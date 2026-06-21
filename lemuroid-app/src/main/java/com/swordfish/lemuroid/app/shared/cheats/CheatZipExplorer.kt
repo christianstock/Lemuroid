@@ -1,5 +1,6 @@
 package com.swordfish.lemuroid.app.shared.cheats
 
+// Cheat file handling - loads .cht files from ZIP archives
 import android.content.Context
 import android.net.Uri
 import java.util.zip.ZipInputStream
