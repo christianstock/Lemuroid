@@ -24,17 +24,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.swordfish.lemuroid.lib.library.db.entity.GameCheatEntity
 import kotlinx.coroutines.flow.Flow
-import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.launch
 
 @Composable
 fun CheatMenuScreen(
     cheatsFlow: Flow<List<GameCheatEntity>>,
-    onCheatToggle: suspend (GameCheatEntity, Boolean) -> Unit,
+    onCheatToggle: (GameCheatEntity, Boolean) -> Unit,
     onClose: () -> Unit,
 ) {
     val cheats = cheatsFlow.collectAsState(initial = emptyList()).value
-    val coroutineScope = rememberCoroutineScope()
 
     Surface(
         modifier = Modifier
@@ -89,9 +86,7 @@ fun CheatMenuScreen(
                         CheatItemRow(
                             cheat = cheat,
                             onToggle = { enabled ->
-                                coroutineScope.launch {
-                                    onCheatToggle(cheat, enabled)
-                                }
+                                onCheatToggle(cheat, enabled)
                             },
                         )
                     }
