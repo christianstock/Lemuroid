@@ -76,8 +76,31 @@ class GameViewModelRetroGameView(
     private val retroGameViewFlow = MutableStateFlow<GLRetroView?>(null)
     var retroGameView: GLRetroView? by MutableStateProperty(retroGameViewFlow)
 
+    private var currentGameId: Long = -1L
+    private val cheatsFlow = MutableStateFlow<List<com.swordfish.lemuroid.lib.library.db.entity.GameCheatEntity>>(emptyList())
+
     fun getGameState(): Flow<GameState> {
         return gameState.debounce(200)
+    }
+
+    fun getCheats(): Flow<List<com.swordfish.lemuroid.lib.library.db.entity.GameCheatEntity>> {
+        return cheatsFlow
+    }
+
+    suspend fun toggleCheat(cheat: com.swordfish.lemuroid.lib.library.db.entity.GameCheatEntity, enabled: Boolean) {
+        try {
+            // Update database
+            cheatManager.updateCheatEnabled(cheat.gameId, cheat.cheatIndex, enabled)
+            // Update RetroView
+            retroGameView?.setCheat(cheat.cheatIndex, enabled, cheat.code)
+            // Update local state
+            val updatedCheats = cheatsFlow.value.map {
+                if (it.cheatIndex == cheat.cheatIndex) it.copy(enabled = enabled) else it
+            }
+            cheatsFlow.value = updatedCheats
+        } catch (e: Exception) {
+            Timber.e(e, "Error toggling cheat")
+        }
     }
 
     suspend fun initialize(
@@ -314,8 +337,10 @@ class GameViewModelRetroGameView(
 
     suspend fun initializeCheats(gameEntity: Game) {
         try {
+            currentGameId = gameEntity.id
             waitRetroGameViewInitialized()
             val enabledCheats = cheatManager.getEnabledCheats(gameEntity.id)
+            cheatsFlow.value = enabledCheats
             enabledCheats.forEach { cheat ->
                 retroGameView?.setCheat(cheat.index, cheat.enabled, cheat.code)
             }

@@ -31,4 +31,15 @@ class CheatManager(
             gameCheatDao.deleteCheat(gameId, cheat.index)
         }
     }
+
+    suspend fun updateCheatEnabled(gameId: Int, cheatIndex: Int, enabled: Boolean) = withContext(Dispatchers.IO) {
+        val cheat = gameCheatDao.getCheatsForGame(gameId).find { it.cheatIndex == cheatIndex }
+        if (cheat != null) {
+            if (enabled) {
+                gameCheatDao.insertCheat(cheat.copy(enabled = true))
+            } else {
+                gameCheatDao.deleteCheat(gameId, cheatIndex)
+            }
+        }
+    }
 }

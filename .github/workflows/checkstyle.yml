@@ -30,3 +30,11 @@ jobs:
     # TODO: Re-enable ktlint after resolving cache/rule interpretation issues
     # - name: Run ktlint tests
     #   run: ./gradlew ktlintCheck
+    
+    - name: Upload APK Artifact
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: lemuroid-apk
+        path: lemuroid-app/build/outputs/apk/free/debug/lemuroid-free-debug.apk
+        retention-days: 30

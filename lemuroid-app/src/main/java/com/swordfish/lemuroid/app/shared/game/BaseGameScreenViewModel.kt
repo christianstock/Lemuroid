@@ -149,6 +149,7 @@ class BaseGameScreenViewModel(
         )
 
     val loadingState = MutableStateFlow(false)
+    val cheatMenuVisible = MutableStateFlow(false)
 
     private inline fun withLoading(block: () -> Unit) {
         loadingState.value = true
@@ -313,6 +314,22 @@ class BaseGameScreenViewModel(
 
     fun handleVirtualInputEvent(events: List<InputEvent>) {
         touchControls.handleVirtualInputEvent(events)
+    }
+
+    fun toggleCheatMenu() {
+        cheatMenuVisible.value = !cheatMenuVisible.value
+    }
+
+    fun closeCheatMenu() {
+        cheatMenuVisible.value = false
+    }
+
+    suspend fun toggleCheat(cheat: com.swordfish.lemuroid.lib.library.db.entity.GameCheatEntity, enabled: Boolean) {
+        retroGameView.toggleCheat(cheat, enabled)
+    }
+
+    fun getCheats(): kotlinx.coroutines.flow.Flow<List<com.swordfish.lemuroid.lib.library.db.entity.GameCheatEntity>> {
+        return retroGameView.getCheats()
     }
 
     override fun onCreate(owner: LifecycleOwner) {

@@ -14,6 +14,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.swordfish.lemuroid.app.shared.cheats.ui.CheatMenuScreen
 import com.swordfish.lemuroid.app.shared.game.viewmodel.GameViewModelRetroGameView
 
 @Composable
@@ -30,8 +31,35 @@ fun BaseGameScreen(
         gameState is GameViewModelRetroGameView.GameState.Loaded ||
             gameState is GameViewModelRetroGameView.GameState.Ready
 
+    val cheatMenuVisible = viewModel.cheatMenuVisible.collectAsState().value
+
     if (isGameReady) {
-        gameScreen(viewModel)
+        Box(modifier = Modifier.fillMaxSize()) {
+            gameScreen(viewModel)
+
+            // Cheat menu overlay
+            AnimatedVisibility(
+                visible = cheatMenuVisible,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .fillMaxSize(0.9f),
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CheatMenuScreen(
+                        cheatsFlow = viewModel.getCheats(),
+                        onCheatToggle = { cheat, enabled ->
+                            viewModel.toggleCheat(cheat, enabled)
+                        },
+                        onClose = {
+                            viewModel.closeCheatMenu()
+                        },
+                    )
+                }
+            }
+        }
     } else {
         Box(
             modifier = Modifier.fillMaxSize(),
