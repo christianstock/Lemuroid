@@ -15,11 +15,11 @@ include(
     ":lemuroid-metadata-libretro-db",
     ":lemuroid-app-ext-free",
     ":lemuroid-app-ext-play",
-    ":bundled-cores",
+    // ":bundled-cores",  // Commented out - lemuroid-cores directory is empty in this fork
     ":baselineprofile"
 )
 
-project(":bundled-cores").projectDir = File("lemuroid-cores/bundled-cores")
+// project(":bundled-cores").projectDir = File("lemuroid-cores/bundled-cores")  // Commented out
 
 fun usePlayDynamicFeatures(): Boolean {
     val task = gradle.startParameter.taskRequests.toString()
