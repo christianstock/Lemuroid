@@ -1,5 +1,6 @@
 package com.swordfish.lemuroid.app.shared.cheats
 
+// Manages cheat database operations and LibRetro integration
 import com.swordfish.lemuroid.lib.library.db.dao.GameCheatDao
 import com.swordfish.lemuroid.lib.library.db.entity.GameCheatEntity
 import kotlinx.coroutines.Dispatchers
