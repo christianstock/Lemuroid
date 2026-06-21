@@ -24,6 +24,7 @@ import com.swordfish.lemuroid.lib.game.GameLoaderException
 import com.swordfish.lemuroid.lib.library.GameSystem
 import com.swordfish.lemuroid.lib.library.SystemCoreConfig
 import com.swordfish.lemuroid.lib.library.db.entity.Game
+import com.swordfish.lemuroid.lib.library.db.entity.GameCheatEntity
 import com.swordfish.lemuroid.lib.storage.RomFiles
 import com.swordfish.libretrodroid.GLRetroView
 import com.swordfish.libretrodroid.GLRetroViewData
@@ -77,17 +78,17 @@ class GameViewModelRetroGameView(
     var retroGameView: GLRetroView? by MutableStateProperty(retroGameViewFlow)
 
     private var currentGameId: Long = -1L
-    private val cheatsFlow = MutableStateFlow<List<com.swordfish.lemuroid.lib.library.db.entity.GameCheatEntity>>(emptyList())
+    private val cheatsFlow = MutableStateFlow<List<GameCheatEntity>>(emptyList())
 
     fun getGameState(): Flow<GameState> {
         return gameState.debounce(200)
     }
 
-    fun getCheats(): Flow<List<com.swordfish.lemuroid.lib.library.db.entity.GameCheatEntity>> {
+    fun getCheats(): Flow<List<GameCheatEntity>> {
         return cheatsFlow
     }
 
-    suspend fun toggleCheat(cheat: com.swordfish.lemuroid.lib.library.db.entity.GameCheatEntity, enabled: Boolean) {
+    suspend fun toggleCheat(cheat: GameCheatEntity, enabled: Boolean) {
         try {
             // Update database
             cheatManager.updateCheatEnabled(cheat.gameId, cheat.cheatIndex, enabled)
