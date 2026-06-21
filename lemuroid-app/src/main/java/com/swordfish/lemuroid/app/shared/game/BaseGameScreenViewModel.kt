@@ -205,6 +205,8 @@ class BaseGameScreenViewModel(
     ) {
         Timber.i("Calling load game: $game")
         retroGameView.initialize(applicationContext, game, systemCoreConfig, gameLoader, requestLoadSave)
+        // Load enabled cheats after game is initialized
+        retroGameView.initializeCheats(game)
     }
 
     fun showEditControls(show: Boolean) {
