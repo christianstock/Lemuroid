@@ -133,7 +133,7 @@ dependencies {
     "baselineProfile"(project(":baselineprofile"))
     implementation(deps.libs.androidx.profileInstaller)
 
-    "bundleImplementation"(project(":bundled-cores"))
+    // "bundleImplementation"(project(":bundled-cores"))  // Commented out - bundled-cores not available in fork
 
     "freeImplementation"(project(":lemuroid-app-ext-free"))
     "playImplementation"(project(":lemuroid-app-ext-play"))
