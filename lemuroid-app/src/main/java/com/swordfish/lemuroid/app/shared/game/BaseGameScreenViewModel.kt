@@ -32,6 +32,7 @@ import com.swordfish.lemuroid.lib.game.GameLoader
 import com.swordfish.lemuroid.lib.library.GameSystem
 import com.swordfish.lemuroid.lib.library.SystemCoreConfig
 import com.swordfish.lemuroid.lib.library.db.entity.Game
+import com.swordfish.lemuroid.lib.library.db.entity.GameCheatEntity
 import com.swordfish.lemuroid.lib.saves.SavesManager
 import com.swordfish.lemuroid.lib.saves.StatesManager
 import com.swordfish.lemuroid.lib.saves.StatesPreviewManager
@@ -324,11 +325,11 @@ class BaseGameScreenViewModel(
         cheatMenuVisible.value = false
     }
 
-    suspend fun toggleCheat(cheat: com.swordfish.lemuroid.lib.library.db.entity.GameCheatEntity, enabled: Boolean) {
+    suspend fun toggleCheat(cheat: GameCheatEntity, enabled: Boolean) {
         retroGameView.toggleCheat(cheat, enabled)
     }
 
-    fun getCheats(): kotlinx.coroutines.flow.Flow<List<com.swordfish.lemuroid.lib.library.db.entity.GameCheatEntity>> {
+    fun getCheats(): Flow<List<GameCheatEntity>> {
         return retroGameView.getCheats()
     }
 
