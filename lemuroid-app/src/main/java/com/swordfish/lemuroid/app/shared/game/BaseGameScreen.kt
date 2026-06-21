@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.swordfish.lemuroid.app.shared.cheats.ui.CheatMenuScreen
 import com.swordfish.lemuroid.app.shared.game.viewmodel.GameViewModelRetroGameView
+import com.swordfish.lemuroid.lib.library.db.entity.GameCheatEntity
 import kotlinx.coroutines.launch
 
 @Composable
