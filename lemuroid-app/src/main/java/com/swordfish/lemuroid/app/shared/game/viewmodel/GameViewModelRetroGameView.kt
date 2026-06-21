@@ -343,7 +343,7 @@ class GameViewModelRetroGameView(
             val enabledCheats = cheatManager.getEnabledCheats(gameEntity.id)
             cheatsFlow.value = enabledCheats
             enabledCheats.forEach { cheat ->
-                retroGameView?.setCheat(cheat.index, cheat.enabled, cheat.code)
+                retroGameView?.setCheat(cheat.cheatIndex, cheat.enabled, cheat.code)
             }
         } catch (e: Exception) {
             Timber.e(e, "Error initializing cheats")
