@@ -13,24 +13,6 @@ class CheatManager(
             .filter { it.enabled }
     }
 
-    suspend fun applyCheat(gameId: Int, zipUri: String, entryName: String, cheat: Cheat) = withContext(Dispatchers.IO) {
-        if (cheat.enabled) {
-            gameCheatDao.insertCheat(
-                GameCheatEntity(
-                    gameId = gameId,
-                    zipUri = zipUri,
-                    entryName = entryName,
-                    cheatIndex = cheat.index,
-                    description = cheat.description,
-                    code = cheat.code,
-                    enabled = true
-                )
-            )
-        } else {
-            gameCheatDao.deleteCheat(gameId, cheat.index)
-        }
-    }
-
     suspend fun updateCheatEnabled(gameId: Int, cheatIndex: Int, enabled: Boolean) = withContext(Dispatchers.IO) {
         val cheat = gameCheatDao.getCheatsForGame(gameId).find { it.cheatIndex == cheatIndex }
         if (cheat != null) {
