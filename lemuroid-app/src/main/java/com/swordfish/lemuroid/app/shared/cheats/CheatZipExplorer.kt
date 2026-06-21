@@ -25,7 +25,7 @@ object CheatZipExplorer {
                                     CheatFile(
                                         zipUri = uriString,
                                         entryName = entry.name,
-                                        displayName = entry.name.substringAfterLast("/").substringBeforeLast(".")
+                                        displayName = entry.name.substringAfterLast("/").substringBeforeLast("."),
                                     )
                                 )
                             }
