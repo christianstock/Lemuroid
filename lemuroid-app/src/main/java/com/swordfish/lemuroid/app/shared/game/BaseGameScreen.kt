@@ -11,11 +11,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.swordfish.lemuroid.app.shared.cheats.ui.CheatMenuScreen
 import com.swordfish.lemuroid.app.shared.game.viewmodel.GameViewModelRetroGameView
+import kotlinx.coroutines.launch
 
 @Composable
 fun BaseGameScreen(
@@ -32,6 +34,7 @@ fun BaseGameScreen(
             gameState is GameViewModelRetroGameView.GameState.Ready
 
     val cheatMenuVisible = viewModel.cheatMenuVisible.collectAsState().value
+    val coroutineScope = rememberCoroutineScope()
 
     if (isGameReady) {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -51,7 +54,9 @@ fun BaseGameScreen(
                     CheatMenuScreen(
                         cheatsFlow = viewModel.getCheats(),
                         onCheatToggle = { cheat, enabled ->
-                            viewModel.toggleCheat(cheat, enabled)
+                            coroutineScope.launch {
+                                viewModel.toggleCheat(cheat, enabled)
+                            }
                         },
                         onClose = {
                             viewModel.closeCheatMenu()
