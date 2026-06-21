@@ -8,10 +8,9 @@ import kotlinx.coroutines.withContext
 class CheatManager(
     private val gameCheatDao: GameCheatDao
 ) {
-    suspend fun getEnabledCheats(gameId: Int): List<Cheat> = withContext(Dispatchers.IO) {
+    suspend fun getEnabledCheats(gameId: Int): List<GameCheatEntity> = withContext(Dispatchers.IO) {
         gameCheatDao.getCheatsForGame(gameId)
             .filter { it.enabled }
-            .map { Cheat(it.cheatIndex, it.description, it.code, it.enabled) }
     }
 
     suspend fun applyCheat(gameId: Int, zipUri: String, entryName: String, cheat: Cheat) = withContext(Dispatchers.IO) {
