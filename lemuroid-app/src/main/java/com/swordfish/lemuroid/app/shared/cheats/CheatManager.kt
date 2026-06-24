@@ -2,6 +2,8 @@ package com.swordfish.lemuroid.app.shared.cheats
 
 // Manages cheat database operations and LibRetro integration
 import com.swordfish.lemuroid.app.shared.cheats.parser.CheatParser
+import com.swordfish.lemuroid.app.shared.cheats.parser.CwCheatParser
+import com.swordfish.lemuroid.app.shared.cheats.ui.SystemScanProgress
 import com.swordfish.lemuroid.lib.library.GameSystem
 import com.swordfish.lemuroid.lib.library.db.RetrogradeDatabase
 import com.swordfish.lemuroid.lib.library.db.dao.GameCheatDao
@@ -9,6 +11,9 @@ import com.swordfish.lemuroid.lib.library.db.entity.Game
 import com.swordfish.lemuroid.lib.library.db.entity.GameCheatEntity
 import com.swordfish.lemuroid.lib.storage.DirectoriesManager
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.zip.ZipInputStream
@@ -20,6 +25,16 @@ class CheatManager(
     private val directoriesManager: DirectoriesManager,
     private val retrogradeDatabase: RetrogradeDatabase,
 ) {
+    // Progress tracking StateFlows
+    private val _systemProgress = MutableStateFlow<List<SystemScanProgress>>(emptyList())
+    val systemProgress: StateFlow<List<SystemScanProgress>> = _systemProgress.asStateFlow()
+
+    private val _totalGamesFound = MutableStateFlow(0)
+    val totalGamesFound: StateFlow<Int> = _totalGamesFound.asStateFlow()
+
+    private val _scanComplete = MutableStateFlow(false)
+    val scanComplete: StateFlow<Boolean> = _scanComplete.asStateFlow()
+
     suspend fun getEnabledCheats(gameId: Int): List<GameCheatEntity> = withContext(Dispatchers.IO) {
         gameCheatDao.getCheatsForGame(gameId)
             .filter { it.enabled }
@@ -75,112 +90,159 @@ class CheatManager(
 
     suspend fun scanLibraryForCheats(onProgress: (Float) -> Unit, onLog: (String) -> Unit): Int = withContext(Dispatchers.IO) {
         val cheatsDir = directoriesManager.getCheatsDirectory()
-        onLog("═══════════════════════════════════════════════════════════════")
-        onLog("🎮 STARTING CHEAT IMPORT SCAN")
-        onLog("═══════════════════════════════════════════════════════════════")
-        onLog("Scanning cheats directory: ${cheatsDir.absolutePath}")
+        onLog("Starting cheat scan...")
         
+        // Reset progress tracking
+        _systemProgress.value = emptyList()
+        _totalGamesFound.value = 0
+        _scanComplete.value = false
+
         if (!cheatsDir.exists()) {
-            onLog("ERROR: Cheat directory not found.")
             return@withContext 0
         }
 
         // Clear all existing cheats for a fresh scan
         gameCheatDao.clearAllCheats()
-        onLog("✓ Cleared local cheat database.")
 
         val games = retrogradeDatabase.gameDao().selectAll()
         var totalMatchedGames = 0
         var totalCheats = 0
-        val gamesWithNoCheats = mutableListOf<String>()
 
-        onLog("📊 Processing ${games.size} games...")
-        onLog("─────────────────────────────────────────────────────────────")
+        // Track per-system games found (not cheats) for final summary
+        val systemGamesCounts = mutableMapOf<String, Int>()
 
-        games.forEachIndexed { index, game ->
-            onProgress(index.toFloat() / games.size.toFloat())
-            val system = GameSystem.findById(game.systemId)
+        // Group games by system and ONLY include systems that have games
+        val gamesBySystem = games.groupBy { GameSystem.findById(it.systemId) }
+            .filter { it.value.isNotEmpty() }
+            .toSortedMap(compareBy { it.libretroFullName })
+
+        var processedGames = 0
+        gamesBySystem.forEach { (system, systemGames) ->
+            val systemName = system.libretroFullName
             
-            // Search in multiple possible folder names
+            // Update progress for current system
+            val currentSystemProgress = SystemScanProgress(
+                systemName = systemName,
+                gamesFound = 0,
+                isCurrentlyScanning = true,
+                isComplete = false
+            )
+            _systemProgress.value = _systemProgress.value.filter { it.systemName != systemName } + currentSystemProgress
+            systemGamesCounts[systemName] = 0
+
+            var systemGamesCount = 0
+            var systemCheatCount = 0
+            
+            // Search in multiple possible folder names - only for systems with games
             val systemDirs = listOf(
                 File(cheatsDir, system.libretroFullName),
                 File(cheatsDir, system.libretroFullName.replace(" - ", " ")),
-                File(cheatsDir, system.id.dbname.uppercase())
+                File(cheatsDir, system.id.dbname.uppercase()),
+                File(cheatsDir, system.id.dbname),
+                File(cheatsDir, "PPSSPP"),
+                File(cheatsDir, "PSP"),
+                File(cheatsDir, "Playstation Portable"),
+                File(cheatsDir, "PlayStation Portable"),
             ).distinct().filter { it.exists() }
 
-            val matchingFiles = mutableListOf<File>()
-            systemDirs.forEach { dir ->
-                matchingFiles.addAll(findMatchingCheatFiles(game, dir))
-            }
+            systemGames.forEachIndexed { index, game ->
+                onProgress((processedGames + index).toFloat() / games.size.toFloat())
 
-            val distinctMatchingFiles = matchingFiles.distinctBy { it.absolutePath }
+                val matchingFiles = mutableListOf<File>()
+                systemDirs.forEach { dir ->
+                    matchingFiles.addAll(findMatchingCheatFiles(game, dir))
+                }
 
-             if (distinctMatchingFiles.isNotEmpty()) {
-                 // Special logging for Shantae
-                 if (game.title.contains("Shantae", ignoreCase = true)) {
-                     onLog("[🔍 SHANTAE] MATCH: ${game.title} (${distinctMatchingFiles.size} files)")
-                     distinctMatchingFiles.forEach { file ->
-                         onLog("[🔍 SHANTAE]   📄 File: ${file.name}")
-                     }
-                 } else {
-                     onLog("✓ MATCH: ${game.title} (${distinctMatchingFiles.size} files)")
-                 }
+                val distinctMatchingFiles = matchingFiles.distinctBy { it.absolutePath }
 
-                  var globalCheatIndex = 0
-                  distinctMatchingFiles.forEach { chtFile ->
-                      runCatching {
-                           chtFile.inputStream().use { inputStream ->
-                               val cheats = CheatParser.parse(inputStream)
-                               val fileNameTypeTag = getCheatTypeTag(chtFile.nameWithoutExtension)
+                 if (distinctMatchingFiles.isNotEmpty()) {
+                       var globalCheatIndex = 0
+                       distinctMatchingFiles.forEach { chtFile ->
+                           runCatching {
+                                chtFile.inputStream().use { inputStream ->
+                                    // Detect cheat file format
+                                    val fileContent = inputStream.bufferedReader().readText()
+                                    
+                                    // Pure CWCheat format has lines starting with _S, _G, _C at beginning of line
+                                    val hasCwCheatLines = fileContent.lines().any { line ->
+                                        line.trimStart().matches(Regex("^_[SGC].*"))
+                                    }
+                                    val hasLibRetroKey = fileContent.contains("cheats")
+                                    val isCwCheatFormat = hasCwCheatLines && !hasLibRetroKey
+                                    
+                                    val cheats = if (isCwCheatFormat) {
+                                        fileContent.byteInputStream().use { 
+                                            CwCheatParser.parse(it)
+                                        }
+                                    } else {
+                                        fileContent.byteInputStream().use { 
+                                            CheatParser.parse(it)
+                                        }
+                                    }
+                                    
+                                    val fileNameTypeTag = getCheatTypeTag(chtFile.nameWithoutExtension)
 
-                              cheats.forEach { cheat ->
-                                  // Prioritize filename-based detection, fallback to cheat file type if filename detection returns null
-                                  val source = (fileNameTypeTag ?: cheat.type ?: "Others").trim()
-                                  gameCheatDao.insertCheat(
-                                      GameCheatEntity(
-                                          gameId = game.id,
-                                          zipUri = chtFile.absolutePath,
-                                          entryName = chtFile.name,
-                                          cheatIndex = globalCheatIndex++,
-                                          description = cheat.description,
-                                          code = cheat.code,
-                                          enabled = false,
-                                          source = source
-                                      )
-                                  )
-                                  totalCheats++
-                              }
+                                   cheats.forEach { cheat ->
+                                       val source = (fileNameTypeTag ?: cheat.type ?: "Others").trim()
+                                       try {
+                                           gameCheatDao.insertCheat(
+                                               GameCheatEntity(
+                                                   gameId = game.id,
+                                                   zipUri = chtFile.absolutePath,
+                                                   entryName = chtFile.name,
+                                                   cheatIndex = globalCheatIndex++,
+                                                   description = cheat.description,
+                                                   code = cheat.code,
+                                                   enabled = false,
+                                                   source = source
+                                               )
+                                           )
+                                           totalCheats++
+                                           systemCheatCount++
+                                       } catch (e: Exception) {
+                                           // Silent fail
+                                       }
+                                   }
+                               }
+                           }.onFailure {
+                               // Silent fail
+                           }
+                       }
+                       
+                     if (globalCheatIndex > 0) {
+                          totalMatchedGames++
+                          systemGamesCount++
+                          
+                          systemGamesCounts[systemName] = systemGamesCount
+                          _systemProgress.value = _systemProgress.value.map {
+                              if (it.systemName == systemName) {
+                                  it.copy(gamesFound = systemGamesCount)
+                              } else it
                           }
-                      }.onFailure {
-                          onLog("❌ ERROR parsing ${chtFile.name}: ${it.message}")
                       }
                   }
-                if (globalCheatIndex > 0) {
-                    totalMatchedGames++
-                }
-            } else {
-                // Track games with no cheats
-                gamesWithNoCheats.add(game.title)
-            }
+             }
+
+             // Mark system as complete
+             _systemProgress.value = _systemProgress.value.map {
+                 if (it.systemName == systemName) {
+                     it.copy(isCurrentlyScanning = false, isComplete = true)
+                 } else it
+             }
+
+             processedGames += systemGames.size
         }
 
         onProgress(1f)
-        onLog("─────────────────────────────────────────────────────────────")
-        onLog("✓ Scan Complete!")
-        onLog("📊 Summary:")
-        onLog("  • Games with cheats: $totalMatchedGames")
-        onLog("  • Total cheats found: $totalCheats")
-        onLog("  • Games with NO cheats: ${gamesWithNoCheats.size}")
+        _scanComplete.value = true
 
-        if (gamesWithNoCheats.isNotEmpty()) {
-            onLog("─────────────────────────────────────────────────────────────")
-            onLog("🔸 Games without cheats:")
-            gamesWithNoCheats.sorted().forEach { gameName ->
-                onLog("   ○ $gameName")
+        onLog("Scan complete:")
+        systemGamesCounts.toSortedMap().forEach { (system, count) ->
+            if (count > 0) {
+                onLog("$system - $count game${if (count != 1) "s" else ""}")
             }
         }
-
-        onLog("═══════════════════════════════════════════════════════════════")
+        
         totalMatchedGames
     }
 

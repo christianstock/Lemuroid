@@ -8,6 +8,7 @@ import com.fredporciuncula.flow.preferences.FlowSharedPreferences
 import com.swordfish.lemuroid.R
 import com.swordfish.lemuroid.app.shared.cheats.CheatDownloader
 import com.swordfish.lemuroid.app.shared.cheats.CheatManager
+import com.swordfish.lemuroid.app.shared.cheats.ui.SystemScanProgress
 import com.swordfish.lemuroid.app.shared.library.PendingOperationsMonitor
 import com.swordfish.lemuroid.app.shared.settings.SettingsInteractor
 import com.swordfish.lemuroid.lib.savesync.SaveSyncManager
@@ -55,6 +56,8 @@ class SettingsViewModel(
         val cheatUpdateInProgress: Boolean = false,
         val cheatUpdateProgress: Float = 0f,
         val cheatsFound: Int = -1,
+        val systemScanProgress: List<SystemScanProgress> = emptyList(),
+        val scanComplete: Boolean = false,
     )
 
     private val cheatUpdateInProgress = MutableStateFlow(false)
@@ -77,11 +80,20 @@ class SettingsViewModel(
                 isSaveSyncSupported = saveSyncManager.isSupported(),
                 cheatUpdateInProgress = inProgress,
                 cheatUpdateProgress = progress,
-                cheatsFound = found
+                cheatsFound = found,
+                systemScanProgress = emptyList(),
+                scanComplete = false
             )
         }
         .flowOn(Dispatchers.IO)
         .stateIn(viewModelScope, SharingStarted.Lazily, State())
+
+    // Separate flows for system progress
+    val systemScanProgress = cheatManager.systemProgress
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    val scanComplete = cheatManager.scanComplete
+        .stateIn(viewModelScope, SharingStarted.Lazily, false)
 
     fun changeLocalStorageFolder() {
         settingsInteractor.changeLocalStorageFolder()

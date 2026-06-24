@@ -1,23 +1,37 @@
 package com.swordfish.lemuroid.app.mobile.feature.settings.general
 
 import android.net.Uri
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.documentfile.provider.DocumentFile
 import androidx.navigation.NavController
 import com.swordfish.lemuroid.R
 import com.swordfish.lemuroid.app.mobile.feature.main.MainRoute
 import com.swordfish.lemuroid.app.mobile.feature.main.navigateToRoute
+import com.swordfish.lemuroid.app.shared.cheats.ui.SystemScanProgress
 import com.swordfish.lemuroid.app.shared.library.LibraryIndexScheduler
 import com.swordfish.lemuroid.app.shared.game.skins.GbcSkinManager
 import com.swordfish.lemuroid.app.shared.game.skins.ui.GbcSkinSelectionScreen
@@ -53,6 +67,16 @@ fun SettingsScreen(
             .collectAsState(false)
             .value
 
+    val systemScanProgress =
+        viewModel.systemScanProgress
+            .collectAsState(emptyList())
+            .value
+
+    val scanComplete =
+        viewModel.scanComplete
+            .collectAsState(false)
+            .value
+
     LemuroidSettingsPage(modifier = modifier) {
         RomsSettings(
             state = state,
@@ -62,7 +86,9 @@ fun SettingsScreen(
         )
         CheatsSettings(
             state = state,
-            onUpdateCheats = { viewModel.downloadAndScanCheats() }
+            onUpdateCheats = { viewModel.downloadAndScanCheats() },
+            systemScanProgress = systemScanProgress,
+            scanComplete = scanComplete
         )
         DisplaySettings()
         GeneralSettings()
@@ -79,9 +105,12 @@ fun SettingsScreen(
 private fun CheatsSettings(
     state: SettingsViewModel.State,
     onUpdateCheats: () -> Unit,
+    systemScanProgress: List<SystemScanProgress> = emptyList(),
+    scanComplete: Boolean = false,
 ) {
     val context = LocalContext.current
-    
+    val currentSystem = systemScanProgress.find { it.isCurrentlyScanning }
+
     LemuroidCardSettingsGroup(
         title = { Text(text = stringResource(id = R.string.settings_category_cheats)) },
     ) {
@@ -94,6 +123,51 @@ private fun CheatsSettings(
             onClick = { onUpdateCheats() },
         )
         
+        // Show current system tab if scanning
+        if (state.cheatUpdateInProgress && currentSystem != null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f),
+                        shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
+                    )
+                    .padding(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Scanning",
+                            fontSize = 10.sp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = currentSystem.systemName,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "${currentSystem.gamesFound} game${if (currentSystem.gamesFound != 1) "s" else ""} found",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        )
+                    }
+                    CircularProgressIndicator(
+                        modifier = Modifier.align(Alignment.CenterVertically),
+                        strokeWidth = 2.dp,
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
         if (state.cheatUpdateInProgress) {
             LinearProgressIndicator(
                 progress = { state.cheatUpdateProgress },
@@ -103,6 +177,39 @@ private fun CheatsSettings(
             )
         }
         
+        // Show final summary if scan complete
+        if (scanComplete && systemScanProgress.isNotEmpty() && !state.cheatUpdateInProgress) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp)
+            ) {
+                Text(
+                    text = "Scan complete:",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Per-system summary
+                val systemSummary = systemScanProgress
+                    .filter { it.gamesFound > 0 }
+                    .sortedBy { it.systemName }
+
+                systemSummary.forEach { system ->
+                    Text(
+                        text = "${system.systemName} - ${system.gamesFound} game${if (system.gamesFound != 1) "s" else ""}",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+                        modifier = Modifier.padding(start = 8.dp, top = 4.dp)
+                    )
+                }
+            }
+        }
+
         if (state.cheatsFound >= 0 && !state.cheatUpdateInProgress) {
             Text(
                 text = stringResource(id = R.string.settings_cheats_found_toast, state.cheatsFound),
@@ -195,7 +302,7 @@ private fun DisplaySettings() {
         ) {
             GbcSkinSelectionScreen(
                 skinManager = gbcSkinManager,
-                onSkinSelected = { skinId -> 
+                onSkinSelected = { skinId ->
                     gbcSkinManager.setSelectedSkin(skinId)
                 },
                 modifier = Modifier

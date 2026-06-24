@@ -15,12 +15,23 @@ object CheatParser {
             normalizedProps[(key as String).trim()] = (value as String).trim()
         }
 
-        val cheatsCount = normalizedProps["cheats"]?.toIntOrNull() ?: 0
+        val cheatsCountStr = normalizedProps["cheats"]?.removeSurrounding("\"")
+        val cheatsCount = cheatsCountStr?.toIntOrNull() ?: 0
+        
+        if (cheatsCount == 0) {
+            return emptyList()
+        }
+        
         val cheats = mutableListOf<Cheat>()
 
         for (i in 0 until cheatsCount) {
             val codeKey = "cheat${i}_code"
-            val code = normalizedProps[codeKey]?.removeSurrounding("\"") ?: continue
+            var code = normalizedProps[codeKey]?.removeSurrounding("\"") ?: continue
+            
+            // Handle hybrid format: strip _L prefix if present (PSP cheats use "_L 0x... 0x..." format in LibRetro files)
+            if (code.startsWith("_L ")) {
+                code = code.removePrefix("_L ").trim()
+            }
 
             val descKey = "cheat${i}_desc"
             var desc = normalizedProps[descKey]?.removeSurrounding("\"") ?: "Cheat $i"
@@ -47,5 +58,14 @@ object CheatParser {
         return cheats
     }
 }
+
+
+
+
+
+
+
+
+
 
 
