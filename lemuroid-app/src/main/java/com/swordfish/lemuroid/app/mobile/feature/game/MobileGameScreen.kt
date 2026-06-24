@@ -33,11 +33,15 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.vector.ImageVector
+import android.view.KeyEvent
+import com.swordfish.lemuroid.app.shared.game.ui.InteractiveTopBar
+import gg.padkit.inputevents.InputEvent
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.layoutId
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -49,6 +53,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import kotlinx.coroutines.launch
 import com.swordfish.lemuroid.app.shared.game.BaseGameScreenViewModel
 import com.swordfish.lemuroid.app.shared.game.viewmodel.GameViewModelTouchControls.Companion.MENU_LOADING_ANIMATION_MILLIS
 import com.swordfish.lemuroid.app.shared.settings.HapticFeedbackMode
@@ -66,6 +71,7 @@ import gg.padkit.inputstate.InputState
 
 @Composable
 fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
+    val coroutineScope = rememberCoroutineScope()
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val isLandscape = constraints.maxWidth > constraints.maxHeight
 
@@ -101,6 +107,10 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
             viewModel
                 .getTouchHapticFeedbackMode()
                 .collectAsState(HapticFeedbackMode.NONE)
+
+        val isPlayingState = viewModel.getIsPlaying().collectAsState(true)
+        val rewindAvailableState = viewModel.getRewindAvailable().collectAsState(false)
+        val menuPressedState = viewModel.isMenuPressed().collectAsState(false)
 
         val padHapticFeedback =
             when (hapticFeedbackMode.value) {
@@ -200,6 +210,28 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
                             controllerConfig = currentControllerConfig,
                             touchControllerSettings = touchControllerSettings,
                             viewModel = viewModel,
+                        )
+
+                        InteractiveTopBar(
+                            isPlaying = isPlayingState.value,
+                            isRewindAvailable = rewindAvailableState.value,
+                            onSaveClick = { viewModel.saveQuickSave() },
+                            onSaveLongClick = { viewModel.showSaveMenu() },
+                            onLoadClick = { viewModel.loadQuickSave() },
+                            onLoadLongClick = { viewModel.showLoadMenu() },
+                            onRewindClick = { pressed ->
+                                coroutineScope.launch {
+                                    if (pressed) viewModel.startRewind() else viewModel.stopRewind()
+                                }
+                            },
+                            onPauseToggle = { viewModel.togglePause() },
+                            onMenuClick = { pressed ->
+                                viewModel.handleVirtualInputEvent(
+                                    listOf(InputEvent.Button(KeyEvent.KEYCODE_BUTTON_MODE, pressed)),
+                                )
+                            },
+                            modifier = Modifier.layoutId(GameScreenLayout.CONSTRAINTS_INTERACTIVE_BAR),
+                            isMenuPressed = menuPressedState.value,
                         )
                     }
                 }
