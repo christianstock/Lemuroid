@@ -170,9 +170,32 @@ class GameViewModelSaves(
         sideEffects.showToast(appContext.getString(R.string.game_toast_quick_save_saved))
     }
 
+    private fun isQuickSaveValid(): Boolean {
+        val save = currentQuickSave ?: return false
+        return try {
+            // Check if the save state version is compatible
+            systemCoreConfig.statesVersion == save.metadata.version
+        } catch (e: Throwable) {
+            false
+        }
+    }
+
     fun loadQuickSave() {
-        loadSaveState(currentQuickSave ?: return)
-        sideEffects.showToast(appContext.getString(R.string.game_toast_quick_save_loaded))
+        try {
+            loadSaveState(currentQuickSave ?: return)
+            sideEffects.showToast(appContext.getString(R.string.game_toast_quick_save_loaded))
+        } catch (e: Throwable) {
+            val errorMessageId =
+                when (e) {
+                    is IncompatibleStateException -> R.string.error_message_incompatible_state
+                    else -> R.string.game_toast_load_state_failed
+                }
+            sideEffects.showToast(appContext.getString(errorMessageId))
+            // Clear the invalid quicksave
+            currentQuickSave = null
+            quickSaveTimestamp = 0
+            prefs.edit().remove("${game.id}_timestamp").apply()
+        }
     }
     
     fun getQuickSaveTimestamp(): Long {
@@ -180,7 +203,7 @@ class GameViewModelSaves(
     }
     
     fun hasQuickSave(): Boolean {
-        return currentQuickSave != null
+        return currentQuickSave != null && isQuickSaveValid()
     }
     
     companion object {

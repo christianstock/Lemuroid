@@ -418,7 +418,7 @@ class BaseGameScreenViewModel(
     suspend fun stopRewind() {
         isPlaying.value = true
         rewindManager.stopRewind()
-        rewindProgress.value = rewindManager.getRewindProgress()
+        rewindProgress.value = 0f
     }
 
     private suspend fun applyRewindState() {
