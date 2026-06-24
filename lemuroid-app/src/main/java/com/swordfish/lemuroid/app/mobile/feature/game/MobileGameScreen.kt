@@ -16,8 +16,10 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
@@ -65,9 +67,11 @@ import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.launch
 import com.swordfish.lemuroid.app.shared.game.BaseGameScreenViewModel
+import com.swordfish.lemuroid.app.shared.game.PhysicalScreenSizeCalculator
 import com.swordfish.lemuroid.app.shared.game.viewmodel.GameViewModelTouchControls.Companion.MENU_LOADING_ANIMATION_MILLIS
 import com.swordfish.lemuroid.app.shared.settings.HapticFeedbackMode
 import com.swordfish.lemuroid.lib.controller.ControllerConfig
+import com.swordfish.lemuroid.lib.library.SystemID
 import com.swordfish.touchinput.controller.R
 import com.swordfish.touchinput.radial.LemuroidPadTheme
 import com.swordfish.touchinput.radial.LocalLemuroidPadTheme
@@ -84,6 +88,33 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
     val coroutineScope = rememberCoroutineScope()
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val isLandscape = constraints.maxWidth > constraints.maxHeight
+        val density = LocalDensity.current
+        val context = LocalContext.current
+
+        // Calculate physical screen size for handheld systems (GB, GBC, GBA)
+        val physicalScreenDimensions = remember(constraints, context) {
+            val displayMetrics = context.resources.displayMetrics
+            val systemIdEnum = SystemID.values().find { it.dbname == viewModel.game.systemId }
+            systemIdEnum?.let {
+                PhysicalScreenSizeCalculator.calculateScreenDimensions(
+                    systemId = it,
+                    displayMetrics = displayMetrics,
+                    maxAvailableWidthPx = constraints.maxWidth.toFloat(),
+                    maxAvailableHeightPx = constraints.maxHeight.toFloat(),
+                )
+            }
+        }
+
+        // Create modifier for game view with physical dimensions if applicable
+        val gameViewModifier = remember(physicalScreenDimensions, density) {
+            if (physicalScreenDimensions != null) {
+                Modifier
+                    .width(with(density) { physicalScreenDimensions.widthPx.toDp() })
+                    .height(with(density) { physicalScreenDimensions.heightPx.toDp() })
+            } else {
+                Modifier.fillMaxSize()
+            }
+        }
 
         LaunchedEffect(isLandscape) {
             val orientation =
@@ -177,13 +208,31 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
                         currentControllerConfig?.allowTouchOverlay ?: true,
                     ),
             ) {
-                Box(
-                    modifier =
-                        Modifier
-                            .layoutId(GameScreenLayout.CONSTRAINTS_GAME_VIEW)
-                            .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Top))
-                            .onGloballyPositioned { viewportPosition.value = it.boundsInRoot() },
-                )
+                // When using physical screen dimensions, center the game view in available space
+                if (physicalScreenDimensions != null) {
+                    Box(
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .layoutId(GameScreenLayout.CONSTRAINTS_GAME_VIEW),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier =
+                                gameViewModifier
+                                    .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Top))
+                                    .onGloballyPositioned { viewportPosition.value = it.boundsInRoot() },
+                        )
+                    }
+                } else {
+                    Box(
+                        modifier =
+                            gameViewModifier
+                                .layoutId(GameScreenLayout.CONSTRAINTS_GAME_VIEW)
+                                .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Top))
+                                .onGloballyPositioned { viewportPosition.value = it.boundsInRoot() },
+                    )
+                }
 
                 val isVisible =
                     touchControllerSettings != null &&
