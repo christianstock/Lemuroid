@@ -181,6 +181,8 @@ abstract class BaseGameActivity : ImmersiveActivity() {
     private fun displayOptionsDialog(
         currentTiltConfiguration: TiltConfiguration,
         tiltConfigurations: List<TiltConfiguration>,
+        initialRoute: String? = null,
+        isDirectAccess: Boolean = false,
     ) {
         if (baseGameScreenViewModel.loadingState.value) {
             return
@@ -222,6 +224,8 @@ abstract class BaseGameActivity : ImmersiveActivity() {
                 this.putExtra(GameMenuContract.EXTRA_CURRENT_TILT_CONFIG, currentTiltConfiguration)
                 // TODO PADS... Make sure to avoid passing this if a physical pad is connected.
                 this.putExtra(GameMenuContract.EXTRA_TILT_ALL_CONFIGS, tiltConfigurations.toTypedArray())
+                this.putExtra("INITIAL_ROUTE", initialRoute)
+                this.putExtra("IS_DIRECT_ACCESS", isDirectAccess)
             }
         startActivityForResult(intent, DIALOG_REQUEST)
         overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
@@ -248,6 +252,8 @@ abstract class BaseGameActivity : ImmersiveActivity() {
                         displayOptionsDialog(
                             it.currentTiltConfiguration,
                             it.tiltConfigurations,
+                            it.initialRoute,
+                            it.isDirectAccess,
                         )
                     is GameViewModelSideEffects.UiEffect.ShowToast -> displayToast(it.message)
                     is GameViewModelSideEffects.UiEffect.SuccessfulFinish -> performSuccessfulActivityFinish()
@@ -417,6 +423,11 @@ abstract class BaseGameActivity : ImmersiveActivity() {
             if (data?.hasExtra(GameMenuContract.RESULT_CHANGE_TILT_CONFIG) == true) {
                 val tiltConfig = data.serializable<TiltConfiguration>(GameMenuContract.RESULT_CHANGE_TILT_CONFIG)
                 baseGameScreenViewModel.changeTiltConfiguration(tiltConfig!!)
+            }
+            if (data?.getBooleanExtra(GameMenuContract.RESULT_CHEATS_CHANGED, false) == true) {
+                lifecycleScope.launch {
+                    baseGameScreenViewModel.retroGameView.initializeCheats(game)
+                }
             }
         }
     }

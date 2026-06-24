@@ -46,8 +46,11 @@ import com.swordfish.lemuroid.app.mobile.feature.gamemenu.coreoptions.GameMenuCo
 import com.swordfish.lemuroid.app.mobile.feature.gamemenu.coreoptions.GameMenuCoreOptionsViewModel
 import com.swordfish.lemuroid.app.mobile.feature.gamemenu.states.GameMenuStatesScreen
 import com.swordfish.lemuroid.app.mobile.feature.gamemenu.states.GameMenuStatesViewModel
+import com.swordfish.lemuroid.app.mobile.feature.gamemenu.cheats.GameMenuCheatsViewModel
+import com.swordfish.lemuroid.app.shared.cheats.ui.CheatMenuScreen
 import com.swordfish.lemuroid.app.mobile.shared.compose.ui.AppTheme
 import com.swordfish.lemuroid.app.shared.GameMenuContract
+import com.swordfish.lemuroid.app.shared.cheats.CheatManager
 import com.swordfish.lemuroid.app.shared.coreoptions.LemuroidCoreOption
 import com.swordfish.lemuroid.app.shared.input.InputDeviceManager
 import com.swordfish.lemuroid.common.kotlin.serializable
@@ -69,6 +72,11 @@ class GameMenuActivity : RetrogradeComponentActivity() {
 
     @Inject
     lateinit var statesPreviewManager: StatesPreviewManager
+
+    @Inject
+    lateinit var cheatManager: CheatManager
+
+    private var cheatsChanged = false
 
     data class GameMenuRequest(
         val coreOptions: List<LemuroidCoreOption>,
@@ -129,14 +137,17 @@ class GameMenuActivity : RetrogradeComponentActivity() {
                         ?: emptyList(),
             )
 
+        val initialRoute = intent.getStringExtra("INITIAL_ROUTE") ?: GameMenuRoute.HOME.route
+        val isDirectAccess = intent.getBooleanExtra("IS_DIRECT_ACCESS", false)
+
         setContent {
-            GameMenuScreen(gameMenuRequest)
+            GameMenuScreen(gameMenuRequest, initialRoute, isDirectAccess)
         }
     }
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
-    private fun GameMenuScreen(gameMenuRequest: GameMenuRequest) {
+    private fun GameMenuScreen(gameMenuRequest: GameMenuRequest, initialRoute: String, isDirectAccess: Boolean) {
         AppTheme {
             val navController = rememberNavController()
             val navBackStackEntry = navController.currentBackStackEntryAsState()
@@ -145,14 +156,14 @@ class GameMenuActivity : RetrogradeComponentActivity() {
             val currentRoute =
                 currentDestination?.route
                     ?.let { GameMenuRoute.findByRoute(it) }
-                    ?: GameMenuRoute.HOME
+                    ?: GameMenuRoute.findByRoute(initialRoute)
 
             SideMenu {
                 TopAppBar(
                     title = { Text(stringResource(currentRoute.titleId)) },
                     windowInsets = WindowInsets(0.dp),
                     navigationIcon = {
-                        AnimatedContent(targetState = currentRoute.canGoBack(), label = "Back") { canGoBack ->
+                        AnimatedContent(targetState = currentRoute.canGoBack() && !isDirectAccess, label = "Back") { canGoBack ->
                             if (canGoBack) {
                                 IconButton(onClick = { navController.popBackStack() }) {
                                     Icon(
@@ -177,7 +188,7 @@ class GameMenuActivity : RetrogradeComponentActivity() {
                         Modifier
                             .fillMaxSize(),
                     navController = navController,
-                    startDestination = GameMenuRoute.HOME.route,
+                    startDestination = initialRoute,
                     enterTransition = { fadeIn() },
                     exitTransition = { fadeOut() },
                 ) {
@@ -226,6 +237,30 @@ class GameMenuActivity : RetrogradeComponentActivity() {
                             gameMenuRequest,
                         )
                     }
+                    composable(GameMenuRoute.CHEATS) {
+                        val viewModel: GameMenuCheatsViewModel = viewModel(
+                            factory = GameMenuCheatsViewModel.Factory(
+                                applicationContext,
+                                gameMenuRequest.game.id,
+                                cheatManager
+                            )
+                        )
+                        CheatMenuScreen(
+                            modifier = Modifier.fillMaxSize(),
+                            cheatsFlow = viewModel.cheats,
+                            onCheatToggle = { cheat, enabled ->
+                                viewModel.toggleCheat(cheat, enabled)
+                                cheatsChanged = true
+                            },
+                            onImportCheats = { uri ->
+                                viewModel.importCheats(uri)
+                                cheatsChanged = true
+                            },
+                            onClose = {
+                                navController.popBackStack()
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -260,6 +295,9 @@ class GameMenuActivity : RetrogradeComponentActivity() {
     private fun onResult(block: Intent.() -> Unit) {
         val resultIntent = Intent()
         resultIntent.block()
+        if (cheatsChanged) {
+            resultIntent.putExtra(GameMenuContract.RESULT_CHEATS_CHANGED, true)
+        }
         setResult(RESULT_OK, resultIntent)
         finish()
     }

@@ -19,5 +19,6 @@ data class GameCheatEntity(
     val cheatIndex: Int,
     val description: String,
     val code: String,
-    val enabled: Boolean
+    val enabled: Boolean,
+    val source: String? = null,
 )

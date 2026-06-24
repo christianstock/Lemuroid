@@ -37,7 +37,11 @@ fun GameMenuStatesScreen(
                         )
                     }
                 },
-                onClick = { onStateClicked(index) },
+                onClick = {
+                    // Use -1 for quick save, otherwise use adjusted index (subtract 1 if quick save exists)
+                    val slotIndex = if (entry.isQuickSave) -1 else index - if (state.value.hasQuickSave) 1 else 0
+                    onStateClicked(slotIndex)
+                },
             )
         }
     }

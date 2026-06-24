@@ -34,6 +34,9 @@
     <string name="settings_title_maximum_cache_usage">Cache size limit</string>
 
     <string name="settings_category_cheats">Cheats</string>
+    <string name="settings_title_update_cheats">Update Cheat Database</string>
+    <string name="settings_description_update_cheats">Download official cheats from Libretro and scan your library</string>
+    <string name="settings_cheats_found_toast">Scan complete. Found cheats for %1$d games.</string>
     <string name="settings_title_cheat_zip_files">Linked Cheat ZIPs</string>
     <string name="settings_description_cheat_zip_files">Manage linked ZIP files containing cheat codes</string>
     <string name="settings_cheat_zip_files_add">Add ZIP</string>
@@ -128,6 +131,7 @@
     <string name="game_menu_quit">Quit</string>
     <string name="game_menu_settings">Settings</string>
     <string name="game_menu_state">State %1$s</string>
+    <string name="game_menu_quick_save">Quick Save</string>
     <string name="game_menu_change_disk_button">Change Disk</string>
     <string name="game_menu_edit_touch_controls">Edit Controls</string>
     <string name="game_menu_mute_audio">Mute</string>

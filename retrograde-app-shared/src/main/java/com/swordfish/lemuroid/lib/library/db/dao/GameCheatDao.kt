@@ -15,8 +15,14 @@ interface GameCheatDao {
     suspend fun insertCheat(cheat: GameCheatEntity)
 
     @Query("DELETE FROM game_cheats WHERE gameId = :gameId AND cheatIndex = :cheatIndex")
-    suspend fun deleteCheat(gameId: Int, cheatIndex: Int)
+    suspend fun deleteCheat(
+        gameId: Int,
+        cheatIndex: Int,
+    )
 
     @Query("DELETE FROM game_cheats WHERE gameId = :gameId")
     suspend fun clearCheatsForGame(gameId: Int)
+
+    @Query("DELETE FROM game_cheats")
+    suspend fun clearAllCheats()
 }

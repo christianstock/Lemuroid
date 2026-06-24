@@ -6,6 +6,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Sensors
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -138,6 +139,19 @@ fun GameMenuHomeScreen(
             },
             onClick = {
                 onResult { putExtra(GameMenuContract.RESULT_EDIT_TOUCH_CONTROLS, true) }
+            },
+        )
+
+        LemuroidSettingsMenuLink(
+            title = { Text(text = "Cheats") },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Star,
+                    contentDescription = "Cheats",
+                )
+            },
+            onClick = {
+                navController.navigate(GameMenuRoute.CHEATS.route)
             },
         )
 

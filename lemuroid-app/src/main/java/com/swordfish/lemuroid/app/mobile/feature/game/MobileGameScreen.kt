@@ -17,9 +17,9 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.RotateLeft
 import androidx.compose.material.icons.filled.Height
 import androidx.compose.material.icons.filled.OpenInFull
-import androidx.compose.material.icons.filled.RotateLeft
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -310,7 +310,7 @@ private fun MenuEditTouchControls(
                     )
                 }
                 if (controllerConfig.allowTouchRotation) {
-                    MenuEditTouchControlRow(Icons.Default.RotateLeft, "Rotate", 0f) {
+                    MenuEditTouchControlRow(Icons.AutoMirrored.Filled.RotateLeft, "Rotate", 0f) {
                         Slider(
                             value = touchControllerSettings.rotation,
                             onValueChange = {

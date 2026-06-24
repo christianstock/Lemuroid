@@ -9,20 +9,43 @@ object CheatParser {
         val properties = Properties()
         properties.load(inputStream)
 
-        val cheatsCount = properties.getProperty("cheats")?.toIntOrNull() ?: 0
+        // Normalize all keys by trimming them (in case file has spaces around = sign)
+        val normalizedProps = mutableMapOf<String, String>()
+        for ((key, value) in properties) {
+            normalizedProps[(key as String).trim()] = (value as String).trim()
+        }
+
+        val cheatsCount = normalizedProps["cheats"]?.toIntOrNull() ?: 0
         val cheats = mutableListOf<Cheat>()
 
         for (i in 0 until cheatsCount) {
-            var desc = properties.getProperty("cheat${i}_desc") ?: "Cheat $i"
-            var code = properties.getProperty("cheat${i}_code") ?: continue
-            val enabled = properties.getProperty("cheat${i}_enable")?.trim()?.toBoolean() ?: false
+            val codeKey = "cheat${i}_code"
+            val code = normalizedProps[codeKey]?.removeSurrounding("\"") ?: continue
 
-            desc = desc.trim().removeSurrounding("\"")
-            code = code.trim().removeSurrounding("\"")
+            val descKey = "cheat${i}_desc"
+            var desc = normalizedProps[descKey]?.removeSurrounding("\"") ?: "Cheat $i"
 
-            cheats.add(Cheat(i, desc, code, enabled))
+            val enableKey = "cheat${i}_enable"
+            val enabled = normalizedProps[enableKey]?.toBoolean() ?: false
+
+            // Check multiple possible type keys
+            val typeKey1 = "cheat${i}_type"
+            val typeKey2 = "cheat${i}_cheat_type"
+            val typeValue = (normalizedProps[typeKey1] ?: normalizedProps[typeKey2])?.removeSurrounding("\"")
+
+            val type = when(typeValue) {
+                "1" -> "GameShark"
+                "2" -> "ActionReplay"
+                "3" -> "GameGenie"
+                "4" -> "CodeBreaker"
+                else -> typeValue
+            }
+
+            cheats.add(Cheat(i, desc, code, enabled, type))
         }
 
         return cheats
     }
 }
+
+

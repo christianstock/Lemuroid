@@ -4,5 +4,6 @@ data class Cheat(
     val index: Int,
     val description: String,
     val code: String,
-    val enabled: Boolean
+    val enabled: Boolean,
+    val type: String? = null
 )

@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -53,11 +54,15 @@ fun BaseGameScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     CheatMenuScreen(
+                        modifier = Modifier.fillMaxSize(0.8f),
                         cheatsFlow = viewModel.getCheats(),
                         onCheatToggle = { cheat, enabled ->
                             coroutineScope.launch {
                                 viewModel.toggleCheat(cheat, enabled)
                             }
+                        },
+                        onImportCheats = { uri ->
+                            viewModel.importCheats(uri)
                         },
                         onClose = {
                             viewModel.closeCheatMenu()

@@ -1,6 +1,10 @@
 package com.swordfish.lemuroid.app.mobile.feature.settings.general
 
 import android.net.Uri
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -8,12 +12,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.documentfile.provider.DocumentFile
 import androidx.navigation.NavController
 import com.swordfish.lemuroid.R
 import com.swordfish.lemuroid.app.mobile.feature.main.MainRoute
 import com.swordfish.lemuroid.app.mobile.feature.main.navigateToRoute
 import com.swordfish.lemuroid.app.shared.library.LibraryIndexScheduler
+import com.swordfish.lemuroid.app.shared.game.skins.GbcSkinManager
+import com.swordfish.lemuroid.app.shared.game.skins.ui.GbcSkinSelectionScreen
 import com.swordfish.lemuroid.app.utils.android.settings.LemuroidCardSettingsGroup
 import com.swordfish.lemuroid.app.utils.android.settings.LemuroidSettingsList
 import com.swordfish.lemuroid.app.utils.android.settings.LemuroidSettingsMenuLink
@@ -53,6 +60,11 @@ fun SettingsScreen(
             indexingInProgress = indexingInProgress,
             scanInProgress = scanInProgress,
         )
+        CheatsSettings(
+            state = state,
+            onUpdateCheats = { viewModel.downloadAndScanCheats() }
+        )
+        DisplaySettings()
         GeneralSettings()
         InputSettings(navController = navController)
         MiscSettings(
@@ -60,6 +72,44 @@ fun SettingsScreen(
             isSaveSyncSupported = state.isSaveSyncSupported,
             navController = navController,
         )
+    }
+}
+
+@Composable
+private fun CheatsSettings(
+    state: SettingsViewModel.State,
+    onUpdateCheats: () -> Unit,
+) {
+    val context = LocalContext.current
+    
+    LemuroidCardSettingsGroup(
+        title = { Text(text = stringResource(id = R.string.settings_category_cheats)) },
+    ) {
+        LemuroidSettingsMenuLink(
+            title = { Text(text = stringResource(id = R.string.settings_title_update_cheats)) },
+            subtitle = {
+                Text(text = stringResource(id = R.string.settings_description_update_cheats))
+            },
+            enabled = !state.cheatUpdateInProgress,
+            onClick = { onUpdateCheats() },
+        )
+        
+        if (state.cheatUpdateInProgress) {
+            LinearProgressIndicator(
+                progress = { state.cheatUpdateProgress },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            )
+        }
+        
+        if (state.cheatsFound >= 0 && !state.cheatUpdateInProgress) {
+            Text(
+                text = stringResource(id = R.string.settings_cheats_found_toast, state.cheatsFound),
+                modifier = Modifier.padding(16.dp),
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
     }
 }
 
@@ -130,6 +180,29 @@ private fun InputSettings(navController: NavController) {
             },
             onClick = { navController.navigateToRoute(MainRoute.SETTINGS_INPUT_DEVICES) },
         )
+    }
+}
+
+@Composable
+private fun DisplaySettings() {
+    val context = LocalContext.current
+    val gbcSkinManager = remember { GbcSkinManager(context) }
+    val selectedSkin = gbcSkinManager.getSelectedSkinFlow().collectAsState(null).value
+
+    if (selectedSkin != null) {
+        LemuroidCardSettingsGroup(
+            title = { Text(text = "Display") },
+        ) {
+            GbcSkinSelectionScreen(
+                skinManager = gbcSkinManager,
+                onSkinSelected = { skinId -> 
+                    gbcSkinManager.setSelectedSkin(skinId)
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp)
+            )
+        }
     }
 }
 

@@ -51,6 +51,8 @@ import com.swordfish.lemuroid.app.mobile.feature.systems.MetaSystemsScreen
 import com.swordfish.lemuroid.app.mobile.feature.systems.MetaSystemsViewModel
 import com.swordfish.lemuroid.app.mobile.shared.compose.ui.AppTheme
 import com.swordfish.lemuroid.app.shared.GameInteractor
+import com.swordfish.lemuroid.app.shared.cheats.CheatDownloader
+import com.swordfish.lemuroid.app.shared.cheats.CheatManager
 import com.swordfish.lemuroid.app.shared.game.BaseGameActivity
 import com.swordfish.lemuroid.app.shared.game.GameLauncher
 import com.swordfish.lemuroid.app.shared.input.InputDeviceManager
@@ -101,6 +103,12 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
 
     @Inject
     lateinit var inputDeviceManager: InputDeviceManager
+
+    @Inject
+    lateinit var cheatDownloader: CheatDownloader
+
+    @Inject
+    lateinit var cheatManager: CheatManager
 
     private val reviewManager = ReviewManager()
 
@@ -276,6 +284,8 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
                                                     applicationContext,
                                                 ),
                                             ),
+                                            cheatDownloader,
+                                            cheatManager,
                                         ),
                                 ),
                             navController = navController,

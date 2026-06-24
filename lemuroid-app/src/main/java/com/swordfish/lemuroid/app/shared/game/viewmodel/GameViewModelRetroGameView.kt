@@ -2,6 +2,7 @@ package com.swordfish.lemuroid.app.shared.game.viewmodel
 
 import android.content.Context
 import android.content.pm.PackageManager
+import android.net.Uri
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.Lifecycle
@@ -77,7 +78,7 @@ class GameViewModelRetroGameView(
     private val retroGameViewFlow = MutableStateFlow<GLRetroView?>(null)
     var retroGameView: GLRetroView? by MutableStateProperty(retroGameViewFlow)
 
-    private var currentGameId: Long = -1L
+    private var currentGameId: Int = -1
     private val cheatsFlow = MutableStateFlow<List<GameCheatEntity>>(emptyList())
 
     fun getGameState(): Flow<GameState> {
@@ -92,15 +93,28 @@ class GameViewModelRetroGameView(
         try {
             // Update database
             cheatManager.updateCheatEnabled(cheat.gameId, cheat.cheatIndex, enabled)
-            // Update RetroView
-            retroGameView?.setCheat(cheat.cheatIndex, enabled, cheat.code)
+            
             // Update local state
             val updatedCheats = cheatsFlow.value.map {
                 if (it.cheatIndex == cheat.cheatIndex) it.copy(enabled = enabled) else it
             }
             cheatsFlow.value = updatedCheats
+            
+            // Re-apply all cheats to ensure correct state in the core
+            applyCheats(updatedCheats)
         } catch (e: Exception) {
             Timber.e(e, "Error toggling cheat")
+        }
+    }
+
+    private fun applyCheats(cheats: List<GameCheatEntity>) {
+        retroGameView?.queueEvent {
+            com.swordfish.libretrodroid.LibretroDroid.resetCheat()
+            cheats.forEach { cheat ->
+                if (cheat.enabled) {
+                    com.swordfish.libretrodroid.LibretroDroid.setCheat(cheat.cheatIndex, true, cheat.code)
+                }
+            }
         }
     }
 
@@ -340,13 +354,22 @@ class GameViewModelRetroGameView(
         try {
             currentGameId = gameEntity.id
             waitRetroGameViewInitialized()
-            val enabledCheats = cheatManager.getEnabledCheats(gameEntity.id)
-            cheatsFlow.value = enabledCheats
-            enabledCheats.forEach { cheat ->
-                retroGameView?.setCheat(cheat.cheatIndex, cheat.enabled, cheat.code)
-            }
+            val cheats = cheatManager.getAllCheats(gameEntity.id)
+            cheatsFlow.value = cheats
+            applyCheats(cheats)
         } catch (e: Exception) {
             Timber.e(e, "Error initializing cheats")
+        }
+    }
+
+    suspend fun importCheats(uri: Uri) {
+        try {
+            cheatManager.importCheats(appContext, currentGameId, uri)
+            // Refresh local state
+            val updatedCheats = cheatManager.getAllCheats(currentGameId)
+            cheatsFlow.value = updatedCheats
+        } catch (e: Exception) {
+            Timber.e(e, "Error importing cheats")
         }
     }
 

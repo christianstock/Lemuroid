@@ -1,6 +1,7 @@
 package com.swordfish.lemuroid.app.shared.game.viewmodel
 
 import android.content.Context
+import android.content.SharedPreferences
 import com.swordfish.lemuroid.R
 import com.swordfish.lemuroid.app.mobile.feature.settings.SettingsManager
 import com.swordfish.lemuroid.common.graphics.GraphicsUtils
@@ -33,6 +34,8 @@ class GameViewModelSaves(
     private val sideEffects: GameViewModelSideEffects,
 ) {
     private var currentQuickSave: SaveState? = null
+    private var quickSaveTimestamp: Long = 0
+    private val prefs: SharedPreferences = appContext.getSharedPreferences("quick_saves", Context.MODE_PRIVATE)
 
     data class SaveSnapshot(
         val sram: ByteArray,
@@ -160,11 +163,30 @@ class GameViewModelSaves(
 
     fun saveQuickSave() {
         currentQuickSave = getCurrentSaveState()
+        quickSaveTimestamp = System.currentTimeMillis()
+        // Store in SharedPreferences for access from menu
+        prefs.edit().putLong("${game.id}_timestamp", quickSaveTimestamp).apply()
+        Timber.i("✓ Quick save created at: ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(java.util.Date(quickSaveTimestamp))}")
         sideEffects.showToast(appContext.getString(R.string.game_toast_quick_save_saved))
     }
 
     fun loadQuickSave() {
         loadSaveState(currentQuickSave ?: return)
         sideEffects.showToast(appContext.getString(R.string.game_toast_quick_save_loaded))
+    }
+    
+    fun getQuickSaveTimestamp(): Long {
+        return quickSaveTimestamp
+    }
+    
+    fun hasQuickSave(): Boolean {
+        return currentQuickSave != null
+    }
+    
+    companion object {
+        fun getQuickSaveTimestampForGame(context: Context, gameId: Long): Long {
+            val prefs = context.getSharedPreferences("quick_saves", Context.MODE_PRIVATE)
+            return prefs.getLong("${gameId}_timestamp", 0)
+        }
     }
 }

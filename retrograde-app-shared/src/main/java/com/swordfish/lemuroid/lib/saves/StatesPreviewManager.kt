@@ -47,6 +47,31 @@ class StatesPreviewManager(private val directoriesManager: DirectoriesManager) {
         return File(statesDirectories, fileName)
     }
 
+    suspend fun getQuickSavePreview(
+        game: Game,
+        coreID: CoreID,
+        size: Int,
+    ): Bitmap? =
+        withContext(Dispatchers.IO) {
+            val screenshotName = "${game.fileName}.quicksave.jpg"
+            val file = getPreviewFile(screenshotName, coreID.coreName)
+            if (!file.exists()) return@withContext null
+            val bitmap = BitmapFactory.decodeFile(file.absolutePath)
+            ThumbnailUtils.extractThumbnail(bitmap, size, size)
+        }
+
+    suspend fun setQuickSavePreview(
+        game: Game,
+        bitmap: Bitmap,
+        coreID: CoreID,
+    ) = withContext(Dispatchers.IO) {
+        val screenshotName = "${game.fileName}.quicksave.jpg"
+        val file = getPreviewFile(screenshotName, coreID.coreName)
+        FileOutputStream(file).use {
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 90, it)
+        }
+    }
+
     private fun getSlotScreenshotName(
         game: Game,
         index: Int,

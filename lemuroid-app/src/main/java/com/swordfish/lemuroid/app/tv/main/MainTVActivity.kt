@@ -12,6 +12,7 @@ import androidx.core.view.isVisible
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import com.swordfish.lemuroid.R
+import com.swordfish.lemuroid.app.mobile.feature.main.MainActivity
 import com.swordfish.lemuroid.app.mobile.feature.shortcuts.ShortcutsGenerator
 import com.swordfish.lemuroid.app.shared.GameInteractor
 import com.swordfish.lemuroid.app.shared.game.BaseGameActivity
@@ -50,6 +51,11 @@ class MainTVActivity : BaseTVActivity(), BusyActivity {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (!TVHelper.isTV(this)) {
+            startActivity(Intent(this, MainActivity::class.java))
+            finish()
+            return
+        }
         setContentView(R.layout.activity_tv_main)
 
         val factory = MainTVViewModel.Factory(applicationContext)
