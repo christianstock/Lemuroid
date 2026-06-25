@@ -24,6 +24,15 @@ fun LemuroidCrossForeground(
     val theme = LocalLemuroidPadTheme.current
     val isPressed = directionState.value != Offset.Zero
 
+    // Read the current directional offsets
+    val touchOffset = directionState.value
+
+    // FIXED: Up is positive Y, Down is negative Y in standard joystick input states
+    val isUpPressed = touchOffset.y > 0.1f
+    val isDownPressed = touchOffset.y < -0.1f
+    val isLeftPressed = touchOffset.x < -0.1f
+    val isRightPressed = touchOffset.x > 0.1f
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -33,6 +42,7 @@ fun LemuroidCrossForeground(
                 val centerX = size.width / 2f
                 val centerY = size.height / 2f
 
+                // --- 1. Core D-Pad Path Construction ---
                 val crossPath = Path().apply {
                     // Top arm
                     moveTo(centerX - crossWidth / 2f, 0f)
@@ -77,7 +87,64 @@ fun LemuroidCrossForeground(
                     )
                 }
 
-                // Draw center indentation
+                // --- 2. Directional Triangles ---
+                val arrowWidth = crossWidth * 0.6f
+                val arrowHeight = crossHeight * 0.63f
+
+                val defaultColor = Color.Black.copy(alpha = 0.25f)
+                val pressedColor = Color.Black.copy(alpha = 0.55f)
+
+                val edgeOffset = 10.dp.toPx()
+
+                // Top Arrow (Points Up)
+                val topArrow = Path().apply {
+                    moveTo(centerX, edgeOffset)
+                    lineTo(centerX - arrowWidth / 2f, edgeOffset + arrowHeight)
+                    lineTo(centerX + arrowWidth / 2f, edgeOffset + arrowHeight)
+                    close()
+                }
+                drawPath(
+                    path = topArrow,
+                    color = if (isUpPressed) pressedColor else defaultColor
+                )
+
+                // Bottom Arrow (Points Down)
+                val bottomArrow = Path().apply {
+                    moveTo(centerX, size.height - edgeOffset)
+                    lineTo(centerX - arrowWidth / 2f, size.height - edgeOffset - arrowHeight)
+                    lineTo(centerX + arrowWidth / 2f, size.height - edgeOffset - arrowHeight)
+                    close()
+                }
+                drawPath(
+                    path = bottomArrow,
+                    color = if (isDownPressed) pressedColor else defaultColor
+                )
+
+                // Left Arrow (Points Left)
+                val leftArrow = Path().apply {
+                    moveTo(edgeOffset, centerY)
+                    lineTo(edgeOffset + arrowHeight, centerY - arrowWidth / 2f)
+                    lineTo(edgeOffset + arrowHeight, centerY + arrowWidth / 2f)
+                    close()
+                }
+                drawPath(
+                    path = leftArrow,
+                    color = if (isLeftPressed) pressedColor else defaultColor
+                )
+
+                // Right Arrow (Points Right)
+                val rightArrow = Path().apply {
+                    moveTo(size.width - edgeOffset, centerY)
+                    lineTo(size.width - edgeOffset - arrowHeight, centerY - arrowWidth / 2f)
+                    lineTo(size.width - edgeOffset - arrowHeight, centerY + arrowWidth / 2f)
+                    close()
+                }
+                drawPath(
+                    path = rightArrow,
+                    color = if (isRightPressed) pressedColor else defaultColor
+                )
+
+                // --- 3. Center Indentation ---
                 drawCircle(
                     color = Color.Black.copy(alpha = 0.1f),
                     radius = crossWidth / 3f,

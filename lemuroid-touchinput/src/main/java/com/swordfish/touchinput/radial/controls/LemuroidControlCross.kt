@@ -19,7 +19,7 @@ fun LemuroidControlCross(
     id: Id.DiscreteDirection,
     allowDiagonals: Boolean = true,
     background: @Composable () -> Unit = {
-        LemuroidControlBackground()
+        //LemuroidControlBackground()
     },
     foreground: @Composable (State<Offset>) -> Unit = {
         LemuroidCrossForeground(

@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.swordfish.touchinput.controller.R
+import com.swordfish.touchinput.radial.controls.GBCControlButton
 import com.swordfish.touchinput.radial.controls.LemuroidControlAnalog
 import com.swordfish.touchinput.radial.controls.LemuroidControlButton
 import com.swordfish.touchinput.radial.settings.TouchControllerSettingsManager
@@ -19,6 +20,28 @@ fun SecondaryButtonSelect(position: Int = 0) {
         modifier = Modifier.radialPosition(120f - 30f * position),
         id = Id.Key(KeyEvent.KEYCODE_BUTTON_SELECT),
         icon = R.drawable.button_select,
+    )
+}
+
+context(PadKitScope, LayoutRadialSecondaryDialsScope)
+@Composable
+fun SecondaryButtonSelectGB(position: Int = 0) {
+    LemuroidControlButton(
+        modifier = Modifier.radialPosition(120f - 30f * position),
+        id = Id.Key(KeyEvent.KEYCODE_BUTTON_SELECT),
+        label = "SEL",
+        icon = null,
+    )
+}
+
+context(PadKitScope, LayoutRadialSecondaryDialsScope)
+@Composable
+fun SecondaryButtonSelectGBC(position: Int = 0) {
+    GBCControlButton(
+        modifier = Modifier.radialPosition(120f - 30f * position),
+        id = Id.Key(KeyEvent.KEYCODE_BUTTON_SELECT),
+        label = "SELECT",
+        icon = null,
     )
 }
 
@@ -89,6 +112,28 @@ fun SecondaryButtonStart(position: Int = 0) {
         modifier = Modifier.radialPosition(60f + 30f * position),
         id = Id.Key(KeyEvent.KEYCODE_BUTTON_START),
         icon = R.drawable.button_start,
+    )
+}
+
+context(PadKitScope, LayoutRadialSecondaryDialsScope)
+@Composable
+fun SecondaryButtonStartGB(position: Int = 0) {
+    LemuroidControlButton(
+        modifier = Modifier.radialPosition(60f + 30f * position),
+        id = Id.Key(KeyEvent.KEYCODE_BUTTON_START),
+        label = "STR",
+        icon = null,
+    )
+}
+
+context(PadKitScope, LayoutRadialSecondaryDialsScope)
+@Composable
+fun SecondaryButtonStartGBC(position: Int = 0) {
+    GBCControlButton(
+        modifier = Modifier.radialPosition(60f + 30f * position),
+        id = Id.Key(KeyEvent.KEYCODE_BUTTON_START),
+        label = "START",
+        icon = null,
     )
 }
 

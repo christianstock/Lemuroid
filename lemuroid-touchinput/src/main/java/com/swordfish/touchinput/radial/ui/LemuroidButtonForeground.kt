@@ -1,18 +1,30 @@
 package com.swordfish.touchinput.radial.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraintsScope
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.swordfish.lemuroid.common.compose.textUnit
 import com.swordfish.touchinput.radial.LocalLemuroidPadTheme
 
@@ -86,4 +98,171 @@ private fun BoxWithConstraintsScope.LemuroidButtonForegroundLabel(
         color = LocalLemuroidPadTheme.current.icons(pressedState.value),
         fontSize = fontSize.textUnit(),
     )
+}
+
+@Composable
+fun GbcButtonForeground(
+    modifier: Modifier = Modifier,
+    pressed: State<Boolean>,
+    label: (@Composable BoxWithConstraintsScope.() -> Unit),
+    icon: (@Composable BoxWithConstraintsScope.() -> Unit),
+) {
+    val theme = LocalLemuroidPadTheme.current
+
+    // Darken the button body color on press
+    val baseFillColor = theme.foregroundFill(pressed.value)
+    val finalFillColor = if (pressed.value) {
+        Color(
+            red = baseFillColor.red * 0.50f,
+            green = baseFillColor.green * 0.50f,
+            blue = baseFillColor.blue * 0.50f,
+            alpha = baseFillColor.alpha
+        )
+    } else {
+        baseFillColor
+    }
+
+    Column(
+        modifier = modifier.padding(theme.foregroundPadding),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        // Horizontal Pill Shape
+        GlassSurface(
+            modifier = Modifier.size(width = 36.dp, height = 12.dp),
+            cornerRadius = 6.dp,
+            fillColor = finalFillColor,
+            shadowColor = theme.level3Shadow,
+            shadowWidth = theme.level3ShadowWidth,
+            content = {
+                this.icon()
+            },
+        )
+
+        // FIXED: Using unbounded = true allows the label container to break
+        // through any forced width limitations from the layout grid.
+        Box(
+            modifier = Modifier
+                .padding(top = 20.dp)
+                .wrapContentSize(align = Alignment.Center, unbounded = true),
+            contentAlignment = Alignment.Center
+        ) {
+            androidx.compose.foundation.layout.BoxWithConstraints(
+                modifier = Modifier.wrapContentSize(unbounded = true),
+                contentAlignment = Alignment.Center
+            ) {
+                this.label()
+            }
+        }
+    }
+}
+
+@Composable
+fun GbcButtonForeground(
+    modifier: Modifier = Modifier,
+    pressed: State<Boolean>,
+    label: String? = null,
+    icon: Int? = null,
+    iconScale: Float = 0.6f,
+    labelScale: Float = 1.0f,
+) {
+    GbcButtonForeground(
+        modifier = modifier,
+        pressed = pressed, // Let the parent handle the actual dark button press state
+        label = { GbcButtonForegroundLabelComposable(label, labelScale) },
+        icon = { GbcButtonForegroundIcon(icon, iconScale, pressed) },
+    )
+}
+
+@Composable
+private fun BoxWithConstraintsScope.GbcButtonForegroundIcon(
+    icon: Int?,
+    scale: Float,
+    pressedState: State<Boolean>,
+) {
+    if (icon == null) return
+
+    Icon(
+        modifier = Modifier.size(maxWidth * scale, maxHeight * scale),
+        painter = painterResource(icon),
+        contentDescription = "",
+        tint = LocalLemuroidPadTheme.current.icons(pressedState.value),
+    )
+}
+
+@Composable
+private fun GbcButtonForegroundLabelComposable(
+    label: String?,
+    scale: Float,
+
+) {
+    if (label == null) return
+
+    val theme = LocalLemuroidPadTheme.current
+
+
+
+// Create a darker shade of the theme color for the label
+
+    val labelColor = theme.icons(false).let { baseColor ->
+        Color(
+            red = (baseColor.red).coerceAtMost(1f),
+            green = (baseColor.green).coerceAtMost(1f),
+            blue = (baseColor.blue).coerceAtMost(1f),
+            alpha = baseColor.alpha * 0.4f,
+            )
+        }
+    Text(
+        modifier = Modifier
+            .wrapContentSize()
+            .graphicsLayer(
+                scaleX = 1.0f, // Adjust this down (e.g., 0.6f) to make it even narrower!
+                scaleY = 1.2f  // Keeps vertical height exactly the same
+            ),
+        textAlign = TextAlign.Center,
+        fontWeight = FontWeight.Bold,
+        fontFamily = FontFamily.SansSerif,
+        text = label,
+        color = labelColor,
+        // FIXED: Restored clean, legible text scaling independent of the button width bounds
+        fontSize = (16.dp * scale).textUnit(),
+    )
+}
+
+@Composable
+fun GbcRoundButton(
+    pressed: State<Boolean>,
+    label: String
+) {
+    // Pick your favorite color palette (e.g., deep maroon/dark purple for GBC)
+    val theme = LocalLemuroidPadTheme.current
+    val baseColor = theme.foregroundFill(pressed.value)
+    val buttonColor = if (pressed.value) baseColor.copy(alpha = 0.7f) else baseColor
+    val labelColor = buttonColor.copy(alpha = 0.5f)
+
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        // FIXED: ...but this inner Box strictly enforces the exact physical size of your circle!
+        Box(
+            modifier = Modifier
+                .size(60.dp) // Adjust this number up or down to make the circle exactly the size you want
+                .background(color = buttonColor, shape = CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                modifier = Modifier
+                    .wrapContentSize()
+                    .graphicsLayer(
+                        scaleX = 1.0f, // Adjust this down (e.g., 0.6f) to make it even narrower!
+                        scaleY = 1.2f  // Keeps vertical height exactly the same
+                    ),
+                text = label,
+                color = labelColor,
+                fontWeight = FontWeight.Bold,
+                // Pro-Tip: If you make the button tiny, drop this font size down (e.g., 12.sp) so it fits!
+                fontSize = 32.sp
+            )
+        }
+    }
 }
