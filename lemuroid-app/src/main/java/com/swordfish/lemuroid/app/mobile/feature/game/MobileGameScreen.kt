@@ -196,7 +196,7 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
 
             if (isVisible) {
                 val gbcSkinManager = remember { GbcSkinManager.getInstance(context) }
-                val currentSkin = gbcSkinManager.getSelectedSkinFlow().collectAsState(GbcSkin.LEMUROID_DEFAULT).value
+                val currentSkin = gbcSkinManager.getSelectedSkinFlow().collectAsState(GbcSkin.BERRY).value
                 val theme = remember(viewModel.game.systemId, currentSkin) {
                     getThemeForSystem(
                         viewModel.game.systemId,
