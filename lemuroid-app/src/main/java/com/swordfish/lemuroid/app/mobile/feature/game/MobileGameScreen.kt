@@ -1,7 +1,6 @@
 package com.swordfish.lemuroid.app.mobile.feature.game
 
 import android.graphics.RectF
-import android.util.Log
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -36,7 +35,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -158,8 +156,6 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
                     Modifier
                         .fillMaxSize()
                         .onGloballyPositioned {
-                            val bounds = it.boundsInRoot()
-                            Log.d("MobileGameScreen", "AndroidView measured: ${bounds.width.toInt()}x${bounds.height.toInt()}px")
                             fullScreenPosition.value = it.boundsInRoot()
                         },
                 factory = {
@@ -174,11 +170,6 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
                 val gameView = viewModel.retroGameView.retroGameViewFlow()
                 if (fullPos == null || viewPos == null) return@LaunchedEffect
 
-                Log.d("MobileGameScreen", "=== VIEWPORT EFFECT TRIGGERED ===")
-                Log.d("MobileGameScreen", "Viewport calculation:")
-                Log.d("MobileGameScreen", "  fullPos (entire screen): ${fullPos.width}x${fullPos.height}px, position=(${fullPos.left}, ${fullPos.top})")
-                Log.d("MobileGameScreen", "  viewPos (game container): ${viewPos.width}x${viewPos.height}px, position=(${viewPos.left}, ${viewPos.top})")
-
                 val viewport =
                     RectF(
                         (viewPos.left - fullPos.left) / fullPos.width,
@@ -186,8 +177,6 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
                         (viewPos.right - fullPos.left) / fullPos.width,
                         (viewPos.bottom - fullPos.top) / fullPos.height,
                     )
-                Log.d("MobileGameScreen", "  calculated viewport (normalized): $viewport")
-                Log.d("MobileGameScreen", "  This is normalized coords for GLRetroView, not physical dims")
                 gameView.viewport = viewport
             }
 
@@ -208,8 +197,7 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
                             .layoutId(GameScreenLayout.CONSTRAINTS_GAME_VIEW)
                             .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Top))
                             .onSizeChanged { 
-                                Log.d("MobileGameScreen", "Slot size changed: ${it.width}x${it.height}px")
-                                slotSize = it 
+                                slotSize = it
                             },
                     contentAlignment = Alignment.Center
                 ) {
@@ -234,12 +222,6 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
                         }
                     } else null
 
-                    if (physicalDimensions != null) {
-                        Log.d("MobileGameScreen", "Rendering with PHYSICAL dimensions: ${physicalDimensions.widthPx}x${physicalDimensions.heightPx}px")
-                    } else if (slotSize != null) {
-                        Log.d("MobileGameScreen", "Rendering with FULL-SCREEN fallback (doesn't fit in ${availableWidth.toInt()}x${availableHeight.toInt()}px)")
-                    }
-
                     val gameViewModifier = if (physicalDimensions != null) {
                         Modifier.size(
                             width = with(density) { physicalDimensions.widthPx.toDp() },
@@ -254,16 +236,6 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
                             gameViewModifier
                                 .onGloballyPositioned {
                                     val bounds = it.boundsInRoot()
-                                    Log.d("MobileGameScreen", "Game View measured: ${bounds.width.toInt()}x${bounds.height.toInt()}px at (${bounds.left.toInt()}, ${bounds.top.toInt()})")
-                                    if (physicalDimensions != null) {
-                                        Log.d("MobileGameScreen", "  Expected physical: ${physicalDimensions.widthPx.toInt()}x${physicalDimensions.heightPx.toInt()}px")
-                                        
-                                        // If we are significantly squashed (e.g. > 5% height reduction), log it clearly
-                                        val heightRatio = bounds.height / physicalDimensions.heightPx
-                                        if (heightRatio < 0.95f) {
-                                            Log.e("MobileGameScreen", "  SQUASHED DETECTED! Height is only ${(heightRatio * 100).toInt()}% of physical size")
-                                        }
-                                    }
                                     viewportPosition.value = bounds
                                 },
                     )
@@ -274,7 +246,6 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
                         currentControllerConfig != null &&
                         touchControlsVisibleState.value
 
-                Log.d("MobileGameScreen", "Touch controls isVisible=$isVisible")
 
                 if (isVisible) {
                     CompositionLocalProvider(LocalLemuroidPadTheme provides LemuroidPadTheme()) {
