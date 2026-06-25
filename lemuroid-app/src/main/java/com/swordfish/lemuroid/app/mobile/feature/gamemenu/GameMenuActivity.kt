@@ -47,6 +47,8 @@ import com.swordfish.lemuroid.app.mobile.feature.gamemenu.coreoptions.GameMenuCo
 import com.swordfish.lemuroid.app.mobile.feature.gamemenu.states.GameMenuStatesScreen
 import com.swordfish.lemuroid.app.mobile.feature.gamemenu.states.GameMenuStatesViewModel
 import com.swordfish.lemuroid.app.mobile.feature.gamemenu.cheats.GameMenuCheatsViewModel
+import com.swordfish.lemuroid.app.shared.game.skins.GbcSkinManager
+import com.swordfish.lemuroid.app.shared.game.skins.ui.GbcSkinSelectionScreen
 import com.swordfish.lemuroid.app.shared.cheats.ui.CheatMenuScreen
 import com.swordfish.lemuroid.app.mobile.shared.compose.ui.AppTheme
 import com.swordfish.lemuroid.app.shared.GameMenuContract
@@ -259,6 +261,16 @@ class GameMenuActivity : RetrogradeComponentActivity() {
                             onClose = {
                                 navController.popBackStack()
                             }
+                        )
+                    }
+                    composable(GameMenuRoute.SKINS) {
+                        val gbcSkinManager = remember { GbcSkinManager.getInstance(applicationContext) }
+                        GbcSkinSelectionScreen(
+                            skinManager = gbcSkinManager,
+                            onSkinSelected = { skinId ->
+                                gbcSkinManager.setSelectedSkin(skinId)
+                            },
+                            modifier = Modifier.fillMaxSize()
                         )
                     }
                 }

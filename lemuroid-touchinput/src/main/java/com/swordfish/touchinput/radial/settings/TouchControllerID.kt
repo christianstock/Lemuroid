@@ -16,6 +16,8 @@ import com.swordfish.touchinput.radial.layouts.DesmumeLeft
 import com.swordfish.touchinput.radial.layouts.DesmumeRight
 import com.swordfish.touchinput.radial.layouts.GBALeft
 import com.swordfish.touchinput.radial.layouts.GBARight
+import com.swordfish.touchinput.radial.layouts.GBCLeft
+import com.swordfish.touchinput.radial.layouts.GBCRight
 import com.swordfish.touchinput.radial.layouts.GBLeft
 import com.swordfish.touchinput.radial.layouts.GBRight
 import com.swordfish.touchinput.radial.layouts.GGLeft
@@ -56,6 +58,7 @@ import gg.padkit.PadKitScope
 
 enum class TouchControllerID {
     GB,
+    GBC,
     NES,
     DESMUME,
     MELONDS,
@@ -100,6 +103,12 @@ enum class TouchControllerID {
                     Config(
                         { modifier, settings -> GBLeft(modifier, settings) },
                         { modifier, settings -> GBRight(modifier, settings) },
+                    )
+
+                GBC ->
+                    Config(
+                        { modifier, settings -> GBCLeft(modifier, settings) },
+                        { modifier, settings -> GBCRight(modifier, settings) },
                     )
 
                 NES ->

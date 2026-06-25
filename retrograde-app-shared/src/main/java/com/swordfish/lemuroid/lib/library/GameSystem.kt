@@ -559,7 +559,7 @@ data class GameSystem(
                                 ),
                             controllerConfigs =
                                 hashMapOf(
-                                    0 to arrayListOf(ControllerConfigs.GB),
+                                    0 to arrayListOf(ControllerConfigs.GBC),
                                 ),
                         ),
                     ),

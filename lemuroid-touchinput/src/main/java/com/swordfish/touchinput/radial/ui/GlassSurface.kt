@@ -13,8 +13,10 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import com.swordfish.touchinput.radial.LocalLemuroidPadTheme
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlin.math.ceil
@@ -62,12 +64,13 @@ private object ShadowCache {
 @Composable
 fun GlassSurface(
     modifier: Modifier = Modifier,
-    cornerRadius: Dp = Dp.Infinity,
+    cornerRadius: Dp = LocalLemuroidPadTheme.current.buttonCornerRadius,
     fillColor: Color = Color.White.copy(alpha = 0.15f),
     shadowColor: Color = Color.Black.copy(alpha = 0.3f),
     shadowWidth: Dp = 1.dp,
     content: @Composable BoxWithConstraintsScope.() -> Unit = { },
 ) {
+    val theme = LocalLemuroidPadTheme.current
     BoxWithConstraints(
         contentAlignment = Alignment.Center,
         modifier =
@@ -111,12 +114,34 @@ fun GlassSurface(
                         drawImage(shadowBitmap, topLeft = shadowOffset)
                     }
 
+                    // Bottom: Large shape with a dark "shadow" color for bevel
+                    theme.bevelColorDark?.let { bevelDark ->
+                        drawRoundRect(
+                            color = bevelDark,
+                            topLeft = Offset(1f, 1f), // Offset for depth
+                            size = expandedSize,
+                            cornerRadius = CornerRadius(cornerRadiusPx, cornerRadiusPx),
+                        )
+                    }
+
+                    // Middle: Main surface color
                     drawRoundRect(
                         color = fillColor,
                         topLeft = Offset(0f, 0f),
                         size = expandedSize,
                         cornerRadius = CornerRadius(cornerRadiusPx, cornerRadiusPx),
                     )
+
+                    // Top: Thin highlight on top-left edge
+                    theme.bevelColorLight?.let { bevelLight ->
+                        drawRoundRect(
+                            color = bevelLight,
+                            topLeft = Offset(0f, 0f),
+                            size = expandedSize,
+                            cornerRadius = CornerRadius(cornerRadiusPx, cornerRadiusPx),
+                            style = Stroke(width = 1.dp.toPx())
+                        )
+                    }
 
                     drawContent()
                 }

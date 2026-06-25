@@ -33,8 +33,6 @@ import com.swordfish.lemuroid.app.mobile.feature.main.MainRoute
 import com.swordfish.lemuroid.app.mobile.feature.main.navigateToRoute
 import com.swordfish.lemuroid.app.shared.cheats.ui.SystemScanProgress
 import com.swordfish.lemuroid.app.shared.library.LibraryIndexScheduler
-import com.swordfish.lemuroid.app.shared.game.skins.GbcSkinManager
-import com.swordfish.lemuroid.app.shared.game.skins.ui.GbcSkinSelectionScreen
 import com.swordfish.lemuroid.app.utils.android.settings.LemuroidCardSettingsGroup
 import com.swordfish.lemuroid.app.utils.android.settings.LemuroidSettingsList
 import com.swordfish.lemuroid.app.utils.android.settings.LemuroidSettingsMenuLink
@@ -90,7 +88,6 @@ fun SettingsScreen(
             systemScanProgress = systemScanProgress,
             scanComplete = scanComplete
         )
-        DisplaySettings()
         GeneralSettings()
         InputSettings(navController = navController)
         MiscSettings(
@@ -287,29 +284,6 @@ private fun InputSettings(navController: NavController) {
             },
             onClick = { navController.navigateToRoute(MainRoute.SETTINGS_INPUT_DEVICES) },
         )
-    }
-}
-
-@Composable
-private fun DisplaySettings() {
-    val context = LocalContext.current
-    val gbcSkinManager = remember { GbcSkinManager(context) }
-    val selectedSkin = gbcSkinManager.getSelectedSkinFlow().collectAsState(null).value
-
-    if (selectedSkin != null) {
-        LemuroidCardSettingsGroup(
-            title = { Text(text = "Display") },
-        ) {
-            GbcSkinSelectionScreen(
-                skinManager = gbcSkinManager,
-                onSkinSelected = { skinId ->
-                    gbcSkinManager.setSelectedSkin(skinId)
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp)
-            )
-        }
     }
 }
 

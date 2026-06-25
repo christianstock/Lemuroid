@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
@@ -154,6 +155,21 @@ fun GameMenuHomeScreen(
                 navController.navigate(GameMenuRoute.CHEATS.route)
             },
         )
+
+        if (gameMenuRequest.game.systemId == "gbc") {
+            LemuroidSettingsMenuLink(
+                title = { Text(text = stringResource(id = R.string.game_menu_skins)) },
+                icon = {
+                    Icon(
+                        imageVector = Icons.Default.Palette,
+                        contentDescription = stringResource(id = R.string.game_menu_skins),
+                    )
+                },
+                onClick = {
+                    navController.navigateToRoute(GameMenuRoute.SKINS)
+                },
+            )
+        }
 
         if (gameMenuRequest.advancedCoreOptions.isNotEmpty() || gameMenuRequest.coreOptions.isNotEmpty()) {
             LemuroidSettingsMenuLink(

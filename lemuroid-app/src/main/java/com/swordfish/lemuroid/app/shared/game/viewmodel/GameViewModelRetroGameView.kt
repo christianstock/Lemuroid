@@ -205,6 +205,8 @@ class GameViewModelRetroGameView(
                 .apply {
                     isFocusable = false
                     isFocusableInTouchMode = false
+                    setZOrderMediaOverlay(true)
+                    holder.setFormat(android.graphics.PixelFormat.TRANSLUCENT)
                 }
 
         if (!system.hasTouchScreen) {
