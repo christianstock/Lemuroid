@@ -110,11 +110,20 @@ fun GbaLandscapeSkin(
             // LEFT GRIP (D-PAD SIDE)
             Box(
                 modifier = Modifier
-                    .weight(0.25f) // Adjusted to give the center layout its new boundaries
+                    .weight(0.25f)
+                    // 1. Force the container to sit at the absolute top of the row
                     .fillMaxHeight(),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.TopCenter
             ) {
-                leftPad(Modifier.fillMaxSize())
+                // 2. Wrap the pad injection in a box that cuts off space and anchors hard to the top
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(280.dp) // Force a strict height limit so it can't stretch or auto-center lower
+                        .padding(top = 8.dp) // Global clearance beneath the interactive bar
+                ) {
+                    leftPad(Modifier.fillMaxSize())
+                }
             }
 
             // CENTER VIEWPORT HOUSING
@@ -128,14 +137,11 @@ fun GbaLandscapeSkin(
                     },
                 contentAlignment = Alignment.TopCenter
             ) {
-                // Inner layout shell that forces the internal video stream upwards
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        // FIXED: Raised to 32.dp to aggressively shove the video layout
-                        // straight up toward the top edge of the master cutout window
                         .padding(bottom = 80.dp),
-                    contentAlignment = Alignment.TopCenter // FIXED: Direct top anchor
+                    contentAlignment = Alignment.TopCenter
                 ) {
                     gameScreenContent()
                 }
@@ -144,11 +150,19 @@ fun GbaLandscapeSkin(
             // RIGHT GRIP (ACTION BUTTONS SIDE)
             Box(
                 modifier = Modifier
-                    .weight(0.25f) // Balanced symmetrically with the left side
+                    .weight(0.25f)
                     .fillMaxHeight(),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.TopCenter
             ) {
-                rightPad(Modifier.fillMaxSize())
+                // 3. Mirror the exact same strict top-bounded box footprint on the right side
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(280.dp) // Keeps R and L pinned to the exact same vertical frame size
+                        .padding(top = 8.dp)
+                ) {
+                    rightPad(Modifier.fillMaxSize())
+                }
             }
         }
     }

@@ -132,3 +132,31 @@ fun GbcControlFaceButtons(
         foregroundComposite = { LemuroidCompositeForeground(it) },
     )
 }
+
+
+context(PadKitScope)
+@Composable
+fun GbaControlFaceButtons(
+    modifier: Modifier = Modifier,
+    rotationInDegrees: Float = 0f,
+    ids: PersistentList<Id.Key>,
+    includeComposite: Boolean = false,
+    applyPadding: Boolean = true,
+    trackPointers: Boolean = true,
+    background: @Composable () -> Unit = { },
+    idsForegrounds: PersistentMap<Id.Key, @Composable (State<Boolean>) -> Unit>,
+) {
+    val theme = LocalLemuroidPadTheme.current
+    ControlFaceButtons(
+        modifier =
+            modifier
+                .run { if (applyPadding) padding(theme.padding) else modifier },
+        includeComposite = includeComposite,
+        ids = ids,
+        trackPointers = trackPointers,
+        rotationInDegrees = rotationInDegrees,
+        foreground = { id, pressed -> (idsForegrounds[id]!!)(pressed) },
+        background = background,
+        foregroundComposite = { LemuroidCompositeForeground(it) },
+    )
+}

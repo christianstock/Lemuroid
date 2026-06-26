@@ -1,16 +1,23 @@
 package com.swordfish.touchinput.radial.ui
 
+import androidx.benchmark.traceprocessor.Row
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.BoxWithConstraintsScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredHeight
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -193,76 +200,6 @@ private fun BoxWithConstraintsScope.GbButtonForegroundIcon(
 }
 
 @Composable
-private fun GbButtonForegroundLabelComposable(
-    label: String?,
-    scale: Float,
-
-    ) {
-    if (label == null) return
-
-    val theme = LocalLemuroidPadTheme.current
-
-
-
-// Create a darker shade of the theme color for the label
-
-    val labelColor = theme.icons(false).let { baseColor ->
-        Color(0xff3639a0)
-    }
-    Text(
-        modifier = Modifier
-            .wrapContentSize(),
-        textAlign = TextAlign.Center,
-        fontWeight = FontWeight.Bold,
-        fontFamily = FontFamily.SansSerif,
-        text = label,
-        color = labelColor,
-        // FIXED: Restored clean, legible text scaling independent of the button width bounds
-        fontSize = (12.dp * scale).textUnit(),
-    )
-}
-
-@Composable
-fun GbRoundButton(
-    pressed: State<Boolean>,
-    label: String
-) {
-    // Pick your favorite color palette (e.g., deep maroon/dark purple for GBC)
-    val theme = LocalLemuroidPadTheme.current
-    val baseColor = theme.foregroundFill(pressed.value)
-    val buttonColor = if (pressed.value) baseColor.copy(alpha = 0.7f) else baseColor
-    val labelColor = buttonColor.copy(alpha = 0.5f)
-
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        // FIXED: ...but this inner Box strictly enforces the exact physical size of your circle!
-        Box(
-            modifier = Modifier
-                .size(60.dp) // Adjust this number up or down to make the circle exactly the size you want
-                .background(color = buttonColor, shape = CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                modifier = Modifier
-                    .wrapContentSize()
-                    .graphicsLayer(
-                        scaleX = 1.0f, // Adjust this down (e.g., 0.6f) to make it even narrower!
-                        scaleY = 1.2f  // Keeps vertical height exactly the same
-                    ),
-                text = label,
-                color = labelColor,
-                fontWeight = FontWeight.Bold,
-                // Pro-Tip: If you make the button tiny, drop this font size down (e.g., 12.sp) so it fits!
-                fontSize = 32.sp
-            )
-        }
-    }
-}
-
-
-@Composable
 fun GbcButtonForeground(
     modifier: Modifier = Modifier,
     pressed: State<Boolean>,
@@ -429,3 +366,180 @@ fun GbcRoundButton(
     }
 }
 
+
+@Composable
+fun GbaRoundButton(
+    pressed: State<Boolean>,
+    label: String
+) {
+    // Pick your favorite color palette (e.g., deep maroon/dark purple for GBC)
+    val theme = LocalLemuroidPadTheme.current
+    val baseColor = theme.foregroundFill(pressed.value)
+    val buttonColor = if (pressed.value) baseColor.copy(alpha = 0.7f) else baseColor
+    val labelColor = buttonColor.copy(alpha = 0.5f)
+
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        // FIXED: ...but this inner Box strictly enforces the exact physical size of your circle!
+        Box(
+            modifier = Modifier
+                .size(60.dp) // Adjust this number up or down to make the circle exactly the size you want
+                .background(color = buttonColor, shape = CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                modifier = Modifier
+                    .wrapContentSize()
+                    .graphicsLayer(
+                        scaleX = 1.0f, // Adjust this down (e.g., 0.6f) to make it even narrower!
+                        scaleY = 1.2f  // Keeps vertical height exactly the same
+                    ),
+                text = label,
+                color = labelColor,
+                fontWeight = FontWeight.Bold,
+                // Pro-Tip: If you make the button tiny, drop this font size down (e.g., 12.sp) so it fits!
+                fontSize = 32.sp
+            )
+        }
+    }
+}
+
+@Composable
+fun GbaButtonForeground(
+    modifier: Modifier = Modifier,
+    pressed: State<Boolean>,
+    label: String? = null,
+    icon: Int? = null,
+    iconScale: Float = 0.6f,
+    labelScale: Float = 1.0f,
+) {
+    val theme = LocalLemuroidPadTheme.current
+
+    val baseFillColor = theme.foregroundFill(pressed.value)
+    val containerBgColor = if (pressed.value) {
+        baseFillColor.copy(alpha = baseFillColor.alpha * 0.7f)
+    } else {
+        baseFillColor.copy(alpha = baseFillColor.alpha * 0.4f)
+    }
+
+    Row(
+        modifier = modifier
+            // FIXED: Prevent the parent ControlButton framework from truncating our oval width and height
+            .layout { measurable, constraints ->
+                val placeable = measurable.measure(
+                    constraints.copy(
+                        maxWidth = Int.MAX_VALUE,
+                        maxHeight = Int.MAX_VALUE
+                    )
+                )
+                layout(placeable.width, placeable.height) {
+                    placeable.place(0, 0)
+                }
+            }
+            .graphicsLayer {
+                rotationZ = 10f // 10-degree downward tilt
+                translationX = -30f.dp.toPx()
+                translationY = 10f.dp.toPx()
+            }
+            .background(
+                color = containerBgColor,
+                shape = RoundedCornerShape(percent = 50)
+            )
+            // Generous padding to make sure the oval background wraps beautifully around everything
+            .padding(horizontal = 14.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Label on the Left
+        if (label != null) {
+            val labelColor = theme.icons(false).let { baseColor ->
+                Color(
+                    red = baseColor.red.coerceAtMost(1f),
+                    green = baseColor.green.coerceAtMost(1f),
+                    blue = baseColor.blue.coerceAtMost(1f),
+                    alpha = baseColor.alpha * 0.8f,
+                )
+            }
+
+            Text(
+                modifier = Modifier
+                    .graphicsLayer {
+                        scaleX = 0.75f
+                    }
+                    .layout { measurable, constraints ->
+                        val placeable = measurable.measure(constraints.copy(maxWidth = Int.MAX_VALUE))
+                        layout((placeable.width * 0.75f).toInt(), placeable.height) {
+                            placeable.place(0, 0)
+                        }
+                    },
+                textAlign = TextAlign.Center,
+                fontWeight = FontWeight.Bold,
+                fontFamily = FontFamily.SansSerif,
+                text = label,
+                color = labelColor,
+                fontSize = (14f * labelScale).sp,
+                maxLines = 1,
+                softWrap = false
+            )
+
+            Spacer(modifier = Modifier.width(8.dp))
+        }
+
+        // Small Round Button on the Right
+        Box(
+            modifier = Modifier
+                .size(24.dp)
+                .background(
+                    color = theme.foregroundFill(pressed.value),
+                    shape = CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            if (icon != null) {
+                Icon(
+                    modifier = Modifier.size(24.dp * iconScale),
+                    painter = painterResource(icon),
+                    contentDescription = "",
+                    tint = theme.icons(pressed.value),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun GbaSideButtonForeground(
+    modifier: Modifier = Modifier,
+    pressed: State<Boolean>,
+    label: String? = null,
+    icon: Int? = null,
+    iconScale: Float = 0.5f,
+    labelScale: Float = 1.0f,
+) {
+    if (label == null) return
+
+    Box(
+        modifier = modifier.fillMaxSize(), // Accept whatever square size the parent forces
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            modifier = Modifier
+                .wrapContentSize()
+                .graphicsLayer {
+                    alpha = if (pressed.value) 0.5f else 1.0f
+
+                    // THE ULTIMATE HACK:
+                    // Force the render layer to stretch 4x wider than the parent container,
+                    // completely bypassing the layout engine's square constraints.
+                    scaleX = 4.0f
+                    scaleY = 1.2f // Slightly bump height if needed, keeping it elongated
+                },
+            text = label,
+            textAlign = TextAlign.Center,
+            fontWeight = FontWeight.Bold,
+            fontSize = 16.sp, // Start smaller so stretching doesn't make it pixelated or huge
+            color = LocalLemuroidPadTheme.current.icons(pressed.value)
+        )
+    }
+}
