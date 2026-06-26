@@ -156,7 +156,7 @@ fun GameMenuHomeScreen(
             },
         )
 
-        if (gameMenuRequest.game.systemId == "gbc") {
+        if (gameMenuRequest.game.systemId == "gb" || gameMenuRequest.game.systemId == "gbc" || gameMenuRequest.game.systemId == "gba") {
             LemuroidSettingsMenuLink(
                 title = { Text(text = stringResource(id = R.string.game_menu_skins)) },
                 icon = {
