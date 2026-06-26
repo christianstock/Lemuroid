@@ -7,30 +7,23 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInParent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.ClipOp
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.toSize
 import com.swordfish.lemuroid.app.shared.game.skins.GbcSkin
 
 /**
- * GBC skin renderer with top interactive bar and structural layout separation.
+ * GBC skin renderer with full-width screen bezel assembly and deep camera clearance.
  */
 @Composable
 fun GbcPortraitSkin(
@@ -41,86 +34,99 @@ fun GbcPortraitSkin(
     interactiveBar: @Composable () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val bezelRect = remember { mutableStateOf<Rect?>(null) }
-
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(color = skin.caseColor),
+        modifier = modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top
     ) {
+        // --- SECTION: CAMERA HOLE CLEARANCE MARGIN ---
+        // FIXED: Increased height from 48.dp to 64.dp for extra safety clearance
+        Spacer(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(64.dp)
+                .background(color = skin.caseColor)
+        )
+
         // --- SECTION 0: INTERACTIVE BAR ---
-        // Keeps a clean, unweighted 56dp height zone that safely clears the camera notch area
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
-                .padding(start = 12.dp, top = 24.dp, end = 12.dp),
+                .background(color = skin.caseColor)
+                .padding(horizontal = 12.dp),
             contentAlignment = Alignment.Center
         ) {
             interactiveBar()
         }
 
         // --- SECTION 1: DISPLAY ASSY ---
-        // FIXED: Replaced .weight() with a fixed .aspectRatio(1.1f) boundary loop.
-        // This stops the emulator layout from collapsing or shrinking to 0 width/height.
         Box(
             modifier = Modifier
-                .fillMaxWidth(0.95f)
+                // FIXED: Changed from 0.95f to full bleed (1.0f) to cover the full screen width!
+                .fillMaxWidth(1.0f)
                 .aspectRatio(1.1f)
-                .graphicsLayer {
-                    compositingStrategy = CompositingStrategy.Offscreen
-                }
                 .drawBehind {
-                    drawRect(color = skin.caseColor)
+                    val cornerPx = 24.dp.toPx()
+                    val bulgePx = 24.dp.toPx()
 
-                    bezelRect.value?.let { rect ->
+                    // FIXED: Increased outer padding to 16.dp to keep the glass bezel edges
+                    // proportional now that the outer container expands completely to the sides
+                    val paddingPx = 16.dp.toPx()
+
+                    val l = paddingPx
+                    val t = paddingPx
+                    val r = size.width - paddingPx
+                    val b = size.height - paddingPx
+
+                    val cutoutPath = Path().apply {
+                        moveTo(l + cornerPx, t)
+                        lineTo(r - cornerPx, t)
+                        quadraticTo(r, t, r, t + cornerPx)
+                        lineTo(r, b - cornerPx)
+                        quadraticTo(r, b, r - cornerPx, b)
+                        quadraticTo((l + r) / 2f, b + bulgePx, l + cornerPx, b)
+                        quadraticTo(l, b, l, b - cornerPx)
+                        lineTo(l, t + cornerPx)
+                        quadraticTo(l, t, l + cornerPx, t)
+                        close()
+                    }
+
+                    clipPath(path = cutoutPath, clipOp = ClipOp.Difference) {
                         drawRect(
-                            color = Color.Transparent,
-                            topLeft = rect.topLeft,
-                            size = rect.size,
-                            blendMode = BlendMode.Clear
+                            color = skin.caseColor,
+                            topLeft = Offset.Zero,
+                            size = size
                         )
                     }
                 },
-            contentAlignment = Alignment.TopCenter
+            contentAlignment = Alignment.Center
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .onGloballyPositioned { coordinates ->
-                        val position = coordinates.positionInParent()
-                        bezelRect.value = Rect(
-                            offset = position,
-                            size = coordinates.size.toSize()
-                        )
-                    }
-                    .padding(12.dp),
+                    // Matches the internal rendering padding rules above
+                    .padding(16.dp),
                 contentAlignment = Alignment.Center
             ) {
                 gameScreenContent()
-
-                BezelWithScreenCutout(
-                    bezelColor = skin.caseColor,
-                    cutoutRect = Rect.Zero,
-                    cornerRadius = 24.dp,
-                    bottomCurveDepth = 24.dp,
-                    modifier = Modifier.matchParentSize()
-                )
             }
         }
 
         // --- SECTION 2: CENTRAL DEVICE GAP ---
-        // This guarantees your required separation gap between the lens and controls pad
-        Spacer(modifier = Modifier.height(48.dp))
+        Spacer(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp)
+                .background(color = skin.caseColor)
+        )
 
         // --- SECTION 3: CONTROLS PAD ---
-        // Let the remaining lower half of the phone display space belong strictly to the controls pad
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f),
+                .weight(1f)
+                .background(color = skin.caseColor),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top
         ) {

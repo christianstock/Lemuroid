@@ -129,6 +129,7 @@ dependencies {
     implementation(project(":retrograde-app-shared"))
     implementation(project(":lemuroid-metadata-libretro-db"))
     implementation(project(":lemuroid-touchinput"))
+    implementation("androidx.compose.foundation:foundation-layout:1.11.3")
 
     "baselineProfile"(project(":baselineprofile"))
     implementation(deps.libs.androidx.profileInstaller)
