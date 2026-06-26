@@ -47,7 +47,11 @@ import com.swordfish.lemuroid.app.mobile.feature.gamemenu.coreoptions.GameMenuCo
 import com.swordfish.lemuroid.app.mobile.feature.gamemenu.states.GameMenuStatesScreen
 import com.swordfish.lemuroid.app.mobile.feature.gamemenu.states.GameMenuStatesViewModel
 import com.swordfish.lemuroid.app.mobile.feature.gamemenu.cheats.GameMenuCheatsViewModel
+import com.swordfish.lemuroid.app.shared.game.skins.GbSkinManager
+import com.swordfish.lemuroid.app.shared.game.skins.GbaSkinManager
 import com.swordfish.lemuroid.app.shared.game.skins.GbcSkinManager
+import com.swordfish.lemuroid.app.shared.game.skins.ui.GbSkinSelectionScreen
+import com.swordfish.lemuroid.app.shared.game.skins.ui.GbaSkinSelectionScreen
 import com.swordfish.lemuroid.app.shared.game.skins.ui.GbcSkinSelectionScreen
 import com.swordfish.lemuroid.app.shared.cheats.ui.CheatMenuScreen
 import com.swordfish.lemuroid.app.mobile.shared.compose.ui.AppTheme
@@ -264,14 +268,49 @@ class GameMenuActivity : RetrogradeComponentActivity() {
                         )
                     }
                     composable(GameMenuRoute.SKINS) {
-                        val gbcSkinManager = remember { GbcSkinManager.getInstance(applicationContext) }
-                        GbcSkinSelectionScreen(
-                            skinManager = gbcSkinManager,
-                            onSkinSelected = { skinId ->
-                                gbcSkinManager.setSelectedSkin(skinId)
-                            },
-                            modifier = Modifier.fillMaxSize()
-                        )
+                        when (gameMenuRequest.game.systemId) {
+                            "gb" -> {
+                                val gbSkinManager = remember { GbSkinManager.getInstance(applicationContext) }
+                                GbSkinSelectionScreen(
+                                    skinManager = gbSkinManager,
+                                    onSkinSelected = { skinId ->
+                                        gbSkinManager.setSelectedSkin(skinId)
+                                    },
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                            "gbc" -> {
+                                val gbcSkinManager = remember { GbcSkinManager.getInstance(applicationContext) }
+                                GbcSkinSelectionScreen(
+                                    skinManager = gbcSkinManager,
+                                    onSkinSelected = { skinId ->
+                                        gbcSkinManager.setSelectedSkin(skinId)
+                                    },
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                            "gba" -> {
+                                val gbaSkinManager = remember { GbaSkinManager.getInstance(applicationContext) }
+                                GbaSkinSelectionScreen(
+                                    skinManager = gbaSkinManager,
+                                    onSkinSelected = { skinId ->
+                                        gbaSkinManager.setSelectedSkin(skinId)
+                                    },
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                            else -> {
+                                // Default to GBC for unknown systems
+                                val gbcSkinManager = remember { GbcSkinManager.getInstance(applicationContext) }
+                                GbcSkinSelectionScreen(
+                                    skinManager = gbcSkinManager,
+                                    onSkinSelected = { skinId ->
+                                        gbcSkinManager.setSelectedSkin(skinId)
+                                    },
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                        }
                     }
                 }
             }

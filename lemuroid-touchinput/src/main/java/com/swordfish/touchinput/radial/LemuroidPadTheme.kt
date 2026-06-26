@@ -131,14 +131,33 @@ class GBCTheme(
 /**
  * DMG-specific theme (Classic Game Boy).
  */
-class DMGTheme : LemuroidPadTheme() {
-    private val dmgGray = Color(0xFF999999)
-    private val dmgMaroon = Color(0xFF8B0000)
-    private val dmgDarkGray = Color(0xFF555555)
+class DMGTheme(
+    shellColor: Color? = null,
+    buttonColor: Color? = null,
+) : LemuroidPadTheme() {
+    private val dmgGray = shellColor ?: Color(0xFF999999)
+    private val dmgMaroon = buttonColor ?: Color(0xFF8B0000)
 
-    override val level0Fill = dmgGray.copy(alpha = 0.3f)
+    private val dmgLightGray = dmgGray.copy(alpha = 1f).let {
+        Color(
+            (it.red * 1.2f).coerceAtMost(1f),
+            (it.green * 1.2f).coerceAtMost(1f),
+            (it.blue * 1.2f).coerceAtMost(1f),
+            it.alpha
+        )
+    }
+    private val dmgDarkGray = dmgGray.copy(alpha = 1f).let {
+        Color(
+            (it.red * 0.7f).coerceAtMost(1f),
+            (it.green * 0.7f).coerceAtMost(1f),
+            (it.blue * 0.7f).coerceAtMost(1f),
+            it.alpha
+        )
+    }
+
+    override val level0Fill = dmgDarkGray.copy(alpha = 0.3f)
     override val level1Fill = dmgGray.copy(alpha = 0.2f)
-    override val level2Fill = dmgGray.copy(alpha = 0.15f)
+    override val level2Fill = dmgLightGray.copy(alpha = 0.15f)
     override val level3Fill = dmgMaroon.copy(alpha = 0.7f)
     override val level3FillPressed = dmgMaroon.copy(alpha = 0.9f)
     
@@ -149,15 +168,35 @@ class DMGTheme : LemuroidPadTheme() {
 /**
  * GBA-specific theme (Game Boy Advance).
  */
-class GBATheme : LemuroidPadTheme() {
-    private val gbaIndigo = Color(0xFF602E8A)
-    private val gbaDarkGray = Color(0xFF333333)
+class GBATheme(
+    shellColor: Color? = null,
+    buttonColor: Color? = null,
+) : LemuroidPadTheme() {
+    private val gbaIndigo = shellColor ?: Color(0xFF602E8A)
+    private val gbaButtonColor = buttonColor ?: Color(0xFF333333)
 
-    override val level0Fill = gbaIndigo.copy(alpha = 0.3f)
+    private val gbaLightIndigo = gbaIndigo.copy(alpha = 1f).let {
+        Color(
+            (it.red * 1.2f).coerceAtMost(1f),
+            (it.green * 1.2f).coerceAtMost(1f),
+            (it.blue * 1.2f).coerceAtMost(1f),
+            it.alpha
+        )
+    }
+    private val gbaDarkIndigo = gbaIndigo.copy(alpha = 1f).let {
+        Color(
+            (it.red * 0.7f).coerceAtMost(1f),
+            (it.green * 0.7f).coerceAtMost(1f),
+            (it.blue * 0.7f).coerceAtMost(1f),
+            it.alpha
+        )
+    }
+
+    override val level0Fill = gbaDarkIndigo.copy(alpha = 0.3f)
     override val level1Fill = gbaIndigo.copy(alpha = 0.2f)
-    override val level2Fill = gbaIndigo.copy(alpha = 0.15f)
-    override val level3Fill = gbaDarkGray.copy(alpha = 0.7f)
-    override val level3FillPressed = gbaDarkGray.copy(alpha = 0.9f)
+    override val level2Fill = gbaLightIndigo.copy(alpha = 0.15f)
+    override val level3Fill = gbaButtonColor.copy(alpha = 0.7f)
+    override val level3FillPressed = gbaButtonColor.copy(alpha = 0.9f)
     
     override val bevelColorLight = Color.White.copy(alpha = 0.25f)
     override val bevelColorDark = Color.Black.copy(alpha = 0.5f)
@@ -176,9 +215,9 @@ fun getThemeForSystem(
     buttonColor: Color? = null,
 ): LemuroidPadTheme {
     return when (systemIdName) {
-        "gb" -> DMGTheme()
+        "gb" -> DMGTheme(shellColor, buttonColor)
         "gbc" -> GBCTheme(shellColor, buttonColor)
-        "gba" -> GBATheme()
+        "gba" -> GBATheme(shellColor, buttonColor)
         else -> LemuroidPadTheme()
     }
 }

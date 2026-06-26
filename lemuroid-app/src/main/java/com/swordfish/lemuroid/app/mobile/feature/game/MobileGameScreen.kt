@@ -73,8 +73,16 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.launch
 import com.swordfish.lemuroid.app.shared.game.BaseGameScreenViewModel
 import com.swordfish.lemuroid.app.shared.game.PhysicalScreenSizeCalculator
+import com.swordfish.lemuroid.app.shared.game.skins.GbSkin
+import com.swordfish.lemuroid.app.shared.game.skins.GbSkinManager
+import com.swordfish.lemuroid.app.shared.game.skins.GbaSkin
+import com.swordfish.lemuroid.app.shared.game.skins.GbaSkinManager
 import com.swordfish.lemuroid.app.shared.game.skins.GbcSkin
 import com.swordfish.lemuroid.app.shared.game.skins.GbcSkinManager
+import com.swordfish.lemuroid.app.shared.game.skins.ui.GbaLandscapeSkin
+import com.swordfish.lemuroid.app.shared.game.skins.ui.GbaPortraitSkin
+import com.swordfish.lemuroid.app.shared.game.skins.ui.GbLandscapeSkin
+import com.swordfish.lemuroid.app.shared.game.skins.ui.GbPortraitSkin
 import com.swordfish.lemuroid.app.shared.game.skins.ui.GbcLandscapeSkin
 import com.swordfish.lemuroid.app.shared.game.skins.ui.GbcPortraitSkin
 import com.swordfish.lemuroid.app.shared.game.viewmodel.GameViewModelTouchControls.Companion.MENU_LOADING_ANIMATION_MILLIS
@@ -195,13 +203,67 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
                     touchControlsVisibleState.value
 
             if (isVisible) {
-                val gbcSkinManager = remember { GbcSkinManager.getInstance(context) }
-                val currentSkin = gbcSkinManager.getSelectedSkinFlow().collectAsState(GbcSkin.BERRY).value
+                // Get the appropriate skin manager and current skin based on system ID
+                val gbSkinManagerRef = remember { 
+                    if (viewModel.game.systemId == "gb") 
+                        GbSkinManager.getInstance(context) 
+                    else null
+                }
+                val gbcSkinManagerRef = remember { 
+                    if (viewModel.game.systemId == "gbc") 
+                        GbcSkinManager.getInstance(context) 
+                    else null
+                }
+                val gbaSkinManagerRef = remember { 
+                    if (viewModel.game.systemId == "gba") 
+                        GbaSkinManager.getInstance(context) 
+                    else null
+                }
+
+                // Collect state for each system independently
+                val gbSkinState = if (gbSkinManagerRef != null) {
+                    gbSkinManagerRef.getSelectedSkinFlow().collectAsState(GbSkin.GREY)
+                } else {
+                    remember { mutableStateOf(GbSkin.GREY) }
+                }
+
+                val gbcSkinState = if (gbcSkinManagerRef != null) {
+                    gbcSkinManagerRef.getSelectedSkinFlow().collectAsState(GbcSkin.BERRY)
+                } else {
+                    remember { mutableStateOf(GbcSkin.BERRY) }
+                }
+
+                val gbaSkinState = if (gbaSkinManagerRef != null) {
+                    gbaSkinManagerRef.getSelectedSkinFlow().collectAsState(GbaSkin.INDIGO)
+                } else {
+                    remember { mutableStateOf(GbaSkin.INDIGO) }
+                }
+
+                // Get current skin based on system
+                val currentSkin: Any? = when (viewModel.game.systemId) {
+                    "gb" -> gbSkinState.value
+                    "gbc" -> gbcSkinState.value
+                    "gba" -> gbaSkinState.value
+                    else -> null
+                }
+
                 val theme = remember(viewModel.game.systemId, currentSkin) {
+                    val shellColor = when (viewModel.game.systemId) {
+                        "gb" -> (currentSkin as? GbSkin)?.caseColor
+                        "gbc" -> (currentSkin as? GbcSkin)?.caseColor
+                        "gba" -> (currentSkin as? GbaSkin)?.caseColor
+                        else -> null
+                    }
+                    val buttonColor = when (viewModel.game.systemId) {
+                        "gb" -> (currentSkin as? GbSkin)?.buttonsColor
+                        "gbc" -> (currentSkin as? GbcSkin)?.buttonsColor
+                        "gba" -> (currentSkin as? GbaSkin)?.buttonsColor
+                        else -> null
+                    }
                     getThemeForSystem(
                         viewModel.game.systemId,
-                        shellColor = if (viewModel.game.systemId == "gbc") currentSkin.caseColor else null,
-                        buttonColor = if (viewModel.game.systemId == "gbc") currentSkin.buttonsColor else null
+                        shellColor = shellColor,
+                        buttonColor = buttonColor
                     )
                 }
 
@@ -264,95 +326,189 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
                         }
                     }
 
-                    if (viewModel.game.systemId == "gbc") {
-                        if (isLandscape) {
-                            GbcLandscapeSkin(
-                                skin = currentSkin,
-                                gameScreenContent = {
-                                    Box(modifier = Modifier.fillMaxSize()) {
-                                        gameScreenContent()
-                                        overlaysContent(Modifier.matchParentSize())
-                                    }
-                                },
-                                leftPad = { mod ->
-                                    leftGamePad?.invoke(this, mod, touchControllerSettings)
-                                },
-                                rightPad = { mod ->
-                                    rightGamePad?.invoke(this, mod, touchControllerSettings)
-                                },
-                                interactiveBar = {
-                                    interactiveBarContent(Modifier.fillMaxWidth().height(84.dp))
-                                },
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        } else {
-                            GbcPortraitSkin(
-                                skin = currentSkin,
-                                gameScreenContent = {
-                                    Box(modifier = Modifier.fillMaxSize()) {
-                                        gameScreenContent()
-                                        overlaysContent(Modifier.matchParentSize())
-                                    }
-                                },
-                                leftPad = { mod ->
-                                    leftGamePad?.invoke(this, mod, touchControllerSettings)
-                                },
-                                rightPad = { mod ->
-                                    rightGamePad?.invoke(this, mod, touchControllerSettings)
-                                },
-                                interactiveBar = {
-                                    interactiveBarContent(Modifier.fillMaxWidth().fillMaxHeight())
-                                },
-                                modifier = Modifier.fillMaxSize()
-                            )
+                    // Render the appropriate skin based on system ID
+                    when (viewModel.game.systemId) {
+                        "gbc" -> {
+                            val gbcSkin = currentSkin as? GbcSkin ?: GbcSkin.BERRY
+                            if (isLandscape) {
+                                GbcLandscapeSkin(
+                                    skin = gbcSkin,
+                                    gameScreenContent = {
+                                        Box(modifier = Modifier.fillMaxSize()) {
+                                            gameScreenContent()
+                                            overlaysContent(Modifier.matchParentSize())
+                                        }
+                                    },
+                                    leftPad = { mod ->
+                                        leftGamePad?.invoke(this, mod, touchControllerSettings)
+                                    },
+                                    rightPad = { mod ->
+                                        rightGamePad?.invoke(this, mod, touchControllerSettings)
+                                    },
+                                    interactiveBar = {
+                                        interactiveBarContent(Modifier.fillMaxWidth().height(84.dp))
+                                    },
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            } else {
+                                GbcPortraitSkin(
+                                    skin = gbcSkin,
+                                    gameScreenContent = {
+                                        Box(modifier = Modifier.fillMaxSize()) {
+                                            gameScreenContent()
+                                            overlaysContent(Modifier.matchParentSize())
+                                        }
+                                    },
+                                    leftPad = { mod ->
+                                        leftGamePad?.invoke(this, mod, touchControllerSettings)
+                                    },
+                                    rightPad = { mod ->
+                                        rightGamePad?.invoke(this, mod, touchControllerSettings)
+                                    },
+                                    interactiveBar = {
+                                        interactiveBarContent(Modifier.fillMaxWidth().fillMaxHeight())
+                                    },
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
                         }
-                    } else {
-                        ConstraintLayout(
-                            modifier = Modifier.fillMaxSize(),
-                            constraintSet =
-                                GameScreenLayout.buildConstraintSet(
-                                    isLandscape,
-                                    currentControllerConfig.allowTouchOverlay,
-                                ),
-                        ) {
-                            Box(
-                                modifier =
-                                    Modifier
-                                        .fillMaxSize()
-                                        .layoutId(GameScreenLayout.CONSTRAINTS_GAME_VIEW)
-                                        .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Top)),
-                                contentAlignment = Alignment.Center
+                        "gb" -> {
+                            val gbSkin = currentSkin as? GbSkin ?: GbSkin.GREY
+                            if (isLandscape) {
+                                GbLandscapeSkin(
+                                    skin = gbSkin,
+                                    gameScreenContent = {
+                                        Box(modifier = Modifier.fillMaxSize()) {
+                                            gameScreenContent()
+                                            overlaysContent(Modifier.matchParentSize())
+                                        }
+                                    },
+                                    leftPad = { mod ->
+                                        leftGamePad?.invoke(this, mod, touchControllerSettings)
+                                    },
+                                    rightPad = { mod ->
+                                        rightGamePad?.invoke(this, mod, touchControllerSettings)
+                                    },
+                                    interactiveBar = {
+                                        interactiveBarContent(Modifier.fillMaxWidth().height(84.dp))
+                                    },
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            } else {
+                                GbPortraitSkin(
+                                    skin = gbSkin,
+                                    gameScreenContent = {
+                                        Box(modifier = Modifier.fillMaxSize()) {
+                                            gameScreenContent()
+                                            overlaysContent(Modifier.matchParentSize())
+                                        }
+                                    },
+                                    leftPad = { mod ->
+                                        leftGamePad?.invoke(this, mod, touchControllerSettings)
+                                    },
+                                    rightPad = { mod ->
+                                        rightGamePad?.invoke(this, mod, touchControllerSettings)
+                                    },
+                                    interactiveBar = {
+                                        interactiveBarContent(Modifier.fillMaxWidth().fillMaxHeight())
+                                    },
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                        }
+                        "gba" -> {
+                            val gbaSkin = currentSkin as? GbaSkin ?: GbaSkin.INDIGO
+                            if (isLandscape) {
+                                GbaLandscapeSkin(
+                                    skin = gbaSkin,
+                                    gameScreenContent = {
+                                        Box(modifier = Modifier.fillMaxSize()) {
+                                            gameScreenContent()
+                                            overlaysContent(Modifier.matchParentSize())
+                                        }
+                                    },
+                                    leftPad = { mod ->
+                                        leftGamePad?.invoke(this, mod, touchControllerSettings)
+                                    },
+                                    rightPad = { mod ->
+                                        rightGamePad?.invoke(this, mod, touchControllerSettings)
+                                    },
+                                    interactiveBar = {
+                                        interactiveBarContent(Modifier.fillMaxWidth().height(84.dp))
+                                    },
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            } else {
+                                GbaPortraitSkin(
+                                    skin = gbaSkin,
+                                    gameScreenContent = {
+                                        Box(modifier = Modifier.fillMaxSize()) {
+                                            gameScreenContent()
+                                            overlaysContent(Modifier.matchParentSize())
+                                        }
+                                    },
+                                    leftPad = { mod ->
+                                        leftGamePad?.invoke(this, mod, touchControllerSettings)
+                                    },
+                                    rightPad = { mod ->
+                                        rightGamePad?.invoke(this, mod, touchControllerSettings)
+                                    },
+                                    interactiveBar = {
+                                        interactiveBarContent(Modifier.fillMaxWidth().fillMaxHeight())
+                                    },
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                        }
+                        else -> {
+                            // Default layout for other systems
+                            ConstraintLayout(
+                                modifier = Modifier.fillMaxSize(),
+                                constraintSet =
+                                    GameScreenLayout.buildConstraintSet(
+                                        isLandscape,
+                                        currentControllerConfig.allowTouchOverlay,
+                                    ),
                             ) {
-                                gameScreenContent()
+                                Box(
+                                    modifier =
+                                        Modifier
+                                            .fillMaxSize()
+                                            .layoutId(GameScreenLayout.CONSTRAINTS_GAME_VIEW)
+                                            .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Top)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    gameScreenContent()
+                                }
+
+                                if (!isLandscape) {
+                                    PadContainer(
+                                        modifier = Modifier.layoutId(GameScreenLayout.CONSTRAINTS_BOTTOM_CONTAINER),
+                                    )
+                                } else if (!currentControllerConfig.allowTouchOverlay) {
+                                    PadContainer(
+                                        modifier = Modifier.layoutId(GameScreenLayout.CONSTRAINTS_LEFT_CONTAINER),
+                                    )
+                                    PadContainer(
+                                        modifier = Modifier.layoutId(GameScreenLayout.CONSTRAINTS_RIGHT_CONTAINER),
+                                    )
+                                }
+
+                                leftGamePad?.invoke(
+                                    this,
+                                    Modifier.layoutId(GameScreenLayout.CONSTRAINTS_LEFT_PAD),
+                                    touchControllerSettings,
+                                )
+                                rightGamePad?.invoke(
+                                    this,
+                                    Modifier.layoutId(GameScreenLayout.CONSTRAINTS_RIGHT_PAD),
+                                    touchControllerSettings,
+                                )
+
+                                overlaysContent(Modifier.layoutId(GameScreenLayout.CONSTRAINTS_GAME_CONTAINER))
+
+                                interactiveBarContent(Modifier.layoutId(GameScreenLayout.CONSTRAINTS_INTERACTIVE_BAR))
                             }
-
-                            if (!isLandscape) {
-                                PadContainer(
-                                    modifier = Modifier.layoutId(GameScreenLayout.CONSTRAINTS_BOTTOM_CONTAINER),
-                                )
-                            } else if (!currentControllerConfig.allowTouchOverlay) {
-                                PadContainer(
-                                    modifier = Modifier.layoutId(GameScreenLayout.CONSTRAINTS_LEFT_CONTAINER),
-                                )
-                                PadContainer(
-                                    modifier = Modifier.layoutId(GameScreenLayout.CONSTRAINTS_RIGHT_CONTAINER),
-                                )
-                            }
-
-                            leftGamePad?.invoke(
-                                this,
-                                Modifier.layoutId(GameScreenLayout.CONSTRAINTS_LEFT_PAD),
-                                touchControllerSettings,
-                            )
-                            rightGamePad?.invoke(
-                                this,
-                                Modifier.layoutId(GameScreenLayout.CONSTRAINTS_RIGHT_PAD),
-                                touchControllerSettings,
-                            )
-
-                            overlaysContent(Modifier.layoutId(GameScreenLayout.CONSTRAINTS_GAME_CONTAINER))
-
-                            interactiveBarContent(Modifier.layoutId(GameScreenLayout.CONSTRAINTS_INTERACTIVE_BAR))
                         }
                     }
                 }
