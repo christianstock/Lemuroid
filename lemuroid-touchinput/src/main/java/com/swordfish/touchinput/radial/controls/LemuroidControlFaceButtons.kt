@@ -81,7 +81,7 @@ fun LemuroidControlFaceButtons(
 
 context(PadKitScope)
 @Composable
-fun GbcControlFaceButtons(
+fun GbControlFaceButtons(
     modifier: Modifier = Modifier,
     rotationInDegrees: Float = 0f,
     ids: PersistentList<Id.Key>,
@@ -110,10 +110,12 @@ context(PadKitScope)
 @Composable
 fun GbcControlFaceButtons(
     modifier: Modifier = Modifier,
-    primaryAnchors: PersistentList<Anchor<Id.Key>>,
-    background: @Composable () -> Unit = { },
+    rotationInDegrees: Float = 0f,
+    ids: PersistentList<Id.Key>,
+    includeComposite: Boolean = false,
     applyPadding: Boolean = true,
     trackPointers: Boolean = true,
+    background: @Composable () -> Unit = { },
     idsForegrounds: PersistentMap<Id.Key, @Composable (State<Boolean>) -> Unit>,
 ) {
     val theme = LocalLemuroidPadTheme.current
@@ -121,9 +123,10 @@ fun GbcControlFaceButtons(
         modifier =
             modifier
                 .run { if (applyPadding) padding(theme.padding) else modifier },
-        primaryAnchors = primaryAnchors,
-        compositeAnchors = persistentListOf(),
+        includeComposite = includeComposite,
+        ids = ids,
         trackPointers = trackPointers,
+        rotationInDegrees = rotationInDegrees,
         foreground = { id, pressed -> (idsForegrounds[id]!!)(pressed) },
         background = background,
         foregroundComposite = { LemuroidCompositeForeground(it) },

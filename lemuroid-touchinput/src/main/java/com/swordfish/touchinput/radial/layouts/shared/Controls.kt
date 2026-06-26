@@ -16,6 +16,7 @@ import gg.padkit.ids.Id
 import gg.padkit.layouts.radial.secondarydials.LayoutRadialSecondaryDialsScope
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
+import com.swordfish.touchinput.radial.controls.GBControlButton
 
 context(PadKitScope, LayoutRadialSecondaryDialsScope)
 @Composable
@@ -30,10 +31,15 @@ fun SecondaryButtonSelect(position: Int = 0) {
 context(PadKitScope, LayoutRadialSecondaryDialsScope)
 @Composable
 fun SecondaryButtonSelectGB(position: Int = 0) {
-    LemuroidControlButton(
-        modifier = Modifier.radialPosition(120f - 30f * position),
+    GBControlButton(
+        modifier = Modifier
+            .radialPosition(120f - 30f * position)
+            .graphicsLayer {
+                // This pushes the button further out along its layout axis
+                translationY = 30.dp.toPx()
+            },
         id = Id.Key(KeyEvent.KEYCODE_BUTTON_SELECT),
-        label = "SEL",
+        label = "SELECT",
         icon = null,
     )
 }
@@ -127,10 +133,15 @@ fun SecondaryButtonStart(position: Int = 0) {
 context(PadKitScope, LayoutRadialSecondaryDialsScope)
 @Composable
 fun SecondaryButtonStartGB(position: Int = 0) {
-    LemuroidControlButton(
-        modifier = Modifier.radialPosition(60f + 30f * position),
+    GBControlButton(
+        modifier = Modifier
+            .radialPosition(60f + 30f * position)
+            .graphicsLayer {
+                // This pushes the button further out along its layout axis
+                translationY = 30.dp.toPx()
+            },
         id = Id.Key(KeyEvent.KEYCODE_BUTTON_START),
-        label = "STR",
+        label = "START",
         icon = null,
     )
 }

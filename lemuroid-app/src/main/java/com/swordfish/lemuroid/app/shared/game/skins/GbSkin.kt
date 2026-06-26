@@ -15,35 +15,35 @@ data class GbSkin(
         val GREY = GbSkin(
             id = "gb_grey",
             name = "Classic Grey",
-            caseColor = Color(0xFF999999),
-            buttonsColor = Color(0xFF8B0000), // Maroon
+            caseColor = Color(0xFFDDD8CC),
+            buttonsColor = Color(0xFF730551), // Maroon
         )
 
         val RED = GbSkin(
             id = "gb_red",
             name = "Red",
-            caseColor = Color(0xFFC81F55),
+            caseColor = Color(0xFFcf2d39),
             buttonsColor = Color(0xFF1C1C1C),
         )
 
         val YELLOW = GbSkin(
             id = "gb_yellow",
             name = "Yellow",
-            caseColor = Color(0xFFF9C623),
+            caseColor = Color(0xFFedbc16),
             buttonsColor = Color(0xFF1C1C1C),
         )
 
         val GREEN = GbSkin(
             id = "gb_green",
             name = "Green",
-            caseColor = Color(0xFF76C043),
+            caseColor = Color(0xFF027d5d),
             buttonsColor = Color(0xFF1C1C1C),
         )
 
         val BLUE = GbSkin(
             id = "gb_blue",
             name = "Blue",
-            caseColor = Color(0xFF0000FF),
+            caseColor = Color(0xFF1148a0),
             buttonsColor = Color(0xFF1C1C1C),
         )
 
@@ -57,7 +57,7 @@ data class GbSkin(
         val WHITE = GbSkin(
             id = "gb_white",
             name = "White",
-            caseColor = Color(0xFFE8E8E8),
+            caseColor = Color(0xFFdbd9d5),
             buttonsColor = Color(0xFF1C1C1C),
         )
 
