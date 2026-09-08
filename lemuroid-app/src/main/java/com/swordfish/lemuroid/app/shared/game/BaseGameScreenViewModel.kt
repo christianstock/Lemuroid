@@ -425,11 +425,11 @@ class BaseGameScreenViewModel(
     }
 
     fun togglePause() {
-        setPause(!isPlaying.value)
+        setPause(isPlaying.value)
     }
 
-    private fun setPause(paused: Boolean) {
-        isPlaying.value = !paused
+    private fun setPause(isCurrentlyPlaying: Boolean) {
+        isPlaying.value = !isCurrentlyPlaying
         retroGameView.retroGameView?.apply {
             frameSpeed = if (isPlaying.value) 1 else 0
         }

@@ -13,6 +13,7 @@ import com.swordfish.lemuroid.app.shared.settings.StorageFrameworkPickerLauncher
 import com.swordfish.lemuroid.common.coroutines.combine
 import com.swordfish.lemuroid.lib.core.CoresSelection
 import com.swordfish.lemuroid.lib.library.CoreID
+import com.swordfish.lemuroid.lib.library.MetaSystemID
 import com.swordfish.lemuroid.lib.library.SystemID
 import com.swordfish.lemuroid.lib.library.db.RetrogradeDatabase
 import com.swordfish.lemuroid.lib.library.db.entity.Game
@@ -24,6 +25,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
@@ -32,14 +34,17 @@ import kotlinx.coroutines.launch
 
 @OptIn(FlowPreview::class)
 class HomeViewModel(
-    appContext: Context,
-    retrogradeDb: RetrogradeDatabase,
+    private val appContext: Context,
+    private val retrogradeDb: RetrogradeDatabase,
     private val coresSelection: CoresSelection,
 ) : ViewModel() {
     companion object {
-        const val CAROUSEL_MAX_ITEMS = 10
         const val DEBOUNCE_TIME = 100L
+        private const val PREFS_NAME = "home_prefs"
+        private const val KEY_SELECTED_SYSTEM = "selected_system_id"
     }
+
+    private val prefs = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     class Factory(
         val appContext: Context,
@@ -52,10 +57,11 @@ class HomeViewModel(
     }
 
     data class UIState(
-        val favoritesGames: List<Game> = emptyList(),
-        val recentGames: List<Game> = emptyList(),
-        val discoveryGames: List<Game> = emptyList(),
+        val games: List<Game> = emptyList(),
+        val availableSystems: List<String> = emptyList(),
+        val selectedSystemId: String? = null,
         val indexInProgress: Boolean = true,
+        val refreshCount: Int = 0,
         val showNoNotificationPermissionCard: Boolean = false,
         val showNoMicrophonePermissionCard: Boolean = false,
         val showNoGamesCard: Boolean = false,
@@ -64,10 +70,18 @@ class HomeViewModel(
 
     private val microphonePermissionEnabledState = MutableStateFlow(true)
     private val notificationsPermissionEnabledState = MutableStateFlow(true)
+    private val refreshCountState = MutableStateFlow(0)
+    private val selectedSystemIdState = MutableStateFlow<String?>(prefs.getString(KEY_SELECTED_SYSTEM, null))
     private val uiStates = MutableStateFlow(UIState())
 
     fun getViewStates(): Flow<UIState> {
         return uiStates
+    }
+
+    fun setSelectedSystem(systemId: String) {
+        selectedSystemIdState.value = systemId
+        prefs.edit().putString(KEY_SELECTED_SYSTEM, systemId).apply()
+        refreshCountState.value++
     }
 
     fun changeLocalStorageFolder(context: Context) {
@@ -77,6 +91,7 @@ class HomeViewModel(
     fun updatePermissions(context: Context) {
         notificationsPermissionEnabledState.value = isNotificationsPermissionGranted(context)
         microphonePermissionEnabledState.value = isMicrophonePermissionGranted(context)
+        refreshCountState.value++
     }
 
     private fun isNotificationsPermissionGranted(context: Context): Boolean {
@@ -104,21 +119,32 @@ class HomeViewModel(
     }
 
     private fun buildViewState(
-        favoritesGames: List<Game>,
-        recentGames: List<Game>,
-        discoveryGames: List<Game>,
+        games: List<Game>,
+        availableSystems: List<String>,
+        selectedSystemId: String?,
         indexInProgress: Boolean,
+        refreshCount: Int,
         notificationsPermissionEnabled: Boolean,
         showMicrophoneCard: Boolean,
         showDesmumeWarning: Boolean,
     ): UIState {
-        val noGames = recentGames.isEmpty() && favoritesGames.isEmpty() && discoveryGames.isEmpty()
+        val noGames = games.isEmpty() && availableSystems.isEmpty()
+
+        // Clean up game titles by removing info in brackets only
+        val cleanedGames = games.map { game ->
+            val cleanedTitle = game.title
+                .replace(Regex("\\s*\\([^)]*\\)"), "") // Remove (...)
+                .replace(Regex("\\s*\\[[^]]*\\]"), "") // Remove [...]
+                .trim()
+            if (cleanedTitle.isEmpty()) game else game.copy(title = cleanedTitle)
+        }
 
         return UIState(
-            favoritesGames = favoritesGames,
-            recentGames = recentGames,
-            discoveryGames = discoveryGames,
+            games = cleanedGames,
+            availableSystems = availableSystems,
+            selectedSystemId = selectedSystemId,
             indexInProgress = indexInProgress,
+            refreshCount = refreshCount,
             showNoNotificationPermissionCard = !notificationsPermissionEnabled,
             showNoMicrophonePermissionCard = showMicrophoneCard,
             showNoGamesCard = noGames,
@@ -127,18 +153,61 @@ class HomeViewModel(
     }
 
     init {
+        // If no system is selected, try to pick the last played one
+        if (selectedSystemIdState.value == null) {
+            viewModelScope.launch {
+                val lastPlayedGame = retrogradeDb.gameDao().selectLastPlayedGameFlow().first()
+                if (lastPlayedGame != null) {
+                    setSelectedSystem(lastPlayedGame.systemId)
+                } else {
+                    val systems = retrogradeDb.gameDao().selectSystems()
+                    if (systems.isNotEmpty()) {
+                        setSelectedSystem(systems.first())
+                    }
+                }
+            }
+        }
+
         viewModelScope.launch {
+            @OptIn(ExperimentalCoroutinesApi::class)
+            val gamesFlow = selectedSystemIdState.flatMapLatest { systemId ->
+                if (systemId != null) {
+                    // systemId might be a MetaSystem name (e.g. "GBA") or a dbname (e.g. "gba")
+                    // Let's check if it matches a MetaSystemID
+                    val metaSystem = try { MetaSystemID.valueOf(systemId) } catch (_: Exception) { null }
+                    if (metaSystem != null) {
+                        val systemIds = metaSystem.systemIDs.map { it.dbname }
+                        retrogradeDb.gameDao().selectBySystemsOrderedByRecentsFlow(systemIds)
+                    } else {
+                        retrogradeDb.gameDao().selectBySystemOrderedByRecentsFlow(systemId)
+                    }
+                } else {
+                    flowOf(emptyList())
+                }
+            }
+
             val uiStatesFlow =
-                combine(
-                    favoritesGames(retrogradeDb),
-                    recentGames(retrogradeDb),
-                    discoveryGames(retrogradeDb),
+                kotlinx.coroutines.flow.combine(
+                    gamesFlow,
+                    retrogradeDb.gameDao().selectSystemsFlow(),
+                    selectedSystemIdState,
                     indexingInProgress(appContext),
+                    refreshCountState,
                     notificationsPermissionEnabledState,
                     microphoneNotification(retrogradeDb),
-                    desmumeWarningNotification(),
-                    ::buildViewState,
-                )
+                    desmumeWarningNotification()
+                ) { params ->
+                    buildViewState(
+                        games = params[0] as List<Game>,
+                        availableSystems = params[1] as List<String>,
+                        selectedSystemId = params[2] as String?,
+                        indexInProgress = params[3] as Boolean,
+                        refreshCount = params[4] as Int,
+                        notificationsPermissionEnabled = params[5] as Boolean,
+                        showMicrophoneCard = params[6] as Boolean,
+                        showDesmumeWarning = params[7] as Boolean
+                    )
+                }
 
             uiStatesFlow
                 .debounce(DEBOUNCE_TIME)
@@ -149,15 +218,6 @@ class HomeViewModel(
 
     private fun indexingInProgress(appContext: Context) =
         PendingOperationsMonitor(appContext).anyLibraryOperationInProgress()
-
-    private fun discoveryGames(retrogradeDb: RetrogradeDatabase) =
-        retrogradeDb.gameDao().selectFirstNotPlayed(CAROUSEL_MAX_ITEMS)
-
-    private fun recentGames(retrogradeDb: RetrogradeDatabase) =
-        retrogradeDb.gameDao().selectFirstUnfavoriteRecents(CAROUSEL_MAX_ITEMS)
-
-    private fun favoritesGames(retrogradeDb: RetrogradeDatabase) =
-        retrogradeDb.gameDao().selectFirstFavorites(CAROUSEL_MAX_ITEMS)
 
     private fun dsGamesCount(retrogradeDb: RetrogradeDatabase): Flow<Int> {
         return retrogradeDb.gameDao().selectSystemsWithCount()

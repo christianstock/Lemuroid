@@ -116,6 +116,10 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
         MainViewModel.Factory(applicationContext, saveSyncManager)
     }
 
+    private val homeViewModel: HomeViewModel by viewModels {
+        HomeViewModel.Factory(applicationContext, retrogradeDb, coresSelection)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge(
             SystemBarStyle.dark(Color.TRANSPARENT),
@@ -199,17 +203,17 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
                     composable(MainRoute.HOME) {
                         HomeScreen(
                             modifier = Modifier.padding(padding),
-                            viewModel =
-                                viewModel(
-                                    factory =
-                                        HomeViewModel.Factory(
-                                            applicationContext,
-                                            retrogradeDb,
-                                            coresSelection,
-                                        ),
-                                ),
+                            viewModel = homeViewModel,
                             onGameClick = onGameClick,
-                            onGameLongClick = onGameLongClick,
+                            onGameLongClick = onGameLongClick, // This is context menu
+                            onNavigateToSystemList = { game ->
+                                // Map game.systemId to MetaSystem name and navigate
+                                val systemId = SystemID.entries.find { it.dbname == game.systemId }
+                                if (systemId != null) {
+                                    val metaSystemId = MetaSystemID.fromSystemID(systemId)
+                                    navController.navigate("systems/${metaSystemId.name}")
+                                }
+                            },
                             onOpenCoreSelection = { navController.navigateToRoute(MainRoute.SETTINGS_CORES_SELECTION) },
                         )
                     }
@@ -250,6 +254,7 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
                                             applicationContext,
                                         ),
                                 ),
+                            homeViewModel = homeViewModel
                         )
                     }
                     composable(MainRoute.SYSTEM_GAMES) { entry ->

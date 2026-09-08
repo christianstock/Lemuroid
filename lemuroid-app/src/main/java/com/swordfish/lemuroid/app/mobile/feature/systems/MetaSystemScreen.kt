@@ -10,6 +10,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.swordfish.lemuroid.app.mobile.feature.home.HomeViewModel
 import com.swordfish.lemuroid.app.mobile.shared.compose.ui.LemuroidEmptyView
 import com.swordfish.lemuroid.app.mobile.shared.compose.ui.LemuroidSystemCard
 import com.swordfish.lemuroid.app.shared.systems.MetaSystemInfo
@@ -19,12 +20,18 @@ fun MetaSystemsScreen(
     modifier: Modifier = Modifier,
     navController: NavController,
     viewModel: MetaSystemsViewModel,
+    homeViewModel: HomeViewModel,
 ) {
     val metaSystems = viewModel.availableMetaSystems.collectAsState(emptyList())
     MetaSystemsScreen(
         modifier = modifier,
         metaSystems = metaSystems.value,
-        onSystemClicked = { navController.navigate("systems/${it.metaSystem.name}") },
+        onSystemClicked = { 
+            // Update the home screen focus system
+            homeViewModel.setSelectedSystem(it.metaSystem.name)
+            // Navigate back home
+            navController.popBackStack()
+        },
     )
 }
 
