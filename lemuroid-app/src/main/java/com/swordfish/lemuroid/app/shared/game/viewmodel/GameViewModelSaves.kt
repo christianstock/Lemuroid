@@ -161,49 +161,104 @@ class GameViewModelSaves(
         return retroGameView.unserializeState(saveState.state)
     }
 
-    fun saveQuickSave() {
-        currentQuickSave = getCurrentSaveState()
+    suspend fun saveQuickSave() {
+        val state = getCurrentSaveState() ?: return
+        currentQuickSave = state
         quickSaveTimestamp = System.currentTimeMillis()
+
+        withContext(Dispatchers.IO) {
+            statesManager.setQuickSave(game, systemCoreConfig.coreID, state)
+            takeQuickSavePreview()
+        }
+
         // Store in SharedPreferences for access from menu
         prefs.edit().putLong("${game.id}_timestamp", quickSaveTimestamp).apply()
-        Timber.i("✓ Quick save created at: ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(java.util.Date(quickSaveTimestamp))}")
+        Timber.i("✓ Quick save created and persisted.")
         sideEffects.showToast(appContext.getString(R.string.game_toast_quick_save_saved))
     }
 
-    private fun isQuickSaveValid(): Boolean {
-        val save = currentQuickSave ?: return false
+    private fun isQuickSaveValid(save: SaveState?): Boolean {
+        val s = save ?: return false
         return try {
             // Check if the save state version is compatible
-            systemCoreConfig.statesVersion == save.metadata.version
+            systemCoreConfig.statesVersion == s.metadata.version
         } catch (e: Throwable) {
             false
         }
     }
 
-    fun loadQuickSave() {
+    suspend fun loadQuickSave() {
         try {
-            loadSaveState(currentQuickSave ?: return)
-            sideEffects.showToast(appContext.getString(R.string.game_toast_quick_save_loaded))
+            // 1. Try memory
+            var stateToLoad = currentQuickSave
+
+            // 2. Try disk if memory is empty
+            if (stateToLoad == null) {
+                stateToLoad = withContext(Dispatchers.IO) {
+                    statesManager.getQuickSave(game, systemCoreConfig.coreID)
+                }
+            }
+
+            if (stateToLoad == null) {
+                Timber.w("No quick save found to load.")
+                return
+            }
+
+            // 3. Validate
+            if (!isQuickSaveValid(stateToLoad)) {
+                Timber.e("Quick save is incompatible or invalid.")
+                sideEffects.showToast(appContext.getString(R.string.error_message_incompatible_state))
+                return
+            }
+
+            currentQuickSave = stateToLoad
+            
+            // 4. Load with retry/wait for core readiness
+            var loaded = false
+            var retries = 5
+            while (!loaded && retries > 0) {
+                loaded = loadSaveState(stateToLoad)
+                if (!loaded) {
+                    Timber.d("Load quick save failed, retrying... ($retries left)")
+                    delay(200)
+                    retries--
+                }
+            }
+
+            if (loaded) {
+                sideEffects.showToast(appContext.getString(R.string.game_toast_quick_save_loaded))
+            } else {
+                sideEffects.showToast(appContext.getString(R.string.game_toast_load_state_failed))
+            }
         } catch (e: Throwable) {
+            Timber.e(e, "Error loading quick save")
             val errorMessageId =
                 when (e) {
                     is IncompatibleStateException -> R.string.error_message_incompatible_state
                     else -> R.string.game_toast_load_state_failed
                 }
             sideEffects.showToast(appContext.getString(errorMessageId))
-            // Clear the invalid quicksave
-            currentQuickSave = null
-            quickSaveTimestamp = 0
-            prefs.edit().remove("${game.id}_timestamp").apply()
         }
     }
-    
+
+    private suspend fun takeQuickSavePreview() {
+        val sizeInDp = StatesPreviewManager.PREVIEW_SIZE_DP
+        val previewSize = GraphicsUtils.convertDpToPixel(sizeInDp, appContext).roundToInt()
+        val preview = retroGameView.retroGameView?.takeScreenshot(previewSize, 3)
+        if (preview != null) {
+            statesPreviewManager.setQuickSavePreview(game, preview, systemCoreConfig.coreID)
+        }
+    }
+
     fun getQuickSaveTimestamp(): Long {
+        if (quickSaveTimestamp == 0L) {
+            quickSaveTimestamp = prefs.getLong("${game.id}_timestamp", 0)
+        }
         return quickSaveTimestamp
     }
-    
+
     fun hasQuickSave(): Boolean {
-        return currentQuickSave != null && isQuickSaveValid()
+        return getQuickSaveTimestamp() > 0
     }
     
     companion object {

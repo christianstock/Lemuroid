@@ -56,6 +56,12 @@ class GameInteractor(
         }
     }
 
+    fun onResetCheats(game: Game) {
+        GlobalScope.launch {
+            retrogradeDb.gameCheatDao().clearCheatsForGame(game.id)
+        }
+    }
+
     fun supportShortcuts(): Boolean {
         return shortcutsGenerator.supportShortcuts()
     }

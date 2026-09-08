@@ -43,11 +43,13 @@ import com.swordfish.touchinput.radial.sensors.TiltConfiguration
 import com.swordfish.touchinput.radial.settings.TouchControllerSettingsManager
 import gg.padkit.inputevents.InputEvent
 import gg.padkit.inputstate.InputState
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 
 class BaseGameScreenViewModel(
@@ -265,6 +267,10 @@ class BaseGameScreenViewModel(
 
     suspend fun saveSlot(index: Int) {
         if (loadingState.value) return
+        if (index == -1) {
+            saveQuickSave()
+            return
+        }
         withLoading {
             saves.saveSlot(index)
         }
@@ -272,35 +278,24 @@ class BaseGameScreenViewModel(
 
     suspend fun loadSlot(index: Int) {
         if (loadingState.value) return
+        if (index == -1) {
+            loadQuickSave()
+            return
+        }
         withLoading {
             saves.loadSlot(index)
         }
     }
 
-    fun saveQuickSave() {
+    suspend fun saveQuickSave() {
         Timber.d("Saving quick save")
         if (loadingState.value) return
         withLoading {
             saves.saveQuickSave()
-            // Capture screenshot for quick save preview asynchronously
-            viewModelScope.launch {
-                try {
-                    val previewSizePixels = 192  // 96dp * 2
-                    val preview = retroGameView.retroGameView?.takeScreenshot(previewSizePixels, 3)
-                    if (preview != null) {
-                        statesPreviewManager.setQuickSavePreview(game, preview, systemCoreConfig.coreID)
-                        Timber.i("✓ Quick save screenshot saved: ${preview.width}x${preview.height}")
-                    } else {
-                        Timber.w("Failed to capture quick save screenshot")
-                    }
-                } catch (e: Exception) {
-                    Timber.e(e, "❌ Error capturing quick save screenshot")
-                }
-            }
         }
     }
 
-    fun loadQuickSave() {
+    suspend fun loadQuickSave() {
         Timber.d("Loading quick save")
         if (loadingState.value) return
         withLoading {
@@ -348,10 +343,6 @@ class BaseGameScreenViewModel(
         touchControls.handleVirtualInputEvent(events)
     }
 
-    fun toggleCheatMenu() {
-        cheatMenuVisible.value = !cheatMenuVisible.value
-    }
-
     fun closeCheatMenu() {
         cheatMenuVisible.value = false
     }
@@ -382,16 +373,22 @@ class BaseGameScreenViewModel(
     suspend fun captureRewindState() {
         val retroGameView = retroGameView.retroGameView ?: return
         try {
+            // Capture state on emulation thread
             val stateData = retroGameView.serializeState()
+
             rewindManager.captureState(stateData)
-            rewindAvailable.value = rewindManager.isRewindAvailable()
-            rewindBufferStats.value = rewindManager.getBufferStats()
+
+            // Only update available state if it actually changed to reduce UI recomposition
+            val available = rewindManager.isRewindAvailable()
+            if (rewindAvailable.value != available) {
+                rewindAvailable.value = available
+            }
         } catch (e: Throwable) {
             Timber.e(e, "Error capturing rewind state")
         }
     }
 
-    suspend fun startRewind() {
+    fun startRewind() {
         if (rewindManager.isRewindActive()) return
         isPlaying.value = false
         rewindManager.rewindBackward() // Set active
@@ -411,13 +408,9 @@ class BaseGameScreenViewModel(
         }
     }
 
-    suspend fun continueRewind() {
-        // Handled by the loop in startRewind
-    }
-
-    suspend fun stopRewind() {
-        isPlaying.value = true
+    fun stopRewind() {
         rewindManager.stopRewind()
+        isPlaying.value = true
         rewindProgress.value = 0f
     }
 
@@ -432,7 +425,11 @@ class BaseGameScreenViewModel(
     }
 
     fun togglePause() {
-        isPlaying.value = !isPlaying.value
+        setPause(!isPlaying.value)
+    }
+
+    private fun setPause(paused: Boolean) {
+        isPlaying.value = !paused
         retroGameView.retroGameView?.apply {
             frameSpeed = if (isPlaying.value) 1 else 0
         }
@@ -459,12 +456,24 @@ class BaseGameScreenViewModel(
 
         // Periodic rewind capture loop
         owner.launchOnState(androidx.lifecycle.Lifecycle.State.RESUMED) {
-            while (true) {
-                if (isPlaying.value) {
-                    captureRewindState()
+            // Move loop to background thread to prevent audio jitter on the Main thread
+            withContext(Dispatchers.Default) {
+                while (true) {
+                    if (isPlaying.value) {
+                        captureRewindState()
+                    }
+                    delay(100) // 10 snapshots per second for smooth rewind
                 }
-                delay(100) // Capture every 0.1 second
             }
+        }
+    }
+
+    override fun onStop(owner: LifecycleOwner) {
+        super.onStop(owner)
+        // Auto-pause when app is backgrounded/minimized for supported systems
+        val autoPauseSystems = listOf("gb", "gba", "gbc")
+        if (autoPauseSystems.contains(game.systemId)) {
+            setPause(true)
         }
     }
 

@@ -96,22 +96,11 @@ fun GbaPortraitSkin(
     ) {
         Spacer(modifier = Modifier.fillMaxWidth().height(64.dp))
 
-        // --- SECTION 0: INTERACTIVE BAR ---
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp)
-                .padding(horizontal = 12.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            interactiveBar()
-        }
-
         // --- SECTION 1: GBA TALLER/WIDER VIEWPORT HOUSING ---
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(1.35f) // Correctly scaled for a larger, prominent GBA lens housing
+                .aspectRatio(1.5f) // Correctly scaled for a larger, prominent GBA lens housing
                 .padding(horizontal = 8.dp, vertical = 12.dp)
                 .onGloballyPositioned {
                     bezelRect.value = it.boundsInParent()
@@ -134,6 +123,17 @@ fun GbaPortraitSkin(
         ) {
             leftPad(Modifier.weight(1f))
             rightPad(Modifier.weight(1f))
+        }
+
+        // --- SECTION 3: INTERACTIVE BAR (Moved to bottom) ---
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .padding(horizontal = 12.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            interactiveBar()
         }
     }
 }

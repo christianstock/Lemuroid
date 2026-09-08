@@ -46,7 +46,6 @@ fun InteractiveTopBar(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(84.dp)
             .padding(horizontal = 8.dp, vertical = 4.dp),
     ) {
         Row(
@@ -71,8 +70,8 @@ fun InteractiveTopBar(
                     modifier = Modifier
                         .wrapContentSize()
                         .graphicsLayer(
-                            scaleX = 1.0f, // Adjust this down (e.g., 0.6f) to make it even narrower!
-                            scaleY = 1.2f  // Keeps vertical height exactly the same
+                            scaleX = 1.0f,
+                            scaleY = 1.2f
                         ),
                     text = "SAVE",
                     fontSize = 12.sp,
@@ -96,8 +95,8 @@ fun InteractiveTopBar(
                     modifier = Modifier
                         .wrapContentSize()
                         .graphicsLayer(
-                            scaleX = 1.0f, // Adjust this down (e.g., 0.6f) to make it even narrower!
-                            scaleY = 1.2f  // Keeps vertical height exactly the same
+                            scaleX = 1.0f,
+                            scaleY = 1.2f
                         ),
                     text = "LOAD",
                     fontSize = 12.sp,
@@ -130,13 +129,13 @@ fun InteractiveTopBar(
                     modifier = Modifier
                         .wrapContentSize()
                         .graphicsLayer(
-                            scaleX = 1.0f, // Adjust this down (e.g., 0.6f) to make it even narrower!
-                            scaleY = 1.2f  // Keeps vertical height exactly the same
+                            scaleX = 1.0f,
+                            scaleY = 1.2f
                         ),
                     text = "REWIND",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
-                    color = buttonLabelColor
+                    color = if (isRewindAvailable) buttonLabelColor else buttonLabelColor.copy(alpha = 0.3f)
                 )
             }
 
@@ -146,24 +145,20 @@ fun InteractiveTopBar(
                 verticalArrangement = Arrangement.Center,
                 modifier = Modifier
                     .weight(1f)
+                    .combinedClickable(onClick = onPauseToggle)
             ) {
-                Box(
+                Text(
                     modifier = Modifier
-                        .combinedClickable(onClick = onPauseToggle)
-                ) {
-                    Text(
-                        modifier = Modifier
-                            .wrapContentSize()
-                            .graphicsLayer(
-                                scaleX = 1.0f, // Adjust this down (e.g., 0.6f) to make it even narrower!
-                                scaleY = 1.2f  // Keeps vertical height exactly the same
-                            ),
-                        text = "PAUSE",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = buttonLabelColor
-                    )
-                }
+                        .wrapContentSize()
+                        .graphicsLayer(
+                            scaleX = 1.0f,
+                            scaleY = 1.2f
+                        ),
+                    text = if (isPlaying) "PAUSE" else "PLAY",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = buttonLabelColor
+                )
             }
 
             // Menu Button
@@ -186,8 +181,8 @@ fun InteractiveTopBar(
                     modifier = Modifier
                         .wrapContentSize()
                         .graphicsLayer(
-                            scaleX = 1.0f, // Adjust this down (e.g., 0.6f) to make it even narrower!
-                            scaleY = 1.2f  // Keeps vertical height exactly the same
+                            scaleX = 1.0f,
+                            scaleY = 1.2f
                         ),
                     text = "MENU",
                     fontSize = 12.sp,

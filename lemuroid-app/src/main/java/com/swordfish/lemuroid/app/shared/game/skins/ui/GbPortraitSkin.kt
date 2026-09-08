@@ -91,16 +91,6 @@ fun GbPortraitSkin(
     ) {
         Spacer(modifier = Modifier.fillMaxWidth().height(64.dp))
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp)
-                .padding(horizontal = 12.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            interactiveBar()
-        }
-
         // --- SECTION 1: MASTER DISPLAY VIEWPORT CONTAINER ---
         Box(
             modifier = Modifier
@@ -129,6 +119,17 @@ fun GbPortraitSkin(
         ) {
             leftPad(Modifier.weight(1f))
             rightPad(Modifier.weight(1f))
+        }
+
+        // --- SECTION 3: INTERACTIVE BAR (Moved to bottom) ---
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .padding(horizontal = 12.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            interactiveBar()
         }
     }
 }

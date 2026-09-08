@@ -365,6 +365,7 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
                     gameInteractor.onFavoriteToggle(game, isFavorite)
                 },
                 onCreateShortcut = { gameInteractor.onCreateShortcut(it) },
+                onResetCheats = { gameInteractor.onResetCheats(it) },
             )
 
             if (infoDialogDisplayed.value) {

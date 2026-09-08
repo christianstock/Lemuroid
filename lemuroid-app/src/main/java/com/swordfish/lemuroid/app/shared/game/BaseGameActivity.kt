@@ -266,11 +266,15 @@ abstract class BaseGameActivity : ImmersiveActivity() {
     }
 
     private fun performSaveQuickSave() {
-        baseGameScreenViewModel.saveQuickSave()
+        lifecycleScope.launch {
+            baseGameScreenViewModel.saveQuickSave()
+        }
     }
 
     private fun performLoadQuickSave() {
-        baseGameScreenViewModel.loadQuickSave()
+        lifecycleScope.launch {
+            baseGameScreenViewModel.loadQuickSave()
+        }
     }
 
     private fun performToggleFastForward() {

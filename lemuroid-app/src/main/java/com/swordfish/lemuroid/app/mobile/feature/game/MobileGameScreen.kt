@@ -282,9 +282,13 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
                         InteractiveTopBar(
                             isPlaying = isPlayingState.value,
                             isRewindAvailable = rewindAvailableState.value,
-                            onSaveClick = { viewModel.saveQuickSave() },
+                            onSaveClick = {
+                                coroutineScope.launch { viewModel.saveQuickSave() }
+                            },
                             onSaveLongClick = { viewModel.showSaveMenu() },
-                            onLoadClick = { viewModel.loadQuickSave() },
+                            onLoadClick = {
+                                coroutineScope.launch { viewModel.loadQuickSave() }
+                            },
                             onLoadLongClick = { viewModel.showLoadMenu() },
                             onRewindClick = { pressed ->
                                 coroutineScope.launch {
@@ -346,7 +350,7 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
                                         rightGamePad?.invoke(this, mod, touchControllerSettings)
                                     },
                                     interactiveBar = {
-                                        interactiveBarContent(Modifier.fillMaxWidth().height(84.dp))
+                                        interactiveBarContent(Modifier.fillMaxWidth().height(40.dp))
                                     },
                                     modifier = Modifier.fillMaxSize()
                                 )
@@ -366,7 +370,7 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
                                         rightGamePad?.invoke(this, mod, touchControllerSettings)
                                     },
                                     interactiveBar = {
-                                        interactiveBarContent(Modifier.fillMaxWidth().fillMaxHeight())
+                                        interactiveBarContent(Modifier.fillMaxWidth().height(56.dp))
                                     },
                                     modifier = Modifier.fillMaxSize()
                                 )
@@ -390,7 +394,7 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
                                         rightGamePad?.invoke(this, mod, touchControllerSettings)
                                     },
                                     interactiveBar = {
-                                        interactiveBarContent(Modifier.fillMaxWidth().height(84.dp))
+                                        interactiveBarContent(Modifier.fillMaxWidth().height(40.dp))
                                     },
                                     modifier = Modifier.fillMaxSize()
                                 )
@@ -410,7 +414,7 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
                                         rightGamePad?.invoke(this, mod, touchControllerSettings)
                                     },
                                     interactiveBar = {
-                                        interactiveBarContent(Modifier.fillMaxWidth().fillMaxHeight())
+                                        interactiveBarContent(Modifier.fillMaxWidth().height(56.dp))
                                     },
                                     modifier = Modifier.fillMaxSize()
                                 )
@@ -434,7 +438,7 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
                                         rightGamePad?.invoke(this, mod, touchControllerSettings)
                                     },
                                     interactiveBar = {
-                                        interactiveBarContent(Modifier.fillMaxWidth().height(84.dp))
+                                        interactiveBarContent(Modifier.fillMaxWidth().height(40.dp))
                                     },
                                     modifier = Modifier.fillMaxSize()
                                 )
@@ -454,7 +458,7 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
                                         rightGamePad?.invoke(this, mod, touchControllerSettings)
                                     },
                                     interactiveBar = {
-                                        interactiveBarContent(Modifier.fillMaxWidth().fillMaxHeight())
+                                        interactiveBarContent(Modifier.fillMaxWidth().height(56.dp))
                                     },
                                     modifier = Modifier.fillMaxSize()
                                 )

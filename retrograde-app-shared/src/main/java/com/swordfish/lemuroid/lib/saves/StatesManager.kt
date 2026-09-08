@@ -140,6 +140,16 @@ class StatesManager(private val directoriesManager: DirectoriesManager) {
         return File(statesDirectories, "$stateFileName.metadata")
     }
 
+    suspend fun getQuickSave(game: Game, coreID: CoreID): SaveState? {
+        return getSaveState(getQuickSaveFileName(game), coreID.coreName)
+    }
+
+    suspend fun setQuickSave(game: Game, coreID: CoreID, saveState: SaveState) {
+        setSaveState(getQuickSaveFileName(game), coreID.coreName, saveState)
+    }
+
+    private fun getQuickSaveFileName(game: Game) = "${game.fileName}.quicksave"
+
     private fun getAutoSaveFileName(game: Game) = "${game.fileName}.state"
 
     private fun getSlotSaveFileName(

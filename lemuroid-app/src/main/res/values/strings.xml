@@ -108,6 +108,9 @@
     <string name="game_context_menu_resume">Resume</string>
     <string name="game_context_menu_restart">Restart</string>
     <string name="game_context_menu_create_shortcut">Pin to launcher</string>
+    <string name="game_context_menu_reset_cheats">Reset cheats</string>
+
+    <string name="cheat_frozen_warning">Game appears frozen. Disabling cheat: %1$s</string>
 
     <string name="home_notification_title">Enable notifications</string>
     <string name="home_notification_message">Lemuroid uses notifications to let you know when a game or operation is running in background.</string>

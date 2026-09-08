@@ -49,7 +49,7 @@ object GameScreenLayout {
                 top.linkTo(parent.top)
                 absoluteLeft.linkTo(parent.absoluteLeft)
                 absoluteRight.linkTo(parent.absoluteRight)
-                bottom.linkTo(leftPad.top)
+                bottom.linkTo(interactiveBar.top)
             }
 
             constrain(bottomContainer) {
@@ -108,7 +108,7 @@ object GameScreenLayout {
                 top.linkTo(parent.top)
                 absoluteLeft.linkTo(parent.absoluteLeft)
                 absoluteRight.linkTo(parent.absoluteRight)
-                bottom.linkTo(parent.bottom)
+                bottom.linkTo(interactiveBar.top)
             }
 
             constrain(gamePadChain) {

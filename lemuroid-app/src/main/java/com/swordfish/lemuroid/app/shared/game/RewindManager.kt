@@ -96,19 +96,25 @@ class RewindManager(private val context: Context) {
 
         val newStateSize = stateData.size
 
-        // Remove old states if buffer is full
-        while (currentBufferSizeBytes + newStateSize > maxBufferSizeBytes && rewindBuffer.isNotEmpty()) {
-            val removedState = rewindBuffer.removeFirst()
-            currentBufferSizeBytes -= removedState.stateData.size
-        }
+        synchronized(rewindBuffer) {
+            // Remove old states if buffer is full
+            while (currentBufferSizeBytes + newStateSize > maxBufferSizeBytes && rewindBuffer.isNotEmpty()) {
+                val removedState = rewindBuffer.removeFirst()
+                currentBufferSizeBytes -= removedState.stateData.size
+            }
 
-        // Add new state
-        rewindBuffer.addLast(RewindState(stateData.copyOf(), System.currentTimeMillis()))
-        currentBufferSizeBytes += newStateSize
+            // Add new state
+            // Optimization: Remove copyOf() as serializeState() already returns a fresh array.
+            // This reduces GC pressure and CPU usage per snapshot.
+            rewindBuffer.addLast(RewindState(stateData, System.currentTimeMillis()))
+            currentBufferSizeBytes += newStateSize
+        }
     }
 
     fun getRewindStates(): List<RewindState> {
-        return rewindBuffer.toList()
+        return synchronized(rewindBuffer) {
+            rewindBuffer.toList()
+        }
     }
 
     fun getBufferStats(): RewindBufferStats {
@@ -116,75 +122,113 @@ class RewindManager(private val context: Context) {
         val memInfo = ActivityManager.MemoryInfo()
         activityManager.getMemoryInfo(memInfo)
 
-        return RewindBufferStats(
-            stateCount = rewindBuffer.size,
-            bufferSizeBytes = currentBufferSizeBytes,
-            maxBufferSizeBytes = maxBufferSizeBytes,
-            isEnabled = maxBufferSizeBytes > 0,
-            availableMemMB = memInfo.availMem / (1024 * 1024),
-            totalMemMB = memInfo.totalMem / (1024 * 1024)
-        )
+        return synchronized(rewindBuffer) {
+            RewindBufferStats(
+                stateCount = rewindBuffer.size,
+                bufferSizeBytes = currentBufferSizeBytes,
+                maxBufferSizeBytes = maxBufferSizeBytes,
+                isEnabled = maxBufferSizeBytes > 0,
+                availableMemMB = memInfo.availMem / (1024 * 1024),
+                totalMemMB = memInfo.totalMem / (1024 * 1024)
+            )
+        }
     }
 
     fun isRewindAvailable(): Boolean {
-        return rewindBuffer.size > 1
+        return synchronized(rewindBuffer) {
+            rewindBuffer.size > 1
+        }
     }
 
     fun getLatestRewindState(): RewindState? {
-        return if (isRewindActive && rewindIndex < rewindBuffer.size) {
-            rewindBuffer.toList().getOrNull(rewindBuffer.size - 1 - rewindIndex)
-        } else {
-            rewindBuffer.lastOrNull()
+        return synchronized(rewindBuffer) {
+            if (rewindBuffer.isEmpty()) return@synchronized null
+            if (isRewindActive && rewindIndex < rewindBuffer.size) {
+                // Optimize to avoid toList() which is O(N)
+                val iterator = rewindBuffer.descendingIterator()
+                var current: RewindState? = null
+                repeat(rewindIndex + 1) {
+                    if (iterator.hasNext()) {
+                        current = iterator.next()
+                    }
+                }
+                current
+            } else {
+                rewindBuffer.peekLast()
+            }
         }
     }
 
     fun rewindBackward() {
-        if (!isRewindActive) {
-            isRewindActive = true
-            rewindIndex = 0
+        synchronized(rewindBuffer) {
+            if (!isRewindActive) {
+                isRewindActive = true
+                rewindIndex = 0
+            }
+            rewindIndex = min(rewindIndex + 1, rewindBuffer.size - 1)
         }
-        rewindIndex = min(rewindIndex + 1, rewindBuffer.size - 1)
         Timber.d("Rewind backward: index=$rewindIndex")
     }
 
     fun rewindForward() {
-        if (isRewindActive) {
-            rewindIndex = max(rewindIndex - 1, 0)
-            if (rewindIndex == 0) {
-                isRewindActive = false
+        synchronized(rewindBuffer) {
+            if (isRewindActive) {
+                rewindIndex = max(rewindIndex - 1, 0)
+                if (rewindIndex == 0) {
+                    isRewindActive = false
+                }
             }
         }
         Timber.d("Rewind forward: index=$rewindIndex, active=$isRewindActive")
     }
 
     fun getRewindStateAt(index: Int): RewindState? {
-        return rewindBuffer.toList().getOrNull(index)
+        return synchronized(rewindBuffer) {
+            rewindBuffer.toList().getOrNull(index)
+        }
     }
 
     fun stopRewind() {
-        isRewindActive = false
-        rewindIndex = 0
+        synchronized(rewindBuffer) {
+            if (isRewindActive && rewindIndex > 0) {
+                // Truncate the buffer to remove the "future" states that were rewound past.
+                // This ensures that new gameplay starts from the current rewind point
+                // and doesn't just append to the previous timeline.
+                repeat(rewindIndex) {
+                    if (rewindBuffer.isNotEmpty()) {
+                        val removed = rewindBuffer.removeLast()
+                        currentBufferSizeBytes -= removed.stateData.size
+                    }
+                }
+                Timber.i("Rewind buffer truncated: removed $rewindIndex states. New size: ${rewindBuffer.size}")
+            }
+            isRewindActive = false
+            rewindIndex = 0
+        }
     }
 
-    fun isRewindActive(): Boolean = isRewindActive
+    fun isRewindActive(): Boolean = synchronized(rewindBuffer) { isRewindActive }
 
     fun getRewindProgress(): Float {
-        if (rewindBuffer.isEmpty()) return 0f
-        return if (isRewindActive) {
-            // Calculate actual seconds rewound based on snapshot index
-            // rewindIndex represents how many snapshots we've gone back
-            val secondsRewound = rewindIndex * (SNAPSHOT_INTERVAL_MS / 1000f)
-            secondsRewound
-        } else {
-            0f
+        return synchronized(rewindBuffer) {
+            if (rewindBuffer.isEmpty()) return@synchronized 0f
+            if (isRewindActive) {
+                // Calculate actual seconds rewound based on snapshot index
+                // rewindIndex represents how many snapshots we've gone back
+                rewindIndex * (SNAPSHOT_INTERVAL_MS / 1000f)
+            } else {
+                0f
+            }
         }
     }
 
     fun getMaxRewindSeconds(): Float {
-        return if (rewindBuffer.isEmpty()) {
-            0f
-        } else {
-            (rewindBuffer.size - 1) * (SNAPSHOT_INTERVAL_MS / 1000f)
+        return synchronized(rewindBuffer) {
+            if (rewindBuffer.isEmpty()) {
+                0f
+            } else {
+                (rewindBuffer.size - 1) * (SNAPSHOT_INTERVAL_MS / 1000f)
+            }
         }
     }
 }

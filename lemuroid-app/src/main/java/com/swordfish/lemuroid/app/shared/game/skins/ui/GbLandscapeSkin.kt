@@ -89,18 +89,6 @@ fun GbLandscapeSkin(
                 }
             }
     ) {
-        // --- SECTION 0: INTERACTIVE BAR (TOP & NARROW) ---
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(40.dp)
-                .background(color = Color.Transparent) // Keeps the raw case color visible underneath
-                .padding(horizontal = 16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            interactiveBar()
-        }
-
         // --- SECTION 1: MAIN LANDSCAPE ROW ---
         Row(
             modifier = Modifier
@@ -149,6 +137,18 @@ fun GbLandscapeSkin(
             ) {
                 rightPad(Modifier.fillMaxSize())
             }
+        }
+
+        // --- SECTION 0: INTERACTIVE BAR (Moved to bottom) ---
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(40.dp)
+                .background(color = Color.Transparent) // Keeps the raw case color visible underneath
+                .padding(horizontal = 16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            interactiveBar()
         }
     }
 }

@@ -102,8 +102,49 @@ class GameViewModelRetroGameView(
             
             // Re-apply all cheats to ensure correct state in the core
             applyCheats(updatedCheats)
+
+            // If enabling a cheat, check for game freeze after 3 seconds
+            if (enabled) {
+                detectAndRevertFrozenCheat(cheat, updatedCheats)
+            }
         } catch (e: Exception) {
             Timber.e(e, "Error toggling cheat")
+        }
+    }
+
+    private fun detectAndRevertFrozenCheat(cheat: GameCheatEntity, appliedCheats: List<GameCheatEntity>) {
+        scope.launch {
+            try {
+                // Wait 3 seconds to detect if the game freezes
+                delay(3.seconds)
+                
+                // Check if retroGameView is still available (game hasn't crashed)
+                val gameView = retroGameView
+                if (gameView == null) {
+                    Timber.w("Game appears to be frozen after enabling cheat: ${cheat.description}")
+                    
+                    // Disable the cheat that caused the freeze
+                    val revertedCheats = appliedCheats.map {
+                        if (it.cheatIndex == cheat.cheatIndex) it.copy(enabled = false) else it
+                    }
+                    
+                    // Update database
+                    cheatManager.updateCheatEnabled(cheat.gameId, cheat.cheatIndex, false)
+                    
+                    // Re-apply cheats without the frozen one
+                    cheatsFlow.value = revertedCheats
+                    applyCheats(revertedCheats)
+                    
+                    // Notify user
+                    val message = appContext.getString(
+                        R.string.cheat_frozen_warning,
+                        cheat.description
+                    )
+                    sideEffects.showToast(message)
+                }
+            } catch (e: Exception) {
+                Timber.e(e, "Error detecting freeze for cheat")
+            }
         }
     }
 

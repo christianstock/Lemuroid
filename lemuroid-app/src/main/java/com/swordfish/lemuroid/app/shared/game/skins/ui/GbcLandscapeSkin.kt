@@ -43,18 +43,6 @@ fun GbcLandscapeSkin(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top
     ) {
-        // --- SECTION 0: INTERACTIVE BAR (TOP & NARROW) ---
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(40.dp)
-                .background(color = skin.caseColor)
-                .padding(horizontal = 16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            interactiveBar()
-        }
-
         // --- SECTION 1: MAIN LANDSCAPE ROW ---
         // Kept transparent so it doesn't mask the background game window surface
         Row(
@@ -182,6 +170,18 @@ fun GbcLandscapeSkin(
             ) {
                 rightPad(Modifier.fillMaxSize())
             }
+        }
+
+        // --- SECTION 0: INTERACTIVE BAR (Moved to bottom) ---
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(40.dp)
+                .background(color = skin.caseColor)
+                .padding(horizontal = 16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            interactiveBar()
         }
     }
 }
