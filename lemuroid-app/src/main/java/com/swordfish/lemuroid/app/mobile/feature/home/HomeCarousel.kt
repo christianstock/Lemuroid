@@ -83,7 +83,7 @@ fun HomeCarousel(
     ) {
         // --- LAYER 0: GLOBAL GAME INFO (TOP) ---
         val currentGame = games[pagerState.currentPage % gamesCount]
-        val titleParts = currentGame.title.split("-", limit = 2).map { it.trim() }
+        val titleParts = currentGame.title.split(" - ", limit = 2).map { it.trim() }
         val mainTitle = titleParts[0]
         val subTitle = titleParts.getOrNull(1)
 
