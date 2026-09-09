@@ -76,10 +76,10 @@ interface GameDao {
     @Query("SELECT * FROM games")
     suspend fun selectAll(): List<Game>
 
-    @Query("SELECT * FROM games WHERE systemId = :systemId ORDER BY lastPlayedAt DESC, title ASC")
+    @Query("SELECT * FROM games WHERE LOWER(systemId) = LOWER(:systemId) ORDER BY lastPlayedAt DESC, title ASC")
     fun selectBySystemOrderedByRecentsFlow(systemId: String): Flow<List<Game>>
 
-    @Query("SELECT * FROM games WHERE systemId IN (:systemIds) ORDER BY lastPlayedAt DESC, title ASC")
+    @Query("SELECT * FROM games WHERE LOWER(systemId) IN (:systemIds) ORDER BY lastPlayedAt DESC, title ASC")
     fun selectBySystemsOrderedByRecentsFlow(systemIds: List<String>): Flow<List<Game>>
 
     @Query("SELECT * FROM games WHERE lastPlayedAt IS NOT NULL ORDER BY lastPlayedAt DESC LIMIT 1")
@@ -87,6 +87,9 @@ interface GameDao {
 
     @Query("SELECT DISTINCT systemId FROM games ORDER BY systemId ASC")
     fun selectSystemsFlow(): Flow<List<String>>
+
+    @Query("SELECT LOWER(systemId) FROM games GROUP BY LOWER(systemId) ORDER BY max(lastPlayedAt) DESC, LOWER(systemId) ASC")
+    fun selectSystemsOrderedByRecentsFlow(): Flow<List<String>>
 
     @Insert
     fun insert(games: List<Game>): List<Long>

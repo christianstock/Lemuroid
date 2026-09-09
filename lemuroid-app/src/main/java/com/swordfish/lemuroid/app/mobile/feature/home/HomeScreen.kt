@@ -8,14 +8,9 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -65,21 +60,20 @@ fun HomeScreen(
 
     val state = viewModel.getViewStates().collectAsState(HomeViewModel.UIState())
     HomeScreen(
-        modifier,
-        state.value,
-        onGameClick,
-        onGameLongClick,
-        onNavigateToSystemList,
-        onOpenCoreSelection,
-        {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-                return@HomeScreen
+        modifier = modifier,
+        state = state.value,
+        onGameClicked = onGameClick,
+        onShowContextMenu = onGameLongClick,
+        onNavigateToSystemList = onNavigateToSystemList,
+        onOpenCoreSelection = onOpenCoreSelection,
+        onSystemSelected = { viewModel.setSelectedSystem(it) },
+        onEnableNotificationsClicked = {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                permissionsLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
-
-            permissionsLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         },
-        { permissionsLauncher.launch(Manifest.permission.RECORD_AUDIO) },
-        { viewModel.changeLocalStorageFolder(context) },
+        onEnableMicrophoneClicked = { permissionsLauncher.launch(Manifest.permission.RECORD_AUDIO) },
+        onSetDirectoryClicked = { viewModel.changeLocalStorageFolder(context) },
     )
 }
 
@@ -91,6 +85,7 @@ private fun HomeScreen(
     onShowContextMenu: (Game) -> Unit,
     onNavigateToSystemList: (Game) -> Unit,
     onOpenCoreSelection: () -> Unit,
+    onSystemSelected: (String) -> Unit,
     onEnableNotificationsClicked: () -> Unit,
     onEnableMicrophoneClicked: () -> Unit,
     onSetDirectoryClicked: () -> Unit,
@@ -122,8 +117,8 @@ private fun HomeScreen(
         AnimatedVisibility(state.showNoMicrophonePermissionCard) {
             HomeNotification(
                 titleId = R.string.home_microphone_title,
-                messageId = R.string.home_microphone_message,
-                actionId = R.string.home_microphone_action,
+                messageId = R.string.home_notification_action,
+                actionId = R.string.home_notification_action,
                 onAction = onEnableMicrophoneClicked,
             )
         }
@@ -136,14 +131,16 @@ private fun HomeScreen(
             )
         }
 
-        if (state.games.isNotEmpty()) {
+        if (state.games.isNotEmpty() || state.availableSystems.isNotEmpty()) {
             HomeCarousel(
                 games = state.games,
+                availableSystems = state.availableSystems,
                 selectedSystemId = state.selectedSystemId,
                 refreshCount = state.refreshCount,
                 onGameClick = onGameClicked,
                 onShowContextMenu = onShowContextMenu,
                 onNavigateToList = onNavigateToSystemList,
+                onSystemSelected = onSystemSelected,
                 modifier = Modifier.weight(1f)
             )
         } else if (!state.showNoGamesCard) {
