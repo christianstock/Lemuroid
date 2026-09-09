@@ -11,10 +11,12 @@ import com.swordfish.lemuroid.lib.library.db.entity.Game
 import com.swordfish.lemuroid.lib.library.db.entity.GameCheatEntity
 import com.swordfish.lemuroid.lib.storage.DirectoriesManager
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
+import timber.log.Timber
 import java.io.File
 import java.util.zip.ZipInputStream
 import android.content.Context
@@ -42,6 +44,10 @@ class CheatManager(
 
     suspend fun getAllCheats(gameId: Int): List<GameCheatEntity> = withContext(Dispatchers.IO) {
         gameCheatDao.getCheatsForGame(gameId)
+    }
+
+    fun getAllCheatsFlow(gameId: Int): Flow<List<GameCheatEntity>> {
+        return gameCheatDao.getCheatsForGameFlow(gameId)
     }
 
     suspend fun updateCheatEnabled(gameId: Int, cheatIndex: Int, enabled: Boolean) = withContext(Dispatchers.IO) {
@@ -200,7 +206,7 @@ class CheatManager(
                                            totalCheats++
                                            systemCheatCount++
                                        } catch (e: Exception) {
-                                           // Silent fail
+                                           Timber.e(e, "Error inserting cheat for game ${game.id}")
                                        }
                                    }
                                }

@@ -83,6 +83,10 @@ fun HomeCarousel(
     ) {
         // --- LAYER 0: GLOBAL GAME INFO (TOP) ---
         val currentGame = games[pagerState.currentPage % gamesCount]
+        val titleParts = currentGame.title.split("-", limit = 2).map { it.trim() }
+        val mainTitle = titleParts[0]
+        val subTitle = titleParts.getOrNull(1)
+
         Column(
             modifier = Modifier
                 .align(Alignment.TopCenter)
@@ -91,21 +95,43 @@ fun HomeCarousel(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = currentGame.title,
+                text = mainTitle,
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Black,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(horizontal = 32.dp)
             )
-            currentGame.developer?.let {
+            
+            subTitle?.let {
                 Text(
                     text = it,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Medium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .padding(start = 32.dp, end = 32.dp, top = 0.dp)
+                        .graphicsLayer {
+                            scaleX = 0.85f;
+                            scaleY = 0.90f;
+                        }
+                )
+            }
+
+            currentGame.developer?.let { developer ->
+                val yearRegex = Regex("\\b(19|20)\\d{2}\\b")
+                val year = yearRegex.find(developer)?.value
+                val displayDev = if (year != null) developer.replace(year, "").replace(Regex(",\\s*$"), "").trim() else developer
+                
+                Text(
+                    text = listOfNotNull(displayDev.takeIf { it.isNotEmpty() }, year).joinToString(" | "),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(top = 4.dp)
+                    modifier = Modifier.padding(top = 2.dp)
                 )
             }
+            // Release year if we can find it (assuming it's sometimes in developer or not available)
+            // Note: The database doesn't currently store a separate 'year' field in the Game entity.
         }
 
         // --- LAYER 1: CARTRIDGE CAROUSEL (Behind the System Slot) ---
@@ -178,14 +204,9 @@ fun HomeCarousel(
                         contentAlignment = Alignment.Center
                     ) {
                         GameCartridge(
-                            systemId = game.systemId,
+                            game = game,
                             modifier = Modifier.fillMaxSize()
-                        ) {
-                            LemuroidGameImage(
-                                game = game,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
+                        )
                     }
                 }
             }

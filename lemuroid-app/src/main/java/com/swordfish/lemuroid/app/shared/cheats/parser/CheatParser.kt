@@ -7,37 +7,55 @@ import java.util.Properties
 object CheatParser {
     fun parse(inputStream: InputStream): List<Cheat> {
         val properties = Properties()
-        properties.load(inputStream)
-
-        // Normalize all keys by trimming them (in case file has spaces around = sign)
-        val normalizedProps = mutableMapOf<String, String>()
-        for ((key, value) in properties) {
-            normalizedProps[(key as String).trim()] = (value as String).trim()
+        try {
+            properties.load(inputStream)
+        } catch (e: Exception) {
+            return emptyList()
         }
 
+        // Normalize all keys by trimming them
+        val normalizedProps = mutableMapOf<String, String>()
+        properties.forEach { key, value ->
+            if (key is String && value is String) {
+                normalizedProps[key.trim()] = value.trim()
+            }
+        }
+
+        // Try getting count from "cheats" key
         val cheatsCountStr = normalizedProps["cheats"]?.removeSurrounding("\"")
-        val cheatsCount = cheatsCountStr?.toIntOrNull() ?: 0
+        var cheatsCount = cheatsCountStr?.toIntOrNull() ?: 0
         
+        // Fallback: If "cheats" is 0, try to count cheatX_code occurrences
+        if (cheatsCount == 0) {
+            cheatsCount = normalizedProps.keys.count { it.startsWith("cheat") && it.endsWith("_code") }
+        }
+
         if (cheatsCount == 0) {
             return emptyList()
         }
         
         val cheats = mutableListOf<Cheat>()
 
-        for (i in 0 until cheatsCount) {
+        // Use a map to handle non-contiguous indices if they exist
+        val indices = normalizedProps.keys
+            .filter { it.startsWith("cheat") && it.endsWith("_code") }
+            .mapNotNull { it.removePrefix("cheat").removeSuffix("_code").toIntOrNull() }
+            .sorted()
+
+        for (i in indices) {
             val codeKey = "cheat${i}_code"
             var code = normalizedProps[codeKey]?.removeSurrounding("\"") ?: continue
             
-            // Handle hybrid format: strip _L prefix if present (PSP cheats use "_L 0x... 0x..." format in LibRetro files)
+            // Handle hybrid format: strip _L prefix if present
             if (code.startsWith("_L ")) {
                 code = code.removePrefix("_L ").trim()
             }
 
             val descKey = "cheat${i}_desc"
-            var desc = normalizedProps[descKey]?.removeSurrounding("\"") ?: "Cheat $i"
+            val desc = normalizedProps[descKey]?.removeSurrounding("\"") ?: "Cheat $i"
 
             val enableKey = "cheat${i}_enable"
-            val enabled = normalizedProps[enableKey]?.toBoolean() ?: false
+            val enabled = normalizedProps[enableKey]?.equals("true", ignoreCase = true) ?: false
 
             // Check multiple possible type keys
             val typeKey1 = "cheat${i}_type"

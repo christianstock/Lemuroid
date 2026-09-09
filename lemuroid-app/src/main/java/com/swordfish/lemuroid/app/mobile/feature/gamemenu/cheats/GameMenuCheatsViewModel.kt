@@ -7,8 +7,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.swordfish.lemuroid.app.shared.cheats.CheatManager
 import com.swordfish.lemuroid.lib.library.db.entity.GameCheatEntity
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 
 class GameMenuCheatsViewModel(
@@ -26,27 +25,15 @@ class GameMenuCheatsViewModel(
         }
     }
 
-    private val _cheats = MutableStateFlow<List<GameCheatEntity>>(emptyList())
-    val cheats: StateFlow<List<GameCheatEntity>> = _cheats
+    val cheats: Flow<List<GameCheatEntity>> = cheatManager.getAllCheatsFlow(gameId)
 
     var cheatsChanged: Boolean = false
         private set
-
-    init {
-        loadCheats()
-    }
-
-    private fun loadCheats() {
-        viewModelScope.launch {
-            _cheats.value = cheatManager.getAllCheats(gameId)
-        }
-    }
 
     fun toggleCheat(cheat: GameCheatEntity, enabled: Boolean) {
         viewModelScope.launch {
             cheatManager.updateCheatEnabled(gameId, cheat.cheatIndex, enabled)
             cheatsChanged = true
-            loadCheats()
         }
     }
 
@@ -54,7 +41,6 @@ class GameMenuCheatsViewModel(
         viewModelScope.launch {
             cheatManager.importCheats(appContext, gameId, uri)
             cheatsChanged = true
-            loadCheats()
         }
     }
 }

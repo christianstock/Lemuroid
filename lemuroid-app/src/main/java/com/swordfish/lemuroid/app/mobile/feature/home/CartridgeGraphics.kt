@@ -15,28 +15,33 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.swordfish.lemuroid.app.mobile.shared.compose.ui.LemuroidGameImage
+import com.swordfish.lemuroid.lib.library.db.entity.Game
 
 @Composable
 fun GameCartridge(
-    systemId: String,
+    game: Game,
     modifier: Modifier = Modifier,
-    content: @Composable () -> Unit
 ) {
     Box(
-        modifier = modifier.aspectRatio(0.9f),
+        modifier = modifier.aspectRatio(0.85f), // Slightly taller for notch
         contentAlignment = Alignment.Center
     ) {
-        when (systemId) {
-            "gb", "gbc" -> GbGbcCartridgeShape(content)
-            "gba" -> GbaCartridgeShape(content)
-            else -> DefaultCartridgeShape(content)
+        when (game.systemId) {
+            "gb", "gbc" -> GbGbcCartridgeShape(game)
+            "gba" -> GbaCartridgeShape(game)
+            else -> DefaultCartridgeShape(game)
         }
     }
 }
 
 @Composable
-private fun GbGbcCartridgeShape(content: @Composable () -> Unit) {
+private fun GbGbcCartridgeShape(game: Game) {
     val cartridgeColor = Color(0xFF3A3A3A) // Dark grey
     val detailColor = Color(0xFF4A4A4A)    // shade lighter
     val lineInsetColor = Color(0xFF2A2A2A) // shade darker
@@ -46,80 +51,126 @@ private fun GbGbcCartridgeShape(content: @Composable () -> Unit) {
             val w = size.width
             val h = size.height
             
-            // 1. Slightly rounded corners for the cartridge body
-            drawRoundRect(
-                color = cartridgeColor,
-                size = size,
-                cornerRadius = CornerRadius(8.dp.toPx())
-            )
+            // 1. Body Path with top-right notch and sharpish corners
+            val shellPath = Path().apply {
+                val r = 1.5.dp.toPx() // Less rounded corners
+                val notchW = 16.dp.toPx()
+                val notchH = 12.dp.toPx()
+                
+                moveTo(r, 0f)
+                lineTo(w - notchW, 0f)
+                lineTo(w - notchW, notchH)
+                lineTo(w, notchH)
+                lineTo(w, h - r)
+                quadraticTo(w, h, w - r, h)
+                lineTo(r, h)
+                quadraticTo(0f, h, 0f, h - r)
+                lineTo(0f, r)
+                quadraticTo(0f, 0f, r, 0f)
+                close()
+            }
+            drawPath(shellPath, cartridgeColor)
             
-            // 2. Top Area details (Moved down slightly)
-            val firstLineY = 16.dp.toPx()
+            // 2. Side Grooves (60% height from bottom)
+            val grooveW = 4.dp.toPx()
+            val grooveH = h * 0.75f
+            val grooveY = h - grooveH - 0.dp.toPx()
+            
+            // Two thin darker stripes on each side
+            drawRect(lineInsetColor, Offset(0.dp.toPx(), grooveY), Size(grooveW, grooveH))
+
+            drawRect(lineInsetColor, Offset(w - 4.dp.toPx(), grooveY), Size(grooveW, grooveH))
+
+            // 3. Top Area details
+            val firstLineY = 26.dp.toPx()
             val lineSpacing = 6.dp.toPx()
-            val lastLineY = firstLineY + 3 * lineSpacing
+            val lastLineY = firstLineY + 4 * lineSpacing // 5 lines
             
-            // 4 thin lines crossing the entire width
-            repeat(4) { i ->
+            // 5 thin lines crossing the entire width
+            repeat(5) { i ->
                 val lineY = firstLineY + i * lineSpacing
                 drawRect(
                     color = lineInsetColor,
                     topLeft = Offset(0f, lineY),
-                    size = Size(w, 1.dp.toPx())
+                    size = Size(w, 3.dp.toPx())
                 )
             }
             
-            // "Oval" (Rounded Box) - Wider
-            val labelPadding = 16.dp.toPx() // Wider than box art
-            val ovalW = w - labelPadding * 2
-            val ovalH = (lastLineY - firstLineY) + 2.dp.toPx()
+            // Grip Rounded Box - Lowered to cover 5th line, stretched
+            val labelPadding = 16.dp.toPx()
+            val ovalW = w - labelPadding * 2 - 16.dp.toPx()
+            val ovalH = (lastLineY - firstLineY) + 16.dp.toPx()
             drawRoundRect(
                 color = detailColor,
-                topLeft = Offset(labelPadding, firstLineY - 1.dp.toPx()),
+                topLeft = Offset(labelPadding + 8.dp.toPx(), firstLineY - 8.dp.toPx()),
                 size = Size(ovalW, ovalH),
                 cornerRadius = CornerRadius(ovalH / 2)
             )
+
+            // Nintendo GAME BOY Text
+            drawContext.canvas.nativeCanvas.apply {
+                val paint = android.graphics.Paint().apply {
+                    color = cartridgeColor.toArgb()
+                    textSize = 12.sp.toPx()
+                    typeface = android.graphics.Typeface.create("sans-serif-condensed", android.graphics.Typeface.NORMAL)
+                    textAlign = android.graphics.Paint.Align.CENTER
+                }
+                drawText("Nintendo", w / 2 - 38.dp.toPx(), firstLineY + ovalH / 2 - 0.dp.toPx(), paint)
+            }
+
+            drawContext.canvas.nativeCanvas.apply {
+                val paint = android.graphics.Paint().apply {
+                    color = cartridgeColor.toArgb()
+                    textSize = 18.sp.toPx()
+                    typeface = android.graphics.Typeface.create("sans-serif-condensed", android.graphics.Typeface.BOLD_ITALIC)
+                    textAlign = android.graphics.Paint.Align.CENTER
+                }
+                drawText("GAME BOY", w / 2 + 32.dp.toPx(), firstLineY + ovalH / 2 - 0.dp.toPx(), paint)
+            }
             
-            // 3. Down triangle (Moved down a bit)
+            // 4. Down triangle (Darker color, Lower)
             val triW = 32.dp.toPx()
             val triH = 20.dp.toPx()
-            val triBottomOffset = 8.dp.toPx() // Lower down
+            val triBottomOffset = 4.dp.toPx() // Lowered
             val triPath = Path().apply {
                 moveTo(w / 2 - triW / 2, h - triH - triBottomOffset)
                 lineTo(w / 2 + triW / 2, h - triH - triBottomOffset)
                 lineTo(w / 2, h - triBottomOffset)
                 close()
             }
-            drawPath(triPath, detailColor)
+            drawPath(triPath, lineInsetColor)
         }
         
-        // 4. Box art with less rounded corners (4.dp)
+        // 5. Box art with more rounded corners (10.dp)
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(start = 24.dp, end = 24.dp, top = 60.dp, bottom = 32.dp)
-                .background(
-                    Color.Black.copy(alpha = 0.05f),
-                    androidx.compose.foundation.shape.RoundedCornerShape(4.dp)
-                )
-                .clip(androidx.compose.foundation.shape.RoundedCornerShape(4.dp)),
+                .padding(start = 24.dp, end = 24.dp, top = 68.dp, bottom = 32.dp)
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp)),
             contentAlignment = Alignment.Center
         ) {
-            content()
+            LemuroidGameImage(
+                game = game,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.FillBounds,
+                applyAspectRatio = false
+            )
         }
     }
 }
 
 @Composable
-private fun GbaCartridgeShape(content: @Composable () -> Unit) {
-    val cartridgeColor = Color(0xFF333333) // Dark grey
+private fun GbaCartridgeShape(game: Game) {
+    val cartridgeColor = Color(0xFF3A3A3A) // Dark grey
     val detailColor = Color(0xFF4A4A4A)    // shade lighter
+    val lineInsetColor = Color(0xFF2A2A2A) // shade darker
     
     Box(modifier = Modifier.fillMaxSize()) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val w = size.width
             val h = size.height
-            val overhangH = 24.dp.toPx()
-            val sideIndent = 12.dp.toPx()
+            val overhangH = 36.dp.toPx()
+            val sideIndent = 6.dp.toPx()
             
             // 1. T-Shaped body with slight overhang on top (Slightly Rounded Corners)
             val path = Path().apply {
@@ -146,49 +197,72 @@ private fun GbaCartridgeShape(content: @Composable () -> Unit) {
             drawPath(path, cartridgeColor)
             
             // 2. Half-oval on top
-            val ovalW = w * 0.6f
-            val ovalH = 16.dp.toPx()
+            val ovalW = w * 0.8f
+            val ovalH = 56.dp.toPx()
             drawArc(
                 color = detailColor,
                 startAngle = 180f,
                 sweepAngle = 180f,
                 useCenter = true,
-                topLeft = Offset((w - ovalW) / 2, -ovalH / 2),
+                topLeft = Offset((w - ovalW) / 2, 4.dp.toPx()),
                 size = Size(ovalW, ovalH)
             )
+
+            val firstLineY = 4.dp.toPx()
+            // Nintendo GAME BOY Text
+            drawContext.canvas.nativeCanvas.apply {
+                val paint = android.graphics.Paint().apply {
+                    color = cartridgeColor.toArgb()
+                    textSize = 14.sp.toPx()
+                    typeface = android.graphics.Typeface.create("sans-serif-condensed", android.graphics.Typeface.BOLD_ITALIC)
+                    textAlign = android.graphics.Paint.Align.CENTER
+                }
+                drawText("GAME BOY", w / 2 - 32.dp.toPx(), firstLineY + ovalH / 2 - 4.dp.toPx(), paint)
+            }
+
+            drawContext.canvas.nativeCanvas.apply {
+                val paint = android.graphics.Paint().apply {
+                    color = cartridgeColor.toArgb()
+                    textSize = 12.sp.toPx()
+                    typeface = android.graphics.Typeface.create("sans-serif-condensed", android.graphics.Typeface.BOLD_ITALIC)
+                    textAlign = android.graphics.Paint.Align.CENTER
+                }
+                drawText("ADVANCE", w / 2 + 32.dp.toPx(), firstLineY + ovalH / 2 - 6.dp.toPx(), paint)
+            }
             
             // 3. Down triangle at bottom center
-            val triW = 20.dp.toPx()
-            val triH = 10.dp.toPx()
-            val triBottomOffset = 10.dp.toPx()
+            val triW = 32.dp.toPx()
+            val triH = 20.dp.toPx()
+            val triBottomOffset = 6.dp.toPx()
             val triPath = Path().apply {
                 moveTo(w / 2 - triW / 2, h - triH - triBottomOffset)
                 lineTo(w / 2 + triW / 2, h - triH - triBottomOffset)
                 lineTo(w / 2, h - triBottomOffset)
                 close()
             }
-            drawPath(triPath, detailColor)
+            drawPath(triPath, lineInsetColor)
         }
         
         // 4. Content (Box Art) - matching the indent and overhang
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(start = 24.dp, end = 24.dp, top = 36.dp, bottom = 32.dp)
-                .background(
-                    Color.Black.copy(alpha = 0.2f),
-                    androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
-                )
+                .padding(start = 24.dp, end = 24.dp, top = 44.dp, bottom = 32.dp)
                 .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp)),
             contentAlignment = Alignment.Center
         ) {
-            content()
+            LemuroidGameImage(
+                game = game,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.FillBounds,
+                applyAspectRatio = false
+            )
         }
     }
 }
 
 @Composable
-private fun DefaultCartridgeShape(content: @Composable () -> Unit) {
+private fun DefaultCartridgeShape(game: Game) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -196,6 +270,10 @@ private fun DefaultCartridgeShape(content: @Composable () -> Unit) {
             .padding(8.dp),
         contentAlignment = Alignment.Center
     ) {
-        content()
+        LemuroidGameImage(
+            game = game,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Fit
+        )
     }
 }

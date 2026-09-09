@@ -132,10 +132,16 @@ class HomeViewModel(
 
         // Clean up game titles by removing info in brackets only
         val cleanedGames = games.map { game ->
-            val cleanedTitle = game.title
+            var cleanedTitle = game.title
                 .replace(Regex("\\s*\\([^)]*\\)"), "") // Remove (...)
                 .replace(Regex("\\s*\\[[^]]*\\]"), "") // Remove [...]
                 .trim()
+
+            // Move ", The" to the front (e.g. "Lord of the Rings, The" -> "The Lord of the Rings")
+            if (cleanedTitle.contains(", The", ignoreCase = true)) {
+                cleanedTitle = cleanedTitle.replace(Regex("^(.*),\\s*[Tt]he\\b(.*)$"), "The $1$2").trim()
+            }
+
             if (cleanedTitle.isEmpty()) game else game.copy(title = cleanedTitle)
         }
 

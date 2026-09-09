@@ -17,11 +17,15 @@ object CwCheatParser {
      */
     fun parse(inputStream: InputStream): List<Cheat> {
         val cheats = mutableListOf<Cheat>()
-        val lines = inputStream.bufferedReader().readLines()
+        val lines = try {
+            inputStream.bufferedReader().readLines()
+        } catch (e: Exception) {
+            return emptyList()
+        }
 
         var currentCheatIndex = 0
         var currentCheatName = ""
-        var currentCheatCode = mutableListOf<String>()
+        val currentCheatCode = mutableListOf<String>()
 
         for (line in lines) {
             val trimmedLine = line.trim()
@@ -44,17 +48,15 @@ object CwCheatParser {
                             type = "CWCheat"
                         )
                     )
+                    currentCheatCode.clear()
                 }
 
                 // Parse new cheat title
                 currentCheatName = trimmedLine
-                    .removePrefix("_C0 ")
-                    .removePrefix("_C1 ")
-                    .removePrefix("_C ")
+                    .replace(Regex("^_C[0-9]*\\s*"), "")
                     .removeSurrounding("\"")
+                    .trim()
                     .ifEmpty { "Cheat ${currentCheatIndex}" }
-
-                currentCheatCode = mutableListOf()
             }
 
             // Code line (starts with _L)

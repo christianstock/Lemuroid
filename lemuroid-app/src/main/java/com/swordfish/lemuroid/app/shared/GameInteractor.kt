@@ -58,7 +58,7 @@ class GameInteractor(
 
     fun onResetCheats(game: Game) {
         GlobalScope.launch {
-            retrogradeDb.gameCheatDao().clearCheatsForGame(game.id)
+            retrogradeDb.gameCheatDao().disableAllCheatsForGame(game.id)
         }
     }
 

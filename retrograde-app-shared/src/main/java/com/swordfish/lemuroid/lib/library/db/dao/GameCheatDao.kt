@@ -5,11 +5,15 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.swordfish.lemuroid.lib.library.db.entity.GameCheatEntity
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface GameCheatDao {
     @Query("SELECT * FROM game_cheats WHERE gameId = :gameId")
     suspend fun getCheatsForGame(gameId: Int): List<GameCheatEntity>
+
+    @Query("SELECT * FROM game_cheats WHERE gameId = :gameId")
+    fun getCheatsForGameFlow(gameId: Int): Flow<List<GameCheatEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertCheat(cheat: GameCheatEntity)
@@ -22,6 +26,9 @@ interface GameCheatDao {
 
     @Query("DELETE FROM game_cheats WHERE gameId = :gameId")
     suspend fun clearCheatsForGame(gameId: Int)
+
+    @Query("UPDATE game_cheats SET enabled = 0 WHERE gameId = :gameId")
+    suspend fun disableAllCheatsForGame(gameId: Int)
 
     @Query("DELETE FROM game_cheats")
     suspend fun clearAllCheats()
