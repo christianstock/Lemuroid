@@ -160,7 +160,7 @@ abstract class LemuroidApplicationModule {
         fun retrogradeDb(app: LemuroidApplication) =
             Room.databaseBuilder(app, RetrogradeDatabase::class.java, RetrogradeDatabase.DB_NAME)
                 .addCallback(GameSearchDao.CALLBACK)
-                .addMigrations(GameSearchDao.MIGRATION, Migrations.VERSION_8_9, Migrations.VERSION_9_10)
+                .addMigrations(GameSearchDao.MIGRATION, Migrations.VERSION_8_9, Migrations.VERSION_9_10, Migrations.VERSION_11_12)
                 .fallbackToDestructiveMigration()
                 .build()
 
@@ -210,6 +210,12 @@ abstract class LemuroidApplicationModule {
             OkHttpClient.Builder()
                 .connectTimeout(1, TimeUnit.MINUTES)
                 .readTimeout(1, TimeUnit.MINUTES)
+                .addInterceptor { chain ->
+                    val request = chain.request().newBuilder()
+                        .header("User-Agent", "Lemuroid-Android-App")
+                        .build()
+                    chain.proceed(request)
+                }
                 .build()
 
         @Provides
@@ -405,10 +411,14 @@ abstract class LemuroidApplicationModule {
         @Provides
         @PerApp
         @JvmStatic
+        fun motionManager(context: Context) = com.swordfish.lemuroid.app.shared.motion.MotionManager(context)
+
+        @Provides
+        @PerApp
+        @JvmStatic
         fun rumbleManager(
             context: Context,
-            settingsManager: SettingsManager,
             inputDeviceManager: InputDeviceManager,
-        ) = RumbleManager(context, settingsManager, inputDeviceManager)
+        ) = RumbleManager(context, inputDeviceManager)
     }
 }

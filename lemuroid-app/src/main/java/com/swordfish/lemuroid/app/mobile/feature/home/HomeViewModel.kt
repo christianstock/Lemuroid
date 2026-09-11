@@ -4,15 +4,16 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.swordfish.lemuroid.app.shared.library.PendingOperationsMonitor
 import com.swordfish.lemuroid.app.shared.settings.StorageFrameworkPickerLauncher
+import com.swordfish.lemuroid.common.kotlin.cleanGameTitle
 import com.swordfish.lemuroid.lib.core.CoresSelection
 import com.swordfish.lemuroid.lib.library.CoreID
-import com.swordfish.lemuroid.lib.library.MetaSystemID
 import com.swordfish.lemuroid.lib.library.SystemID
 import com.swordfish.lemuroid.lib.library.db.RetrogradeDatabase
 import com.swordfish.lemuroid.lib.library.db.entity.Game
@@ -21,7 +22,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -41,6 +41,7 @@ class HomeViewModel(
     companion object {
         private const val PREFS_NAME = "home_prefs"
         private const val KEY_SELECTED_SYSTEM = "selected_system_id"
+        private const val TAG = "HomeVM"
     }
 
     private val prefs = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -56,10 +57,15 @@ class HomeViewModel(
         }
     }
 
+    data class SystemLibrary(
+        val systemId: String,
+        val games: List<Game>
+    )
+
     data class UIState(
-        val games: List<Game> = emptyList(),
-        val availableSystems: List<String> = emptyList(),
+        val systemLibraries: List<SystemLibrary> = emptyList(),
         val selectedSystemId: String? = null,
+        val systemScrollPositions: Map<String, Int> = emptyMap(),
         val indexInProgress: Boolean = true,
         val refreshCount: Int = 0,
         val showNoNotificationPermissionCard: Boolean = false,
@@ -72,19 +78,34 @@ class HomeViewModel(
     private val notificationsPermissionEnabledState = MutableStateFlow(true)
     private val refreshCountState = MutableStateFlow(0)
     private val selectedSystemIdState = MutableStateFlow<String?>(prefs.getString(KEY_SELECTED_SYSTEM, null))
+    private val systemScrollPositionsState = MutableStateFlow<Map<String, Int>>(emptyMap())
     private val uiStates = MutableStateFlow(UIState())
 
     fun getViewStates(): Flow<UIState> = uiStates
 
     fun setSelectedSystem(systemId: String) {
         val normalizedId = systemId.lowercase()
+        if (selectedSystemIdState.value == normalizedId) return
+        
+        Log.d(TAG, "setSelectedSystem: $normalizedId")
         selectedSystemIdState.value = normalizedId
         prefs.edit().putString(KEY_SELECTED_SYSTEM, normalizedId).apply()
         refreshCountState.value++
     }
 
+    fun setSystemScrollPosition(systemId: String, position: Int) {
+        val current = systemScrollPositionsState.value.toMutableMap()
+        if (current[systemId] == position) return
+        current[systemId] = position
+        systemScrollPositionsState.value = current
+    }
+
     fun changeLocalStorageFolder(context: Context) {
         StorageFrameworkPickerLauncher.pickFolder(context)
+    }
+
+    fun refresh() {
+        refreshCountState.value++
     }
 
     fun updatePermissions(context: Context) {
@@ -102,42 +123,7 @@ class HomeViewModel(
         return ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
     }
 
-    private fun buildViewState(
-        games: List<Game>,
-        availableSystems: List<String>,
-        selectedSystemId: String?,
-        refreshCount: Int,
-        indexInProgress: Boolean,
-        notificationsPermissionEnabled: Boolean,
-        showMicrophoneCard: Boolean,
-        showDesmumeWarning: Boolean,
-    ): UIState {
-        val cleanedGames = games.map { game ->
-            var cleanedTitle = game.title
-                .replace(Regex("\\s*\\([^)]*\\)"), "") 
-                .replace(Regex("\\s*\\[[^]]*\\]"), "")
-                .trim()
-            if (cleanedTitle.contains(", The", ignoreCase = true)) {
-                cleanedTitle = cleanedTitle.replace(Regex("^(.*),\\s*[Tt]he\\b(.*)$"), "The $1$2").trim()
-            }
-            if (cleanedTitle.isEmpty()) game else game.copy(title = cleanedTitle)
-        }
-
-        return UIState(
-            games = cleanedGames,
-            availableSystems = availableSystems,
-            selectedSystemId = selectedSystemId,
-            indexInProgress = indexInProgress,
-            refreshCount = refreshCount,
-            showNoNotificationPermissionCard = !notificationsPermissionEnabled,
-            showNoMicrophonePermissionCard = showMicrophoneCard,
-            showNoGamesCard = games.isEmpty() && availableSystems.isEmpty(),
-            showDesmumeDeprecatedCard = showDesmumeWarning,
-        )
-    }
-
     init {
-        // Handle initial selection
         viewModelScope.launch {
             if (selectedSystemIdState.value == null) {
                 val lastPlayedGame = retrogradeDb.gameDao().selectLastPlayedGameFlow().first()
@@ -150,69 +136,57 @@ class HomeViewModel(
             }
         }
 
-        // --- UNIFIED STATE PIPELINE ---
         viewModelScope.launch {
-            @OptIn(ExperimentalCoroutinesApi::class)
-            val pipeline = combine(
+            val uiStatesFlow = combine(
+                retrogradeDb.gameDao().selectSystemsFlow(), // Use stable alphabetical flow for carousel
+                retrogradeDb.gameDao().selectAllFlow(),
                 selectedSystemIdState,
+                systemScrollPositionsState,
                 refreshCountState,
-                retrogradeDb.gameDao().selectSystemsOrderedByRecentsFlow().onStart { emit(emptyList()) },
                 notificationsPermissionEnabledState,
                 indexingInProgress(appContext).onStart { emit(false) },
                 microphoneNotification(retrogradeDb).onStart { emit(false) },
                 desmumeWarningNotification().onStart { emit(false) }
             ) { params ->
-                val sysId = params[0] as String?
-                val ref = params[1] as Int
-                val systems = params[2] as List<String>
-                val notifications = params[3] as Boolean
-                val indexing = params[4] as Boolean
-                val micro = params[5] as Boolean
-                val desmume = params[6] as Boolean
-                
-                Metadata(sysId, ref, systems, notifications, indexing, micro, desmume)
-            }.flatMapLatest { meta ->
-                if (meta.sysId == null) {
-                    flowOf(buildViewState(emptyList(), meta.systems, null, meta.ref, meta.indexing, meta.notifications, meta.micro, meta.desmume))
-                } else {
-                    val sysIdLower = meta.sysId.lowercase()
-                    val isConcrete = SystemID.entries.any { it.dbname.equals(sysIdLower, ignoreCase = true) }
-                    val gamesSource = if (isConcrete) {
-                        retrogradeDb.gameDao().selectBySystemOrderedByRecentsFlow(sysIdLower)
-                    } else {
-                        val metaSys = MetaSystemID.entries.find { it.name.equals(meta.sysId, ignoreCase = true) }
-                        if (metaSys != null) {
-                            retrogradeDb.gameDao().selectBySystemsOrderedByRecentsFlow(metaSys.systemIDs.map { it.dbname.lowercase() })
-                        } else {
-                            retrogradeDb.gameDao().selectBySystemOrderedByRecentsFlow(sysIdLower)
+                val availableSystems = params[0] as List<String>
+                val allGames = params[1] as List<Game>
+                val selectedSystemId = params[2] as String?
+                val scrollPositions = params[3] as Map<String, Int>
+                val refreshCount = params[4] as Int
+                val notificationsEnabled = params[5] as Boolean
+                val indexInProgress = params[6] as Boolean
+                val microphoneEnabled = params[7] as Boolean
+                val desmumeWarning = params[8] as Boolean
+
+                // Group and process games per system
+                val systemLibraries = availableSystems.map { sysId ->
+                    val systemGames = allGames
+                        .filter { it.systemId.lowercase() == sysId.lowercase() }
+                        .map { game ->
+                            val cleaned = game.title.cleanGameTitle()
+                            if (cleaned != game.title) game.copy(title = cleaned) else game
                         }
-                    }
-
-                    gamesSource.map { games ->
-                        buildViewState(games, meta.systems, meta.sysId, meta.ref, meta.indexing, meta.notifications, meta.micro, meta.desmume)
-                    }.onStart {
-                        emit(buildViewState(emptyList(), meta.systems, meta.sysId, meta.ref, meta.indexing, meta.notifications, meta.micro, meta.desmume))
-                    }.catch {
-                        emit(buildViewState(emptyList(), meta.systems, meta.sysId, meta.ref, meta.indexing, meta.notifications, meta.micro, meta.desmume))
-                    }
+                    SystemLibrary(sysId, systemGames)
                 }
-            }
 
-            pipeline
-                .flowOn(Dispatchers.Main.immediate)
+                UIState(
+                    systemLibraries = systemLibraries,
+                    selectedSystemId = selectedSystemId,
+                    systemScrollPositions = scrollPositions,
+                    indexInProgress = indexInProgress,
+                    refreshCount = refreshCount,
+                    showNoNotificationPermissionCard = !notificationsEnabled,
+                    showNoMicrophonePermissionCard = microphoneEnabled,
+                    showNoGamesCard = systemLibraries.isEmpty(),
+                    showDesmumeDeprecatedCard = desmumeWarning
+                )
+            }.distinctUntilChanged()
+
+            uiStatesFlow
+                .flowOn(Dispatchers.IO)
                 .collect { uiStates.value = it }
         }
     }
-
-    private data class Metadata(
-        val sysId: String?,
-        val ref: Int,
-        val systems: List<String>,
-        val notifications: Boolean,
-        val indexing: Boolean,
-        val micro: Boolean,
-        val desmume: Boolean
-    )
 
     private fun indexingInProgress(appContext: Context) =
         PendingOperationsMonitor(appContext).anyLibraryOperationInProgress()

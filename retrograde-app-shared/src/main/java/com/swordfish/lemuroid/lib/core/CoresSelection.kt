@@ -68,6 +68,11 @@ class CoresSelection(
 
     private fun getSelectedCoreNameForSystem(system: GameSystem): Flow<String> {
         return flow {
+            if (system.id == SystemID.GB || system.id == SystemID.GBC) {
+                emit(CoreID.MGBA.coreName)
+                return@flow
+            }
+
             val preferenceKey = computeSystemPreferenceKey(system.id)
             val currentValue = flowSharedPreferences.sharedPreferences.getString(preferenceKey, null)
             var defaultValue = currentValue
@@ -90,6 +95,10 @@ class CoresSelection(
 
     // TODO Also get rid of this when desmume is gone
     private fun getDefaultCoreForSystem(system: GameSystem): String {
+        if (system.id == SystemID.GB || system.id == SystemID.GBC) {
+            return CoreID.MGBA.coreName
+        }
+
         if (system.id == SystemID.NDS) {
             return if (desmumeMigrationHandler.hasPendingDesmumeSaves()) {
                 CoreID.DESMUME.coreName

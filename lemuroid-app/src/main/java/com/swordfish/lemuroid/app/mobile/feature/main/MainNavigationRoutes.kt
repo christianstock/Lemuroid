@@ -97,6 +97,12 @@ enum class MainRoute(
         parent = SETTINGS,
         showBottomNavigation = false,
     ),
+    GAME_INFO(
+        route = "gameinfo/{gameId}",
+        titleId = R.string.title_game_info,
+        arguments = listOf(navArgument("gameId") { type = NavType.IntType }),
+        showBottomNavigation = false,
+    ),
     ;
 
     val root = root()

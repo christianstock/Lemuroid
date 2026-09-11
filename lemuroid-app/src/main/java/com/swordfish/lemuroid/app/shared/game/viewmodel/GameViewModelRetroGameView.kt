@@ -2,6 +2,7 @@ package com.swordfish.lemuroid.app.shared.game.viewmodel
 
 import android.content.Context
 import android.content.pm.PackageManager
+import android.hardware.Sensor
 import android.net.Uri
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.DefaultLifecycleObserver
@@ -22,6 +23,7 @@ import com.swordfish.lemuroid.lib.core.CoreVariablesManager
 import com.swordfish.lemuroid.lib.game.GameLoader
 import com.swordfish.lemuroid.lib.game.GameLoaderError
 import com.swordfish.lemuroid.lib.game.GameLoaderException
+import com.swordfish.lemuroid.lib.library.CoreID
 import com.swordfish.lemuroid.lib.library.GameSystem
 import com.swordfish.lemuroid.lib.library.SystemCoreConfig
 import com.swordfish.lemuroid.lib.library.db.entity.Game
@@ -32,6 +34,7 @@ import com.swordfish.libretrodroid.GLRetroViewData
 import com.swordfish.libretrodroid.ImmersiveMode
 import com.swordfish.libretrodroid.Variable
 import com.swordfish.libretrodroid.VirtualFile
+import com.swordfish.touchinput.radial.sensors.HardwareSensorManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -39,7 +42,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
@@ -58,8 +63,11 @@ class GameViewModelRetroGameView(
     private val coreVariablesManager: CoreVariablesManager,
     private val sideEffects: GameViewModelSideEffects,
     private val rumbleManager: RumbleManager,
+    private val motionManager: com.swordfish.lemuroid.app.shared.motion.MotionManager,
     private val scope: CoroutineScope,
 ) : DefaultLifecycleObserver {
+    private val hardwareSensorManager = HardwareSensorManager(appContext)
+
     sealed interface GameState {
         data object Uninitialized : GameState
 
@@ -88,6 +96,8 @@ class GameViewModelRetroGameView(
     fun getCheats(): Flow<List<GameCheatEntity>> {
         return cheatsFlow
     }
+
+    fun getSensorDebugInfo(): Flow<String> = motionManager.debugInfo
 
     suspend fun toggleCheat(cheat: GameCheatEntity, enabled: Boolean) {
         try {
@@ -174,7 +184,7 @@ class GameViewModelRetroGameView(
         val hdMode = settingsManager.hdMode()
         val hdModeQuality = settingsManager.hdModeQuality()
         val lowLatencyAudio = settingsManager.lowLatencyAudio()
-        val enableRumble = settingsManager.enableRumble()
+        val enableRumble = true // Force enabled
         val directLoad = settingsManager.allowDirectGameLoad()
         val enableImmersiveMode = settingsManager.enableImmersiveMode()
 
@@ -220,7 +230,6 @@ class GameViewModelRetroGameView(
                                 hdModeQuality,
                                 filter,
                                 lowLatencyAudio,
-                                enableRumble,
                                 enableMicrophone,
                                 enableImmersiveMode,
                             )
@@ -292,7 +301,6 @@ class GameViewModelRetroGameView(
         hdModeQuality: HDModeQuality,
         screenFilter: String,
         lowLatencyAudio: Boolean,
-        requestRumble: Boolean,
         requestMicrophone: Boolean,
         enableImmersiveMode: Boolean,
     ): GLRetroViewData {
@@ -322,7 +330,7 @@ class GameViewModelRetroGameView(
                     GameSystem.findById(gameData.game.systemId),
                 )
             preferLowLatencyAudio = lowLatencyAudio
-            rumbleEventsEnabled = requestRumble
+            rumbleEventsEnabled = true // Force enabled
             skipDuplicateFrames = systemCoreConfig.skipDuplicateFrames
             enableMicrophone = requestMicrophone
             immersiveMode = buildImmersiveModeConfiguration(enableImmersiveMode)
@@ -374,6 +382,32 @@ class GameViewModelRetroGameView(
 
         owner.launchOnState(Lifecycle.State.RESUMED) {
             initializeRumbleFlow()
+        }
+
+        owner.launchOnState(Lifecycle.State.RESUMED) {
+            initializeMotionFlow()
+        }
+    }
+
+    private suspend fun initializeMotionFlow() {
+        val retroView = retroGameViewFlow()
+        // Try to get enabled sensors flow via reflection if AAR isn't updated yet
+        val enabledSensors: Flow<Set<Int>> = try {
+            val method = retroView.javaClass.getMethod("getEnabledSensors")
+            @Suppress("UNCHECKED_CAST")
+            method.invoke(retroView) as Flow<Set<Int>>
+        } catch (e: Exception) {
+            Timber.e("Reflection: getEnabledSensors method not found in GLRetroView")
+            emptyFlow()
+        }
+        motionManager.collectAndProcessMotionEvents(systemCoreConfig, retroView, enabledSensors) { missingType ->
+            val sensorName = when (missingType) {
+                Sensor.TYPE_LIGHT -> "Light Sensor"
+                Sensor.TYPE_ACCELEROMETER -> "Accelerometer"
+                Sensor.TYPE_GYROSCOPE -> "Gyroscope"
+                else -> "Unknown"
+            }
+            sideEffects.showToast("Hardware $sensorName missing. Using manual settings.")
         }
     }
 

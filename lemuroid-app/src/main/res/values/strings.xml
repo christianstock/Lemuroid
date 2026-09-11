@@ -1,6 +1,8 @@
 <resources>
     <string name="title_home">Home</string>
     <string name="title_search">Search</string>
+    <string name="title_game_info">Game Info</string>
+    <string name="game_context_menu_game_info">Game Info</string>
     <string name="title_systems">Systems</string>
     <string name="title_games">Games</string>
     <string name="title_settings">Settings</string>

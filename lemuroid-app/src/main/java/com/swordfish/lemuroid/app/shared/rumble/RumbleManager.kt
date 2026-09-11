@@ -5,7 +5,6 @@ import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.view.InputDevice
-import com.swordfish.lemuroid.app.mobile.feature.settings.SettingsManager
 import com.swordfish.lemuroid.app.shared.input.InputDeviceManager
 import com.swordfish.lemuroid.common.coroutines.safeCollect
 import com.swordfish.lemuroid.lib.library.SystemCoreConfig
@@ -25,7 +24,6 @@ import kotlin.math.roundToInt
 @OptIn(ExperimentalCoroutinesApi::class, DelicateCoroutinesApi::class)
 class RumbleManager(
     applicationContext: Context,
-    private val settingsManager: SettingsManager,
     private val inputDeviceManager: InputDeviceManager,
 ) {
     private val deviceVibrator = applicationContext.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
@@ -35,7 +33,7 @@ class RumbleManager(
         systemCoreConfig: SystemCoreConfig,
         rumbleEventsObservable: Flow<RumbleEvent>,
     ) {
-        val enableRumble = settingsManager.enableRumble()
+        val enableRumble = true // Always enabled
         val rumbleSupported = systemCoreConfig.rumbleSupported
 
         if (!enableRumble && rumbleSupported) {
@@ -60,8 +58,8 @@ class RumbleManager(
         }
     }
 
-    private suspend fun getVibrators(gamePads: List<InputDevice>): List<Vibrator> {
-        val enableDeviceRumble = settingsManager.enableDeviceRumble()
+    private fun getVibrators(gamePads: List<InputDevice>): List<Vibrator> {
+        val enableDeviceRumble = true // Always enabled
 
         return if (gamePads.isEmpty() && enableDeviceRumble) {
             listOf(deviceVibrator)

@@ -92,16 +92,23 @@ class LemuroidLibrary(
         startedAtMs: Long,
         gameMetadata: GameMetadataProvider,
     ) = flow<Unit> {
+        Timber.i("Scanning batch of ${batch.size} files")
         val entries = batch.map { fetchEntriesFromDatabase(it) }
 
         val existingEntries = entries.filterIsInstance<ScanEntry.GameFile>()
-        handleExistingEntries(existingEntries, startedAtMs)
+        if (existingEntries.isNotEmpty()) {
+            Timber.i("Updating ${existingEntries.size} existing games")
+            handleExistingEntries(existingEntries, startedAtMs)
+        }
 
         val newEntries =
             entries.filterIsInstance<ScanEntry.File>()
-                .map { buildEntryFromMetadata(it.file, provider, gameMetadata, startedAtMs) }
-
-        handleNewEntries(newEntries, startedAtMs, provider)
+        
+        if (newEntries.isNotEmpty()) {
+            Timber.i("Found ${newEntries.size} new potential games. Fetching metadata...")
+            val processedNewEntries = newEntries.map { buildEntryFromMetadata(it.file, provider, gameMetadata, startedAtMs) }
+            handleNewEntries(processedNewEntries, startedAtMs, provider)
+        }
     }
 
     private fun fetchEntriesFromDatabase(storageFile: GroupedStorageFiles): ScanEntry {
@@ -235,11 +242,18 @@ class LemuroidLibrary(
         metadataProvider: GameMetadataProvider,
         startedAtMs: Long,
     ): ScanEntry {
+        Timber.d("Building entry for: ${groupedStorageFile.primaryFile.name}")
         val game =
             sortedFilesForScanning(groupedStorageFile).asFlow()
                 .mapNotNull { safeStorageFile(provider, it) }
                 .mapNotNull { storageFile ->
+                    Timber.v("Retrieving metadata for technical file: ${storageFile.name} (CRC: ${storageFile.crc})")
                     val metadata = metadataProvider.retrieveMetadata(storageFile)
+                    if (metadata != null) {
+                        Timber.i("Match found: ${metadata.name} for ${storageFile.name}")
+                    } else {
+                        Timber.w("No match found for ${storageFile.name}")
+                    }
                     convertGameMetadataToGame(groupedStorageFile, storageFile, metadata, startedAtMs)
                 }
                 .firstOrNull()
@@ -301,7 +315,12 @@ class LemuroidLibrary(
             title = gameMetadata.name ?: groupedStorageFile.primaryFile.name,
             systemId = gameSystem.id.dbname,
             developer = gameMetadata.developer,
+            publisher = gameMetadata.publisher,
             coverFrontUrl = gameMetadata.thumbnail,
+            coverBackUrl = gameMetadata.thumbnailBack,
+            releaseDate = gameMetadata.releaseDate,
+            summary = gameMetadata.summary,
+            country = gameMetadata.country,
             lastIndexedAt = lastIndexedAt,
         )
     }

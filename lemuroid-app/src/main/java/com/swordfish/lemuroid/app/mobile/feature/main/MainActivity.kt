@@ -30,8 +30,12 @@ import com.swordfish.lemuroid.app.mobile.feature.favorites.FavoritesScreen
 import com.swordfish.lemuroid.app.mobile.feature.favorites.FavoritesViewModel
 import com.swordfish.lemuroid.app.mobile.feature.games.GamesScreen
 import com.swordfish.lemuroid.app.mobile.feature.games.GamesViewModel
+import com.swordfish.lemuroid.app.mobile.feature.gameinfo.GameInfoScreen
+import com.swordfish.lemuroid.app.mobile.feature.gameinfo.GameInfoViewModel
 import com.swordfish.lemuroid.app.mobile.feature.home.HomeScreen
 import com.swordfish.lemuroid.app.mobile.feature.home.HomeViewModel
+import com.swordfish.lemuroid.lib.library.metadata.GameMetadataProvider
+import com.swordfish.lemuroid.lib.storage.StorageProviderRegistry
 import com.swordfish.lemuroid.app.mobile.feature.search.SearchScreen
 import com.swordfish.lemuroid.app.mobile.feature.search.SearchViewModel
 import com.swordfish.lemuroid.app.mobile.feature.settings.advanced.AdvancedSettingsScreen
@@ -110,6 +114,12 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
     @Inject
     lateinit var cheatManager: CheatManager
 
+    @Inject
+    lateinit var gameMetadataProvider: GameMetadataProvider
+
+    @Inject
+    lateinit var storageProviderRegistry: com.swordfish.lemuroid.lib.storage.StorageProviderRegistry
+
     private val reviewManager = ReviewManager()
 
     private val mainViewModel: MainViewModel by viewModels {
@@ -135,6 +145,11 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
             val navController = rememberNavController()
             MainScreen(navController)
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        homeViewModel.refresh()
     }
 
     @OptIn(ExperimentalMaterial3Api::class)
@@ -358,6 +373,22 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
                                 ),
                         )
                     }
+                    composable(MainRoute.GAME_INFO) { entry ->
+                        val gameId = entry.arguments?.getInt("gameId") ?: 0
+                        GameInfoScreen(
+                            viewModel = viewModel(
+                                factory = GameInfoViewModel.Factory(
+                                    appContext = applicationContext,
+                                    gameId = gameId,
+                                    retrogradeDb = retrogradeDb,
+                                    metadataProvider = gameMetadataProvider,
+                                    storageProviderRegistry = storageProviderRegistry
+                                )
+                            ),
+                            modifier = Modifier.padding(padding),
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
                 }
             }
 
@@ -371,6 +402,9 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
                 },
                 onCreateShortcut = { gameInteractor.onCreateShortcut(it) },
                 onResetCheats = { gameInteractor.onResetCheats(it) },
+                onNavigateToGameInfo = { game ->
+                    navController.navigate("gameinfo/${game.id}")
+                }
             )
 
             if (infoDialogDisplayed.value) {

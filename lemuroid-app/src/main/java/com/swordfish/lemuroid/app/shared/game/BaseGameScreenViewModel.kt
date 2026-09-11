@@ -22,6 +22,7 @@ import com.swordfish.lemuroid.app.shared.game.viewmodel.GameViewModelSideEffects
 import com.swordfish.lemuroid.app.shared.game.viewmodel.GameViewModelTilt
 import com.swordfish.lemuroid.app.shared.game.viewmodel.GameViewModelTouchControls
 import com.swordfish.lemuroid.app.shared.input.InputDeviceManager
+import com.swordfish.lemuroid.app.shared.motion.MotionManager
 import com.swordfish.lemuroid.app.shared.rumble.RumbleManager
 import com.swordfish.lemuroid.app.shared.settings.ControllerConfigsManager
 import com.swordfish.lemuroid.app.shared.settings.HapticFeedbackMode
@@ -66,6 +67,7 @@ class BaseGameScreenViewModel(
     private val statesPreviewManager: StatesPreviewManager,
     coreVariablesManager: CoreVariablesManager,
     rumbleManager: RumbleManager,
+    private val motionManager: MotionManager,
     private val cheatManager: CheatManager,
 ) : ViewModel(), DefaultLifecycleObserver {
     class Factory(
@@ -82,6 +84,7 @@ class BaseGameScreenViewModel(
         private val statesPreviewManager: StatesPreviewManager,
         private val coreVariablesManager: CoreVariablesManager,
         private val rumbleManager: RumbleManager,
+        private val motionManager: MotionManager,
         private val cheatManager: CheatManager,
     ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -99,6 +102,7 @@ class BaseGameScreenViewModel(
                 statesPreviewManager,
                 coreVariablesManager,
                 rumbleManager,
+                motionManager,
                 cheatManager,
             ) as T
         }
@@ -115,6 +119,7 @@ class BaseGameScreenViewModel(
             coreVariablesManager,
             sideEffects,
             rumbleManager,
+            motionManager,
             viewModelScope,
         )
     private val tilt = GameViewModelTilt(appContext, settingsManager)
@@ -183,6 +188,8 @@ class BaseGameScreenViewModel(
     fun getSimulatedTiltEvents(): Flow<InputState> {
         return tilt.getSimulatedTiltEvents()
     }
+
+    fun getSensorDebugInfo(): Flow<String> = retroGameView.getSensorDebugInfo()
 
     fun getTouchControlsSettings(
         density: Density,

@@ -44,6 +44,7 @@ fun HomeScreen(
         when (event) {
             Lifecycle.Event.ON_RESUME -> {
                 viewModel.updatePermissions(applicationContext)
+                viewModel.refresh()
             }
             else -> { }
         }
@@ -61,6 +62,7 @@ fun HomeScreen(
     val state = viewModel.getViewStates().collectAsState(HomeViewModel.UIState())
     HomeScreen(
         modifier = modifier,
+        viewModel = viewModel,
         state = state.value,
         onGameClicked = onGameClick,
         onShowContextMenu = onGameLongClick,
@@ -80,6 +82,7 @@ fun HomeScreen(
 @Composable
 private fun HomeScreen(
     modifier: Modifier = Modifier,
+    viewModel: HomeViewModel,
     state: HomeViewModel.UIState,
     onGameClicked: (Game) -> Unit,
     onShowContextMenu: (Game) -> Unit,
@@ -131,16 +134,17 @@ private fun HomeScreen(
             )
         }
 
-        if (state.games.isNotEmpty() || state.availableSystems.isNotEmpty()) {
+        if (state.systemLibraries.isNotEmpty()) {
             HomeCarousel(
-                games = state.games,
-                availableSystems = state.availableSystems,
+                systemLibraries = state.systemLibraries,
                 selectedSystemId = state.selectedSystemId,
+                systemScrollPositions = state.systemScrollPositions,
                 refreshCount = state.refreshCount,
                 onGameClick = onGameClicked,
                 onShowContextMenu = onShowContextMenu,
                 onNavigateToList = onNavigateToSystemList,
                 onSystemSelected = onSystemSelected,
+                onSystemScroll = { systemId, pos -> viewModel.setSystemScrollPosition(systemId, pos) },
                 modifier = Modifier.weight(1f)
             )
         } else if (!state.showNoGamesCard) {

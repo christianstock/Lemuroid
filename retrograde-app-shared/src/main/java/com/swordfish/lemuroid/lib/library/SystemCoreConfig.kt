@@ -19,4 +19,5 @@ data class SystemCoreConfig(
     val skipDuplicateFrames: Boolean = true,
     val supportedOnlyArchitectures: Set<String>? = null,
     val supportsMicrophone: Boolean = false,
+    val sensorsSupported: Boolean = false,
 ) : Serializable

@@ -70,4 +70,15 @@ object Migrations {
                 )
             }
         }
+
+    val VERSION_11_12: Migration =
+        object : Migration(11, 12) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE games ADD COLUMN publisher TEXT")
+                database.execSQL("ALTER TABLE games ADD COLUMN coverBackUrl TEXT")
+                database.execSQL("ALTER TABLE games ADD COLUMN releaseDate TEXT")
+                database.execSQL("ALTER TABLE games ADD COLUMN summary TEXT")
+                database.execSQL("ALTER TABLE games ADD COLUMN country TEXT")
+            }
+        }
 }

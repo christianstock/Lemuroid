@@ -34,6 +34,7 @@
     <string name="setting_gambatte_dark_filter_level">Darken screen</string>
     <string name="setting_gambatte_gbc_color_correction">Color correction</string>
     <string name="setting_mgba_solar_sensor_level">Solar sensor level</string>
+    <string name="setting_mgba_allow_sensor" translatable="false">Allow hardware sensors (Solar/Tilt)</string>
     <string name="setting_mgba_interframe_blending">LCD ghosting</string>
     <string name="setting_mgba_frameskip">Frameskip</string>
     <string name="setting_mgba_color_correction">Color correction</string>

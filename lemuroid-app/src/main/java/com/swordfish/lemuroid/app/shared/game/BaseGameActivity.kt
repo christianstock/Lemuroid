@@ -23,6 +23,7 @@ import com.swordfish.lemuroid.app.shared.coreoptions.CoreOption
 import com.swordfish.lemuroid.app.shared.coreoptions.LemuroidCoreOption
 import com.swordfish.lemuroid.app.shared.game.viewmodel.GameViewModelSideEffects
 import com.swordfish.lemuroid.app.shared.input.InputDeviceManager
+import com.swordfish.lemuroid.app.shared.motion.MotionManager
 import com.swordfish.lemuroid.app.shared.rumble.RumbleManager
 import com.swordfish.lemuroid.app.shared.settings.ControllerConfigsManager
 import com.swordfish.lemuroid.app.tv.game.TVGameActivity
@@ -83,6 +84,9 @@ abstract class BaseGameActivity : ImmersiveActivity() {
     lateinit var rumbleManager: RumbleManager
 
     @Inject
+    lateinit var motionManager: MotionManager
+
+    @Inject
     lateinit var cheatManager: CheatManager
 
     @Inject
@@ -116,6 +120,7 @@ abstract class BaseGameActivity : ImmersiveActivity() {
                 statesPreviewManager,
                 coreVariablesManager,
                 rumbleManager,
+                motionManager,
                 cheatManager,
             )
         }

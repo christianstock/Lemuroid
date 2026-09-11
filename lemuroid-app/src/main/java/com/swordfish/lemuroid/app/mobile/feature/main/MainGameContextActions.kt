@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.safeContent
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Star
@@ -50,6 +51,7 @@ fun MainGameContextActions(
     onFavoriteToggle: (Game, Boolean) -> Unit,
     onCreateShortcut: (Game) -> Unit,
     onResetCheats: (Game) -> Unit,
+    onNavigateToGameInfo: (Game) -> Unit,
 ) {
     val modalSheetState = rememberModalBottomSheetState(true)
     val selectedGame = selectedGameState.value
@@ -73,6 +75,7 @@ fun MainGameContextActions(
                 selectedGameState = selectedGameState,
                 onGameRestart = onGameRestart,
                 onResetCheats = onResetCheats,
+                onNavigateToGameInfo = onNavigateToGameInfo,
             )
         }
     }
@@ -85,6 +88,7 @@ private fun ContextActionContent(
     selectedGameState: MutableState<Game?>,
     onGameRestart: (Game) -> Unit,
     onResetCheats: (Game) -> Unit,
+    onNavigateToGameInfo: (Game) -> Unit,
 ) {
     Column(
         modifier =
@@ -98,7 +102,7 @@ private fun ContextActionContent(
         Box(
             modifier = Modifier
                 .padding(top = 16.dp)
-                .size(200.dp) // Even bigger as requested
+                .size(200.dp)
                 .clip(MaterialTheme.shapes.medium),
             contentAlignment = Alignment.Center
         ) {
@@ -119,13 +123,27 @@ private fun ContextActionContent(
         )
         
         selectedGame.developer?.let {
+            val yearRegex = Regex("\\b(19|20)\\d{2}\\b")
+            val year = selectedGame.releaseDate?.take(4) ?: yearRegex.find(it)?.value
+            val displayDev = if (year != null) it.replace(year, "").replace(Regex(",\\s*$"), "").trim() else it
+            
             Text(
-                text = it,
+                text = listOfNotNull(displayDev.takeIf { it.isNotEmpty() }, year).joinToString(" | "),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(top = 4.dp, bottom = 24.dp)
             )
+        } ?: run {
+            selectedGame.releaseDate?.take(4)?.let { year ->
+                Text(
+                    text = year,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = 4.dp, bottom = 24.dp)
+                )
+            }
         }
 
         Divider(modifier = Modifier.padding(horizontal = 24.dp))
@@ -144,6 +162,14 @@ private fun ContextActionContent(
             icon = Icons.Default.RestartAlt,
             onClick = {
                 onGameRestart(selectedGame)
+                selectedGameState.value = null
+            },
+        )
+        ContextActionEntry(
+            label = stringResource(id = R.string.game_context_menu_game_info),
+            icon = Icons.Default.Info,
+            onClick = {
+                onNavigateToGameInfo(selectedGame)
                 selectedGameState.value = null
             },
         )
@@ -170,7 +196,7 @@ private fun ContextActionEntry(
             modifier
                 .fillMaxWidth()
                 .clickable(onClick = onClick)
-                .height(64.dp) // Taller row for better touch targets
+                .height(64.dp)
                 .padding(horizontal = 24.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

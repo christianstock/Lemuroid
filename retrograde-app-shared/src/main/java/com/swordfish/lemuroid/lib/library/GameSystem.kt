@@ -450,6 +450,50 @@ data class GameSystem(
                     R.string.game_system_abbr_gb,
                     listOf(
                         SystemCoreConfig(
+                            CoreID.MGBA,
+                            exposedSettings =
+                                listOf(
+                                    ExposedSetting(
+                                        "mgba_interframe_blending",
+                                        R.string.setting_mgba_interframe_blending,
+                                        arrayListOf(
+                                            ExposedSetting.Value(
+                                                "OFF",
+                                                R.string.value_mgba_interframe_blending_off,
+                                            ),
+                                            ExposedSetting.Value(
+                                                "mix",
+                                                R.string.value_mgba_interframe_blending_mix,
+                                            ),
+                                            ExposedSetting.Value(
+                                                "lcd_ghosting",
+                                                R.string.value_mgba_interframe_blending_lcd_ghosting,
+                                            ),
+                                            ExposedSetting.Value(
+                                                "lcd_ghosting_fast",
+                                                R.string.value_mgba_interframe_blending_lcd_ghosting_fast,
+                                            ),
+                                        ),
+                                    ),
+                                ),
+                            rumbleSupported = true,
+                            sensorsSupported = true,
+                            defaultSettings =
+                                listOf(
+                                    CoreVariable("mgba_rumble", "ON"),
+                                    CoreVariable("mgba_tilt_sensor", "ON"),
+                                    CoreVariable("mgba_gyro_sensor", "ON"),
+                                    CoreVariable("mgba_rtc", "ON"),
+                                    CoreVariable("mgba_solar_sensor_level", "0"),
+                                    CoreVariable("mgba_skip_bios", "OFF"),
+                                    CoreVariable("mgba_gb_model", "Game Boy"),
+                                ),
+                            controllerConfigs =
+                                hashMapOf(
+                                    0 to arrayListOf(ControllerConfigs.GB),
+                                ),
+                        ),
+                        SystemCoreConfig(
                             CoreID.GAMBATTE,
                             exposedSettings =
                                 listOf(
@@ -492,7 +536,9 @@ data class GameSystem(
                                 listOf(
                                     CoreVariable("gambatte_gb_colorization", "internal"),
                                     CoreVariable("gambatte_gb_internal_palette", "GB - Pocket"),
+                                    CoreVariable("gambatte_rumble", "enabled"),
                                 ),
+                            rumbleSupported = true,
                             controllerConfigs =
                                 hashMapOf(
                                     0 to arrayListOf(ControllerConfigs.GB),
@@ -507,6 +553,64 @@ data class GameSystem(
                     R.string.game_system_title_gbc,
                     R.string.game_system_abbr_gbc,
                     listOf(
+                        SystemCoreConfig(
+                            CoreID.MGBA,
+                            exposedSettings =
+                                listOf(
+                                    ExposedSetting(
+                                        "mgba_interframe_blending",
+                                        R.string.setting_mgba_interframe_blending,
+                                        arrayListOf(
+                                            ExposedSetting.Value(
+                                                "OFF",
+                                                R.string.value_mgba_interframe_blending_off,
+                                            ),
+                                            ExposedSetting.Value(
+                                                "mix",
+                                                R.string.value_mgba_interframe_blending_mix,
+                                            ),
+                                            ExposedSetting.Value(
+                                                "lcd_ghosting",
+                                                R.string.value_mgba_interframe_blending_lcd_ghosting,
+                                            ),
+                                            ExposedSetting.Value(
+                                                "lcd_ghosting_fast",
+                                                R.string.value_mgba_interframe_blending_lcd_ghosting_fast,
+                                            ),
+                                        ),
+                                    ),
+                                    ExposedSetting(
+                                        "mgba_color_correction",
+                                        R.string.setting_mgba_color_correction,
+                                        arrayListOf(
+                                            ExposedSetting.Value(
+                                                "OFF",
+                                                R.string.value_mgba_color_correction_off,
+                                            ),
+                                            ExposedSetting.Value(
+                                                "GBA",
+                                                R.string.value_mgba_color_correction_gba,
+                                            ),
+                                        ),
+                                    ),
+                                ),
+                            rumbleSupported = true,
+                            sensorsSupported = true,
+                            defaultSettings =
+                                listOf(
+                                    CoreVariable("mgba_rumble", "ON"),
+                                    CoreVariable("mgba_tilt_sensor", "ON"),
+                                    CoreVariable("mgba_gyro_sensor", "ON"),
+                                    CoreVariable("mgba_rtc", "ON"),
+                                    CoreVariable("mgba_solar_sensor_level", "0"),
+                                    CoreVariable("mgba_skip_bios", "OFF"),
+                                    CoreVariable("mgba_gb_model", "Game Boy Color"),
+                                ),
+                            controllerConfigs =
+                                hashMapOf(
+                                    0 to arrayListOf(ControllerConfigs.GBC),
+                                ),
+                        ),
                         SystemCoreConfig(
                             CoreID.GAMBATTE,
                             exposedSettings =
@@ -556,6 +660,7 @@ data class GameSystem(
                             defaultSettings =
                                 listOf(
                                     CoreVariable("gambatte_gbc_color_correction", "disabled"),
+                                    CoreVariable("gambatte_rumble", "enabled"),
                                 ),
                             controllerConfigs =
                                 hashMapOf(
@@ -627,7 +732,27 @@ data class GameSystem(
                                         ),
                                     ),
                                 ),
+                            exposedAdvancedSettings =
+                                listOf(
+                                    ExposedSetting(
+                                        "mgba_tilt_sensor",
+                                        R.string.setting_mgba_allow_sensor,
+                                    ),
+                                ),
                             rumbleSupported = true,
+                            sensorsSupported = true,
+                            defaultSettings =
+                                listOf(
+                                    CoreVariable("mgba_tilt_sensor", "ON"),
+                                    CoreVariable("mgba_gyro_sensor", "ON"),
+                                    CoreVariable("mgba_rumble", "ON"),
+                                    CoreVariable("mgba_rtc", "ON"),
+                                    CoreVariable("mgba_solar_sensor_level", "0"),
+                                    CoreVariable("mgba_skip_bios", "OFF"),
+                                    CoreVariable("mgba_flash_size", "128"),
+                                    CoreVariable("mgba_force_rtc", "ON"),
+                                    CoreVariable("mgba_allow_sensor", "ON"),
+                                ),
                             controllerConfigs =
                                 hashMapOf(
                                     0 to arrayListOf(ControllerConfigs.GBA),

@@ -44,6 +44,12 @@ object CoverUtils {
             .okHttpClient {
                 OkHttpClient.Builder()
                     .addNetworkInterceptor(ThrottleFailedThumbnailsInterceptor)
+                    .addInterceptor { chain ->
+                        val request = chain.request().newBuilder()
+                            .header("User-Agent", "Lemuroid-Android-App")
+                            .build()
+                        chain.proceed(request)
+                    }
                     .build()
             }
             .crossfade(true)
