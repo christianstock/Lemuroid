@@ -1,6 +1,10 @@
 package com.swordfish.lemuroid.app.mobile.feature.gameinfo
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,14 +18,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -38,11 +45,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -58,7 +64,7 @@ fun GameInfoScreen(
 ) {
     val game = viewModel.game.collectAsState().value
     val isRescanning = viewModel.isRescanning.collectAsState().value
-    val logs = viewModel.logs.collectAsState().value
+    val pendingMetadata = viewModel.pendingMetadata.collectAsState().value
     var showEditDialog by remember { mutableStateOf(false) }
 
     if (game == null) {
@@ -72,9 +78,31 @@ fun GameInfoScreen(
         EditDetailsDialog(
             game = game,
             onDismiss = { showEditDialog = false },
-            onSave = { date, pub, dev ->
-                viewModel.updateGameDetails(date, pub, dev)
+            onSave = { title, date, pub, dev, reg, ver ->
+                viewModel.updateGameDetails(title, date, pub, dev, reg, ver)
                 showEditDialog = false
+            },
+            onThumbnailSelected = { uri, deleteSource ->
+                viewModel.saveLocalThumbnail(uri, deleteSource)
+            }
+        )
+    }
+
+    if (pendingMetadata != null) {
+        AlertDialog(
+            onDismissRequest = { viewModel.confirmOverwrite(false) },
+            icon = { Icon(Icons.Default.Warning, contentDescription = null) },
+            title = { Text("Overwrite Data?") },
+            text = { Text("Matching metadata found. Do you want to overwrite your existing game details with server data?") },
+            confirmButton = {
+                Button(onClick = { viewModel.confirmOverwrite(true) }) {
+                    Text("Overwrite")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.confirmOverwrite(false) }) {
+                    Text("Keep Current")
+                }
             }
         )
     }
@@ -87,7 +115,6 @@ fun GameInfoScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 1. Title at top with carousel-style subtitles
             item {
                 val title = game.title.cleanGameTitle()
                 val titleParts = title.split(" - ", limit = 2).map { it.trim() }
@@ -111,7 +138,6 @@ fun GameInfoScreen(
                 }
             }
 
-            // 2. Box art centered below
             item {
                 Box(
                     modifier = Modifier
@@ -129,7 +155,22 @@ fun GameInfoScreen(
                 }
             }
 
-            // 3. Year | Publisher | Developer below the art
+            item {
+                val region = game.country ?: "Unknown Region"
+                val version = game.summary ?: ""
+                val infoText = listOfNotNull(region.takeIf { it.isNotEmpty() }, version.takeIf { it.isNotEmpty() }).joinToString(" | ")
+                
+                if (infoText.isNotEmpty()) {
+                    Text(
+                        text = infoText,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+
             item {
                 val year = game.releaseDate?.take(4) ?: "Unknown"
                 val publisher = game.publisher ?: "Unknown"
@@ -142,7 +183,33 @@ fun GameInfoScreen(
                 )
             }
 
-            // 4. Action Buttons
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = androidx.compose.material3.CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("ROM File", style = MaterialTheme.typography.labelMedium)
+                        }
+                        Text(
+                            text = game.fileName,
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -172,41 +239,11 @@ fun GameInfoScreen(
                 }
             }
 
-            // Technical Console
-            if (logs.isNotEmpty()) {
-                item {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(180.dp)
-                            .background(Color(0xFF121212), MaterialTheme.shapes.small)
-                            .padding(8.dp)
-                            .verticalScroll(rememberScrollState())
-                    ) {
-                        Text(
-                            text = "METADATA ENGINE TRACE",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color.Green,
-                            modifier = Modifier.padding(bottom = 4.dp)
-                        )
-                        logs.forEach { log ->
-                            Text(
-                                text = "> $log",
-                                style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
-                                color = if (log.contains("ERROR", true) || log.contains("FAIL")) Color.Red else Color.LightGray,
-                                softWrap = true
-                            )
-                        }
-                    }
-                }
-            }
-
             item {
                 Spacer(modifier = Modifier.height(80.dp))
             }
         }
 
-        // Close button at bottom
         Button(
             onClick = onBack,
             modifier = Modifier
@@ -225,57 +262,143 @@ fun GameInfoScreen(
 private fun EditDetailsDialog(
     game: Game,
     onDismiss: () -> Unit,
-    onSave: (String?, String?, String?) -> Unit
+    onSave: (String, String?, String?, String?, String?, String?) -> Unit,
+    onThumbnailSelected: (Uri, Boolean) -> Unit
 ) {
+    var title by remember { mutableStateOf(game.title) }
     var date by remember { mutableStateOf(game.releaseDate ?: "") }
     var publisher by remember { mutableStateOf(game.publisher ?: "") }
     var developer by remember { mutableStateOf(game.developer ?: "") }
+    var region by remember { mutableStateOf(game.country ?: "") }
+    var version by remember { mutableStateOf(game.summary ?: "") }
+    var deleteSource by remember { mutableStateOf(false) }
+
+    val imagePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let { onThumbnailSelected(it, deleteSource) }
+    }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(vertical = 16.dp),
             shape = MaterialTheme.shapes.large
         ) {
-            Column(
-                modifier = Modifier
-                    .padding(16.dp),
+            LazyColumn(
+                modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(text = "Edit Game Details", style = MaterialTheme.typography.titleLarge)
-                
-                OutlinedTextField(
-                    value = date,
-                    onValueChange = { date = it },
-                    label = { Text("Release Year/Date") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                
-                OutlinedTextField(
-                    value = publisher,
-                    onValueChange = { publisher = it },
-                    label = { Text("Publisher") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                
-                OutlinedTextField(
-                    value = developer,
-                    onValueChange = { developer = it },
-                    label = { Text("Developer") },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                item {
+                    Text(text = "Edit Game Details", style = MaterialTheme.typography.titleLarge)
+                }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    TextButton(onClick = onDismiss) {
-                        Text("Cancel")
+                item {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Text("ROM Filename (Read-only)", style = MaterialTheme.typography.labelSmall)
+                        Text(game.fileName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Button(onClick = { onSave(date, publisher, developer) }) {
-                        Text("Save")
+                }
+                
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { imagePicker.launch("image/*") }
+                            .background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.medium)
+                            .padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(modifier = Modifier.size(60.dp)) {
+                            LemuroidGameImage(game = game, applyAspectRatio = true)
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.3f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.PhotoLibrary, contentDescription = null, tint = androidx.compose.ui.graphics.Color.White)
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Change Box Art", style = MaterialTheme.typography.titleSmall)
+                            Text("Tap to select image", style = MaterialTheme.typography.bodySmall)
+                            
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Checkbox(checked = deleteSource, onCheckedChange = { deleteSource = it })
+                                Text("Delete original after copy", style = MaterialTheme.typography.labelSmall, fontSize = 10.sp)
+                            }
+                        }
+                    }
+                }
+
+                item {
+                    OutlinedTextField(
+                        value = title,
+                        onValueChange = { title = it },
+                        label = { Text("Title") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                item {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = region,
+                            onValueChange = { region = it },
+                            label = { Text("Region") },
+                            modifier = Modifier.weight(1f)
+                        )
+                        OutlinedTextField(
+                            value = version,
+                            onValueChange = { version = it },
+                            label = { Text("Version") },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+
+                item {
+                    OutlinedTextField(
+                        value = date,
+                        onValueChange = { date = it },
+                        label = { Text("Release Year/Date") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                
+                item {
+                    OutlinedTextField(
+                        value = publisher,
+                        onValueChange = { publisher = it },
+                        label = { Text("Publisher") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                
+                item {
+                    OutlinedTextField(
+                        value = developer,
+                        onValueChange = { developer = it },
+                        label = { Text("Developer") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        TextButton(onClick = onDismiss) {
+                            Text("Cancel")
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(onClick = { onSave(title, date, publisher, developer, region, version) }) {
+                            Text("Save")
+                        }
                     }
                 }
             }

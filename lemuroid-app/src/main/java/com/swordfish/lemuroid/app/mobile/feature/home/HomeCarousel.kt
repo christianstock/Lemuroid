@@ -78,20 +78,12 @@ fun HomeCarousel(
     if (systemLibraries.isEmpty()) return
 
     val systemsCount = systemLibraries.size
-    val baseIndex = Int.MAX_VALUE / 2
+    val baseIndex = HomeViewModel.BASE_PAGE_INDEX
     
-    // 1. TOP-LEVEL SYSTEM PAGER
     val initialSystemIndex = baseIndex - (baseIndex % systemsCount)
     val currentSystemInternalIndex = systemLibraries.indexOfFirst { it.systemId.equals(selectedSystemId, ignoreCase = true) }.coerceAtLeast(0)
     val systemPagerState = rememberPagerState(initialPage = initialSystemIndex + currentSystemInternalIndex) { Int.MAX_VALUE }
 
-    val haptic = LocalHapticFeedback.current
-    val coroutineScope = rememberCoroutineScope()
-
-    // Architecture Fix: Tracking the last ID emitted to prevent feedback loops
-    var lastEmittedSystemId by remember { mutableStateOf<String?>(selectedSystemId) }
-
-    // Sync Pager -> ViewModel (System Selection)
     LaunchedEffect(systemPagerState.currentPage, systemPagerState.isScrollInProgress) {
         if (!systemPagerState.isScrollInProgress) {
             val systemId = systemLibraries[systemPagerState.currentPage % systemsCount].systemId
@@ -101,14 +93,12 @@ fun HomeCarousel(
         }
     }
 
-    // Sync ViewModel -> Pager (External Selection)
     LaunchedEffect(selectedSystemId) {
-        if (selectedSystemId != null && !selectedSystemId.equals(lastEmittedSystemId, ignoreCase = true)) {
+        if (selectedSystemId != null) {
             val targetIndex = systemLibraries.indexOfFirst { it.systemId.equals(selectedSystemId, ignoreCase = true) }
             if (targetIndex != -1) {
-                val currentPage = systemPagerState.currentPage
                 val targetPage = initialSystemIndex + targetIndex
-                if (targetPage != currentPage) {
+                if (systemPagerState.currentPage != targetPage) {
                     systemPagerState.scrollToPage(targetPage)
                 }
             }
@@ -122,11 +112,12 @@ fun HomeCarousel(
         key = { page -> systemLibraries[page % systemsCount].systemId }
     ) { systemPage ->
         val library = systemLibraries[systemPage % systemsCount]
+        val scrollPage = systemScrollPositions[library.systemId] ?: baseIndex
         
         SystemPage(
             library = library,
             refreshCount = refreshCount,
-            initialGamePage = systemScrollPositions[library.systemId] ?: baseIndex,
+            scrollPage = scrollPage,
             onScroll = { newIndex -> onSystemScroll(library.systemId, newIndex) },
             onGameClick = onGameClick,
             onShowContextMenu = onShowContextMenu,
@@ -140,22 +131,25 @@ fun HomeCarousel(
 private fun SystemPage(
     library: HomeViewModel.SystemLibrary,
     refreshCount: Int,
-    initialGamePage: Int,
+    scrollPage: Int,
     onScroll: (Int) -> Unit,
     onGameClick: (Game) -> Unit,
     onShowContextMenu: (Game) -> Unit,
     onNavigateToList: (Game) -> Unit
 ) {
     val games = library.games
-    // Use systemId in key to ensure PagerState is preserved for this specific handheld unit
-    val gamePagerState = rememberPagerState(initialPage = initialGamePage) { Int.MAX_VALUE }
+    val gamePagerState = rememberPagerState(initialPage = scrollPage) { Int.MAX_VALUE }
     val haptic = LocalHapticFeedback.current
     val coroutineScope = rememberCoroutineScope()
 
-    // Sync local scroll back to ViewModel only when it changes via user interaction
-    // We check if the pager is currently scrolling to avoid feedback loops
+    LaunchedEffect(scrollPage) {
+        if (gamePagerState.currentPage != scrollPage) {
+            gamePagerState.scrollToPage(scrollPage)
+        }
+    }
+
     LaunchedEffect(gamePagerState.currentPage, gamePagerState.isScrollInProgress) {
-        if (!gamePagerState.isScrollInProgress && gamePagerState.currentPage != initialGamePage) {
+        if (!gamePagerState.isScrollInProgress) {
             onScroll(gamePagerState.currentPage)
         }
     }
@@ -164,7 +158,6 @@ private fun SystemPage(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.BottomCenter
     ) {
-        // --- LAYER 0: GAME INFO ---
         if (games.isNotEmpty()) {
             val index = gamePagerState.currentPage % games.size
             val currentGame = games[index]
@@ -196,30 +189,21 @@ private fun SystemPage(
                     )
                 }
                 
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    val year = currentGame.releaseDate?.take(4) ?: run {
-                        val yearRegex = Regex("\\b(19|20)\\d{2}\\b")
-                        currentGame.developer?.let { yearRegex.find(it)?.value }
-                    }
-                    
-                    val developer = currentGame.developer?.let { dev ->
-                        year?.let { y -> dev.replace(y, "").replace(Regex(",\\s*$"), "").trim() } ?: dev
-                    }
+                val year = currentGame.releaseDate?.take(4) ?: ""
+                val publisher = currentGame.publisher ?: ""
 
-                    if (developer != null || year != null) {
-                        Text(
-                            text = listOfNotNull(developer.takeIf { it?.isNotEmpty() == true }, year).joinToString(" | "),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(top = 4.dp)
-                        )
-                    }
+                if (publisher.isNotEmpty() || year.isNotEmpty()) {
+                    Text(
+                        text = listOfNotNull(publisher.takeIf { it.isNotEmpty() }, year.takeIf { it.isNotEmpty() }).joinToString(" | "),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
                 }
             }
         }
 
-        // --- LAYER 1: CARTRIDGE PAGER ---
         if (games.isNotEmpty()) {
             HorizontalPager(
                 state = gamePagerState,
@@ -227,7 +211,7 @@ private fun SystemPage(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(bottom = 200.dp, top = 140.dp),
-                key = { page -> "${library.systemId}_${games[page % games.size].id}" }
+                key = { page -> "${library.systemId}_pg_$page" }
             ) { page ->
                 val index = page % games.size
                 val game = games[index]
@@ -283,7 +267,6 @@ private fun SystemPage(
             }
         }
 
-        // --- LAYER 2: CONSOLE ART (Foreground) ---
         Box(
             modifier = Modifier
                 .fillMaxWidth(if (library.systemId.lowercase() == "gba" || library.systemId.lowercase() == "psp") 1.0f else 0.8f)

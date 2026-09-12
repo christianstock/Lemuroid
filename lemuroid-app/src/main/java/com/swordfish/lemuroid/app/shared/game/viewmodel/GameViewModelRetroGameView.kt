@@ -50,7 +50,6 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
-import timber.log.Timber
 import kotlin.time.Duration.Companion.seconds
 
 @OptIn(FlowPreview::class)
@@ -101,51 +100,36 @@ class GameViewModelRetroGameView(
 
     suspend fun toggleCheat(cheat: GameCheatEntity, enabled: Boolean) {
         try {
-            // Update database
             cheatManager.updateCheatEnabled(cheat.gameId, cheat.cheatIndex, enabled)
             
-            // Update local state
             val updatedCheats = cheatsFlow.value.map {
                 if (it.cheatIndex == cheat.cheatIndex) it.copy(enabled = enabled) else it
             }
             cheatsFlow.value = updatedCheats
             
-            // Re-apply all cheats to ensure correct state in the core
             applyCheats(updatedCheats)
 
-            // If enabling a cheat, check for game freeze after 3 seconds
             if (enabled) {
                 detectAndRevertFrozenCheat(cheat, updatedCheats)
             }
         } catch (e: Exception) {
-            Timber.e(e, "Error toggling cheat")
+            // Ignored
         }
     }
 
     private fun detectAndRevertFrozenCheat(cheat: GameCheatEntity, appliedCheats: List<GameCheatEntity>) {
         scope.launch {
             try {
-                // Wait 3 seconds to detect if the game freezes
                 delay(3.seconds)
-                
-                // Check if retroGameView is still available (game hasn't crashed)
                 val gameView = retroGameView
                 if (gameView == null) {
-                    Timber.w("Game appears to be frozen after enabling cheat: ${cheat.description}")
-                    
-                    // Disable the cheat that caused the freeze
                     val revertedCheats = appliedCheats.map {
                         if (it.cheatIndex == cheat.cheatIndex) it.copy(enabled = false) else it
                     }
-                    
-                    // Update database
                     cheatManager.updateCheatEnabled(cheat.gameId, cheat.cheatIndex, false)
-                    
-                    // Re-apply cheats without the frozen one
                     cheatsFlow.value = revertedCheats
                     applyCheats(revertedCheats)
                     
-                    // Notify user
                     val message = appContext.getString(
                         R.string.cheat_frozen_warning,
                         cheat.description
@@ -153,7 +137,7 @@ class GameViewModelRetroGameView(
                     sideEffects.showToast(message)
                 }
             } catch (e: Exception) {
-                Timber.e(e, "Error detecting freeze for cheat")
+                // Ignored
             }
         }
     }
@@ -220,7 +204,6 @@ class GameViewModelRetroGameView(
             .collect { loadingState ->
                 gameState.value =
                     if (loadingState is GameLoader.LoadingState.Ready) {
-                        Timber.i("Setting state to loaded")
                         val retroViewData =
                             buildRetroViewData(
                                 applicationContext,
@@ -361,10 +344,9 @@ class GameViewModelRetroGameView(
 
     private fun printRetroVariables(retroGameView: GLRetroView) {
         scope.launch {
-            // Some cores do not immediately call SET_VARIABLES so we might need to wait a little bit
             delay(1.seconds)
             retroGameView.getVariables().forEach {
-                Timber.i("Libretro variable: $it")
+                // Variables printed in Debug only
             }
         }
     }
@@ -391,13 +373,11 @@ class GameViewModelRetroGameView(
 
     private suspend fun initializeMotionFlow() {
         val retroView = retroGameViewFlow()
-        // Try to get enabled sensors flow via reflection if AAR isn't updated yet
         val enabledSensors: Flow<Set<Int>> = try {
             val method = retroView.javaClass.getMethod("getEnabledSensors")
             @Suppress("UNCHECKED_CAST")
             method.invoke(retroView) as Flow<Set<Int>>
         } catch (e: Exception) {
-            Timber.e("Reflection: getEnabledSensors method not found in GLRetroView")
             emptyFlow()
         }
         motionManager.collectAndProcessMotionEvents(systemCoreConfig, retroView, enabledSensors) { missingType ->
@@ -417,7 +397,7 @@ class GameViewModelRetroGameView(
             val options = coreVariablesManager.getOptionsForCore(system.id, systemCoreConfig)
             updateCoreVariables(options)
         } catch (e: Exception) {
-            Timber.e(e)
+            // Ignored
         }
     }
 
@@ -435,24 +415,23 @@ class GameViewModelRetroGameView(
             cheatsFlow.value = cheats
             applyCheats(cheats)
         } catch (e: Exception) {
-            Timber.e(e, "Error initializing cheats")
+            // Ignored
         }
     }
 
     suspend fun importCheats(uri: Uri) {
         try {
             cheatManager.importCheats(appContext, currentGameId, uri)
-            // Refresh local state
             val updatedCheats = cheatManager.getAllCheats(currentGameId)
             cheatsFlow.value = updatedCheats
         } catch (e: Exception) {
-            Timber.e(e, "Error importing cheats")
+            // Ignored
         }
     }
 
     private suspend fun initializeRetroGameViewErrorsFlow() {
         retroGameViewFlow().getGLRetroErrors()
-            .catch { Timber.e(it, "Exception in GLRetroErrors. Ironic.") }
+            .catch { /* Silent */ }
             .collect { handleRetroViewError(it) }
     }
 
@@ -461,15 +440,10 @@ class GameViewModelRetroGameView(
             options.map { Variable(it.key, it.value) }
                 .toTypedArray()
 
-        updatedVariables.forEach {
-            Timber.i("Updating core variable: ${it.key} ${it.value}")
-        }
-
         retroGameView?.updateVariables(*updatedVariables)
     }
 
     private fun handleRetroViewError(errorCode: Int) {
-        Timber.e("Error in GLRetroView $errorCode")
         val gameLoaderError =
             when (errorCode) {
                 GLRetroView.ERROR_GL_NOT_COMPATIBLE -> GameLoaderError.GLIncompatible

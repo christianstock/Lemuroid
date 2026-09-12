@@ -42,7 +42,6 @@ import kotlinx.coroutines.flow.flatMapConcat
 import kotlinx.coroutines.flow.flatMapMerge
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.mapNotNull
-import timber.log.Timber
 
 class LemuroidLibrary(
     private val retrogradedb: RetrogradeDatabase,
@@ -56,13 +55,10 @@ class LemuroidLibrary(
         try {
             indexProviders(startedAtMs)
         } catch (e: Throwable) {
-            Timber.e("Library indexing stopped due to exception", e)
+            // Ignored
         } finally {
             cleanUp(startedAtMs)
         }
-
-        val executionTime = System.currentTimeMillis() - startedAtMs
-        Timber.i("Library indexing completed in: $executionTime ms")
     }
 
     @OptIn(FlowPreview::class)
@@ -92,12 +88,10 @@ class LemuroidLibrary(
         startedAtMs: Long,
         gameMetadata: GameMetadataProvider,
     ) = flow<Unit> {
-        Timber.i("Scanning batch of ${batch.size} files")
         val entries = batch.map { fetchEntriesFromDatabase(it) }
 
         val existingEntries = entries.filterIsInstance<ScanEntry.GameFile>()
         if (existingEntries.isNotEmpty()) {
-            Timber.i("Updating ${existingEntries.size} existing games")
             handleExistingEntries(existingEntries, startedAtMs)
         }
 
@@ -105,14 +99,12 @@ class LemuroidLibrary(
             entries.filterIsInstance<ScanEntry.File>()
         
         if (newEntries.isNotEmpty()) {
-            Timber.i("Found ${newEntries.size} new potential games. Fetching metadata...")
             val processedNewEntries = newEntries.map { buildEntryFromMetadata(it.file, provider, gameMetadata, startedAtMs) }
             handleNewEntries(processedNewEntries, startedAtMs, provider)
         }
     }
 
     private fun fetchEntriesFromDatabase(storageFile: GroupedStorageFiles): ScanEntry {
-        Timber.d("Retrieving scan entry for uri: ${storageFile.primaryFile}")
         val game = retrogradedb.gameDao().selectByFileUri(storageFile.primaryFile.uri.toString())
         return buildScanEntry(storageFile, game)
     }
@@ -144,9 +136,6 @@ class LemuroidLibrary(
             entries
                 .map { it.game.copy(lastIndexedAt = startedAtMs) }
 
-        updatedGames
-            .forEach { Timber.d("Updating game: $it") }
-
         retrogradedb.gameDao().update(updatedGames)
     }
 
@@ -158,9 +147,6 @@ class LemuroidLibrary(
             entries.flatMap { (storageFile, game) ->
                 storageFile.dataFiles.map { convertIntoDataFile(game.id, it, startedAtMs) }
             }
-
-        dataFiles
-            .forEach { Timber.d("Updating data file: $it") }
 
         retrogradedb.dataFileDao().insert(dataFiles)
     }
@@ -205,8 +191,6 @@ class LemuroidLibrary(
             pairs
                 .map { it.game }
 
-        games.forEach { Timber.d("Insert: $it") }
-
         val gameIds = retrogradedb.gameDao().insert(games)
         val dataFiles =
             pairs
@@ -242,18 +226,11 @@ class LemuroidLibrary(
         metadataProvider: GameMetadataProvider,
         startedAtMs: Long,
     ): ScanEntry {
-        Timber.d("Building entry for: ${groupedStorageFile.primaryFile.name}")
         val game =
             sortedFilesForScanning(groupedStorageFile).asFlow()
                 .mapNotNull { safeStorageFile(provider, it) }
                 .mapNotNull { storageFile ->
-                    Timber.v("Retrieving metadata for technical file: ${storageFile.name} (CRC: ${storageFile.crc})")
-                    val metadata = metadataProvider.retrieveMetadata(storageFile)
-                    if (metadata != null) {
-                        Timber.i("Match found: ${metadata.name} for ${storageFile.name}")
-                    } else {
-                        Timber.w("No match found for ${storageFile.name}")
-                    }
+                    val metadata = metadataProvider.retrieveMetadata(storageFile) { }
                     convertGameMetadataToGame(groupedStorageFile, storageFile, metadata, startedAtMs)
                 }
                 .firstOrNull()
@@ -326,13 +303,11 @@ class LemuroidLibrary(
     }
 
     private fun removeDeletedDataFiles(startedAtMs: Long) {
-        Timber.d("Deleting data files from db before: $startedAtMs")
         val dataFiles = retrogradedb.dataFileDao().selectByLastIndexedAtLessThan(startedAtMs)
         retrogradedb.dataFileDao().delete(dataFiles)
     }
 
     private fun removeDeletedGames(startedAtMs: Long) {
-        Timber.d("Deleting games from db before: $startedAtMs")
         val games = retrogradedb.gameDao().selectByLastIndexedAtLessThan(startedAtMs)
         retrogradedb.gameDao().delete(games)
     }
@@ -353,7 +328,6 @@ class LemuroidLibrary(
     }
 
     companion object {
-        // We batch database updates to avoid unnecessary UI updates.
         const val MAX_BUFFER_SIZE = 200
         const val MAX_TIME = 5000
     }

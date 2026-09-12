@@ -64,7 +64,10 @@ fun HomeScreen(
         modifier = modifier,
         viewModel = viewModel,
         state = state.value,
-        onGameClicked = onGameClick,
+        onGameClicked = { 
+            viewModel.onGameLaunched(it)
+            onGameClick(it) 
+        },
         onShowContextMenu = onGameLongClick,
         onNavigateToSystemList = onNavigateToSystemList,
         onOpenCoreSelection = onOpenCoreSelection,

@@ -4,7 +4,6 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
-import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -41,7 +40,7 @@ class HomeViewModel(
     companion object {
         private const val PREFS_NAME = "home_prefs"
         private const val KEY_SELECTED_SYSTEM = "selected_system_id"
-        private const val TAG = "HomeVM"
+        const val BASE_PAGE_INDEX = Int.MAX_VALUE / 2
     }
 
     private val prefs = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -59,7 +58,8 @@ class HomeViewModel(
 
     data class SystemLibrary(
         val systemId: String,
-        val games: List<Game>
+        val games: List<Game>,
+        val lastResetTime: Long = 0L
     )
 
     data class UIState(
@@ -78,7 +78,8 @@ class HomeViewModel(
     private val notificationsPermissionEnabledState = MutableStateFlow(true)
     private val refreshCountState = MutableStateFlow(0)
     private val selectedSystemIdState = MutableStateFlow<String?>(prefs.getString(KEY_SELECTED_SYSTEM, null))
-    private val systemScrollPositionsState = MutableStateFlow<Map<String, Int>>(emptyMap())
+    private val systemScrollIndicesState = MutableStateFlow<Map<String, Int>>(emptyMap())
+    private val systemResetsState = MutableStateFlow<Map<String, Long>>(emptyMap())
     private val uiStates = MutableStateFlow(UIState())
 
     fun getViewStates(): Flow<UIState> = uiStates
@@ -87,17 +88,36 @@ class HomeViewModel(
         val normalizedId = systemId.lowercase()
         if (selectedSystemIdState.value == normalizedId) return
         
-        Log.d(TAG, "setSelectedSystem: $normalizedId")
         selectedSystemIdState.value = normalizedId
         prefs.edit().putString(KEY_SELECTED_SYSTEM, normalizedId).apply()
-        refreshCountState.value++
     }
 
-    fun setSystemScrollPosition(systemId: String, position: Int) {
-        val current = systemScrollPositionsState.value.toMutableMap()
-        if (current[systemId] == position) return
-        current[systemId] = position
-        systemScrollPositionsState.value = current
+    fun setSystemScrollPosition(systemId: String, page: Int) {
+        val uiState = uiStates.value
+        val library = uiState.systemLibraries.find { it.systemId == systemId } ?: return
+        if (library.games.isEmpty()) return
+
+        val relativeIndex = page % library.games.size
+        val current = systemScrollIndicesState.value.toMutableMap()
+        if (current[systemId] == relativeIndex) return
+        
+        current[systemId] = relativeIndex
+        systemScrollIndicesState.value = current
+    }
+
+    fun onGameLaunched(game: Game) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val now = System.currentTimeMillis()
+            retrogradeDb.gameDao().update(game.copy(lastPlayedAt = now))
+            
+            val indices = systemScrollIndicesState.value.toMutableMap()
+            indices[game.systemId] = 0
+            systemScrollIndicesState.value = indices
+
+            val resets = systemResetsState.value.toMutableMap()
+            resets[game.systemId] = now
+            systemResetsState.value = resets
+        }
     }
 
     fun changeLocalStorageFolder(context: Context) {
@@ -111,7 +131,6 @@ class HomeViewModel(
     fun updatePermissions(context: Context) {
         notificationsPermissionEnabledState.value = isNotificationsPermissionGranted(context)
         microphonePermissionEnabledState.value = isMicrophonePermissionGranted(context)
-        refreshCountState.value++
     }
 
     private fun isNotificationsPermissionGranted(context: Context): Boolean {
@@ -138,10 +157,11 @@ class HomeViewModel(
 
         viewModelScope.launch {
             val uiStatesFlow = combine(
-                retrogradeDb.gameDao().selectSystemsFlow(), // Use stable alphabetical flow for carousel
+                retrogradeDb.gameDao().selectSystemsFlow(), 
                 retrogradeDb.gameDao().selectAllFlow(),
                 selectedSystemIdState,
-                systemScrollPositionsState,
+                systemScrollIndicesState,
+                systemResetsState,
                 refreshCountState,
                 notificationsPermissionEnabledState,
                 indexingInProgress(appContext).onStart { emit(false) },
@@ -151,28 +171,40 @@ class HomeViewModel(
                 val availableSystems = params[0] as List<String>
                 val allGames = params[1] as List<Game>
                 val selectedSystemId = params[2] as String?
-                val scrollPositions = params[3] as Map<String, Int>
-                val refreshCount = params[4] as Int
-                val notificationsEnabled = params[5] as Boolean
-                val indexInProgress = params[6] as Boolean
-                val microphoneEnabled = params[7] as Boolean
-                val desmumeWarning = params[8] as Boolean
+                @Suppress("UNCHECKED_CAST")
+                val scrollIndices = params[3] as Map<String, Int>
+                @Suppress("UNCHECKED_CAST")
+                val systemResets = params[4] as Map<String, Long>
+                val refreshCount = params[5] as Int
+                val notificationsEnabled = params[6] as Boolean
+                val indexInProgress = params[7] as Boolean
+                val microphoneEnabled = params[8] as Boolean
+                val desmumeWarning = params[9] as Boolean
 
-                // Group and process games per system
                 val systemLibraries = availableSystems.map { sysId ->
                     val systemGames = allGames
                         .filter { it.systemId.lowercase() == sysId.lowercase() }
+                        .sortedWith(compareByDescending<Game> { it.lastPlayedAt ?: 0L }.thenBy { it.title })
                         .map { game ->
                             val cleaned = game.title.cleanGameTitle()
                             if (cleaned != game.title) game.copy(title = cleaned) else game
                         }
-                    SystemLibrary(sysId, systemGames)
+                    
+                    SystemLibrary(sysId, systemGames, systemResets[sysId] ?: 0L)
+                }
+
+                val systemScrollPositions = systemLibraries.associate { lib ->
+                    val index = scrollIndices[lib.systemId] ?: 0
+                    val gamesSize = lib.games.size.coerceAtLeast(1)
+                    val base = (BASE_PAGE_INDEX / gamesSize) * gamesSize
+                    val page = base + index
+                    lib.systemId to page
                 }
 
                 UIState(
                     systemLibraries = systemLibraries,
                     selectedSystemId = selectedSystemId,
-                    systemScrollPositions = scrollPositions,
+                    systemScrollPositions = systemScrollPositions,
                     indexInProgress = indexInProgress,
                     refreshCount = refreshCount,
                     showNoNotificationPermissionCard = !notificationsEnabled,
