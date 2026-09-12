@@ -83,6 +83,7 @@ fun HomeCarousel(
     val initialSystemIndex = baseIndex - (baseIndex % systemsCount)
     val currentSystemInternalIndex = systemLibraries.indexOfFirst { it.systemId.equals(selectedSystemId, ignoreCase = true) }.coerceAtLeast(0)
     val systemPagerState = rememberPagerState(initialPage = initialSystemIndex + currentSystemInternalIndex) { Int.MAX_VALUE }
+    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(systemPagerState.currentPage, systemPagerState.isScrollInProgress) {
         if (!systemPagerState.isScrollInProgress) {
@@ -108,7 +109,7 @@ fun HomeCarousel(
     HorizontalPager(
         state = systemPagerState,
         modifier = modifier.fillMaxSize(),
-        userScrollEnabled = true,
+        userScrollEnabled = false,
         key = { page -> systemLibraries[page % systemsCount].systemId }
     ) { systemPage ->
         val library = systemLibraries[systemPage % systemsCount]
@@ -121,7 +122,22 @@ fun HomeCarousel(
             onScroll = { newIndex -> onSystemScroll(library.systemId, newIndex) },
             onGameClick = onGameClick,
             onShowContextMenu = onShowContextMenu,
-            onNavigateToList = onNavigateToList
+            onNavigateToList = onNavigateToList,
+            onSystemSwipe = { delta ->
+                systemPagerState.dispatchRawDelta(-delta)
+            },
+            onSystemSwipeEnd = { velocity ->
+                coroutineScope.launch {
+                    val pageOffset = systemPagerState.currentPageOffsetFraction
+                    var targetPage = systemPagerState.currentPage
+                    if (velocity.absoluteValue > 500f) {
+                        if (velocity > 0) targetPage-- else targetPage++
+                    } else if (pageOffset.absoluteValue > 0.5f) {
+                        if (pageOffset > 0) targetPage++ else targetPage--
+                    }
+                    systemPagerState.animateScrollToPage(targetPage)
+                }
+            }
         )
     }
 }
@@ -135,7 +151,9 @@ private fun SystemPage(
     onScroll: (Int) -> Unit,
     onGameClick: (Game) -> Unit,
     onShowContextMenu: (Game) -> Unit,
-    onNavigateToList: (Game) -> Unit
+    onNavigateToList: (Game) -> Unit,
+    onSystemSwipe: (Float) -> Unit,
+    onSystemSwipeEnd: (Float) -> Unit
 ) {
     val games = library.games
     val gamePagerState = rememberPagerState(initialPage = scrollPage) { Int.MAX_VALUE }
@@ -271,7 +289,12 @@ private fun SystemPage(
             modifier = Modifier
                 .fillMaxWidth(if (library.systemId.lowercase() == "gba" || library.systemId.lowercase() == "psp") 1.0f else 0.8f)
                 .height(180.dp)
-                .align(Alignment.BottomCenter),
+                .align(Alignment.BottomCenter)
+                .draggable(
+                    state = rememberDraggableState { delta -> onSystemSwipe(delta) },
+                    orientation = Orientation.Horizontal,
+                    onDragStopped = { velocity -> onSystemSwipeEnd(velocity) }
+                ),
             contentAlignment = Alignment.BottomCenter
         ) {
             SystemForegroundView(systemId = library.systemId, modifier = Modifier.fillMaxSize())

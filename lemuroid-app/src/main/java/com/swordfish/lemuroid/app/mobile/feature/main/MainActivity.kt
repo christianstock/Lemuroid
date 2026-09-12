@@ -172,17 +172,12 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
                 mainViewModel.changeRoute(currentRoute)
             }
 
-            val selectedGameState =
-                remember {
-                    mutableStateOf<Game?>(null)
-                }
-
-            val onGameLongClick = { game: Game ->
-                selectedGameState.value = game
+            val onGameClick = { game: Game ->
+                navController.navigate("gameinfo/${game.id}")
             }
 
-            val onGameClick = { game: Game ->
-                gameInteractor.onGamePlay(game)
+            val onGameLongClick = { game: Game ->
+                navController.navigate("gameinfo/${game.id}")
             }
 
             val onGameFavoriteToggle = { game: Game, isFavorite: Boolean ->
@@ -220,9 +215,8 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
                             modifier = Modifier.padding(padding),
                             viewModel = homeViewModel,
                             onGameClick = onGameClick,
-                            onGameLongClick = onGameLongClick, // This is context menu
+                            onGameLongClick = onGameLongClick,
                             onNavigateToSystemList = { game ->
-                                // Map game.systemId to MetaSystem name and navigate
                                 val systemId = SystemID.entries.find { it.dbname == game.systemId }
                                 if (systemId != null) {
                                     val metaSystemId = MetaSystemID.fromSystemID(systemId)
@@ -385,27 +379,17 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
                                     storageProviderRegistry = storageProviderRegistry
                                 )
                             ),
+                            onPlay = { gameInteractor.onGamePlay(it) },
+                            onRestart = { game ->
+                                gameInteractor.onResetCheats(game)
+                                gameInteractor.onGameRestart(game)
+                            },
                             modifier = Modifier.padding(padding),
                             onBack = { navController.popBackStack() }
                         )
                     }
                 }
             }
-
-            MainGameContextActions(
-                selectedGameState = selectedGameState,
-                shortcutSupported = gameInteractor.supportShortcuts(),
-                onGamePlay = { gameInteractor.onGamePlay(it) },
-                onGameRestart = { gameInteractor.onGameRestart(it) },
-                onFavoriteToggle = { game: Game, isFavorite: Boolean ->
-                    gameInteractor.onFavoriteToggle(game, isFavorite)
-                },
-                onCreateShortcut = { gameInteractor.onCreateShortcut(it) },
-                onResetCheats = { gameInteractor.onResetCheats(it) },
-                onNavigateToGameInfo = { game ->
-                    navController.navigate("gameinfo/${game.id}")
-                }
-            )
 
             if (infoDialogDisplayed.value) {
                 val message =
