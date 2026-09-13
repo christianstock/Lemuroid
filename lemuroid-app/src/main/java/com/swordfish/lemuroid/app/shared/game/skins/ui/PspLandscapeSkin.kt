@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -19,17 +18,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.boundsInParent
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.dp
-import com.swordfish.lemuroid.app.shared.game.skins.GbaSkin
-import com.swordfish.lemuroid.app.shared.game.skins.art.GbaArt
+import com.swordfish.lemuroid.app.shared.game.skins.art.PspArt
 
 @Composable
-fun GbaLandscapeSkin(
-    skin: GbaSkin,
+fun PspLandscapeSkin(
     gameScreenContent: @Composable () -> Unit,
     leftPad: @Composable (Modifier) -> Unit,
     rightPad: @Composable (Modifier) -> Unit,
@@ -37,6 +35,7 @@ fun GbaLandscapeSkin(
     modifier: Modifier = Modifier,
 ) {
     val bezelRect = remember { mutableStateOf<Rect?>(null) }
+    val caseColor = Color(0xFF1A1A1A)
 
     Box(
         modifier = modifier
@@ -45,8 +44,8 @@ fun GbaLandscapeSkin(
                 compositingStrategy = CompositingStrategy.Offscreen
             }
             .drawBehind {
-                GbaArt.run {
-                    drawHandheld(skin.caseColor, bezelRect.value, false)
+                PspArt.run {
+                    drawHandheld(caseColor, bezelRect.value, false)
                 }
             }
     ) {
@@ -66,7 +65,7 @@ fun GbaLandscapeSkin(
 
             Column(
                 modifier = Modifier
-                    .weight(2f)
+                    .weight(2.5f)
                     .fillMaxHeight(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
@@ -76,8 +75,8 @@ fun GbaLandscapeSkin(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .aspectRatio(1.5f)
-                        .padding(horizontal = 8.dp)
+                        .aspectRatio(1.77f) // 16:9 for PSP
+                        .padding(horizontal = 4.dp)
                         .onGloballyPositioned {
                             bezelRect.value = it.boundsInParent()
                         },

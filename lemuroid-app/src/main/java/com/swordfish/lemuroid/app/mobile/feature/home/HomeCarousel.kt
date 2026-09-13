@@ -55,6 +55,10 @@ import com.swordfish.lemuroid.app.mobile.shared.compose.ui.LemuroidGameImage
 import com.swordfish.lemuroid.app.shared.game.skins.GbSkinManager
 import com.swordfish.lemuroid.app.shared.game.skins.GbaSkinManager
 import com.swordfish.lemuroid.app.shared.game.skins.GbcSkinManager
+import com.swordfish.lemuroid.app.shared.game.skins.art.GbArt
+import com.swordfish.lemuroid.app.shared.game.skins.art.GbaArt
+import com.swordfish.lemuroid.app.shared.game.skins.art.GbcArt
+import com.swordfish.lemuroid.app.shared.game.skins.art.PspArt
 import com.swordfish.lemuroid.lib.library.db.entity.Game
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
@@ -319,89 +323,19 @@ private fun SystemForegroundView(
     }
     
     Canvas(modifier = modifier) {
-        val w = size.width
-        val h = size.height
-        val outerCorner = 16.dp.toPx()
-        val path = Path().apply {
-            addRoundRect(RoundRect(Rect(0f, 0f, w, h), topLeft = CornerRadius(outerCorner), topRight = CornerRadius(outerCorner), bottomLeft = CornerRadius.Zero, bottomRight = CornerRadius.Zero))
-        }
-        drawPath(path, caseColor)
-        
-        val bezelW = if (systemIdNorm == "psp") w * 0.95f else w * 0.9f
-        val bezelH = h * 1.1f
-        val bezelX = (w - bezelW) / 2
+        val bezelW = if (systemIdNorm == "psp") size.width * 0.95f else size.width * 0.9f
+        val bezelH = size.height * 1.1f
+        val bezelX = (size.width - bezelW) / 2
         val bezelY = 40.dp.toPx()
         val bezelRect = Rect(bezelX, bezelY, bezelX + bezelW, bezelY + bezelH)
-        val bezelColor = Color(0xFF1A1A1A)
 
         when (systemIdNorm) {
-            "gb" -> {
-                val standardCorner = 12.dp.toPx()
-                val extraRoundCorner = 56.dp.toPx()
-                val bezelPath = Path().apply {
-                    moveTo(bezelRect.left + standardCorner, bezelRect.top)
-                    lineTo(bezelRect.right - standardCorner, bezelRect.top)
-                    quadraticTo(bezelRect.right, bezelRect.top, bezelRect.right, bezelRect.top + standardCorner)
-                    lineTo(bezelRect.right, bezelRect.bottom - extraRoundCorner)
-                    quadraticTo(bezelRect.right, bezelRect.bottom, bezelRect.right - extraRoundCorner, bezelRect.bottom)
-                    lineTo(bezelRect.left + standardCorner, bezelRect.bottom)
-                    quadraticTo(bezelRect.left, bezelRect.bottom, bezelRect.left, bezelRect.bottom - standardCorner)
-                    lineTo(bezelRect.left, bezelRect.top + standardCorner)
-                    quadraticTo(bezelRect.left, bezelRect.top, bezelRect.left + standardCorner, bezelRect.top)
-                    close()
-                }
-                drawPath(bezelPath, bezelColor)
-            }
-            "gbc" -> {
-                val cornerPx = 20.dp.toPx()
-                val bulgePx = 20.dp.toPx()
-                val bezelPath = Path().apply {
-                    moveTo(bezelRect.left + cornerPx, bezelRect.top)
-                    lineTo(bezelRect.right - cornerPx, bezelRect.top)
-                    quadraticTo(bezelRect.right, bezelRect.top, bezelRect.right, bezelRect.top + cornerPx)
-                    lineTo(bezelRect.right, bezelRect.bottom - cornerPx)
-                    quadraticTo(bezelRect.right, bezelRect.bottom, bezelRect.right - cornerPx, bezelRect.bottom)
-                    quadraticTo(bezelRect.center.x, bezelRect.bottom + bulgePx, bezelRect.left + cornerPx, bezelRect.bottom)
-                    quadraticTo(bezelRect.left, bezelRect.bottom, bezelRect.left, bezelRect.bottom - cornerPx)
-                    lineTo(bezelRect.left, bezelRect.top + cornerPx)
-                    quadraticTo(bezelRect.left, bezelRect.top, bezelRect.left + cornerPx, bezelRect.top)
-                    close()
-                }
-                drawPath(bezelPath, bezelColor)
-                drawRoundRect(color = Color.Black.copy(alpha = 0.8f), topLeft = Offset(w * 0.75f, 12.dp.toPx()), size = Size(40.dp.toPx(), 12.dp.toPx()), cornerRadius = CornerRadius(4.dp.toPx()))
-            }
-            "gba" -> {
-                val cornerPx = 24.dp.toPx()
-                val bulgePx = 16.dp.toPx()
-                val bezelPath = Path().apply {
-                    moveTo(bezelRect.left + cornerPx, bezelRect.top)
-                    lineTo(bezelRect.right - cornerPx, bezelRect.top)
-                    quadraticTo(bezelRect.right, bezelRect.top, bezelRect.right, bezelRect.top + cornerPx)
-                    lineTo(bezelRect.right, bezelRect.bottom - cornerPx)
-                    quadraticTo(bezelRect.right, bezelRect.bottom, bezelRect.right - cornerPx, bezelRect.bottom)
-                    quadraticTo(bezelRect.center.x, bezelRect.bottom + bulgePx, bezelRect.left + cornerPx, bezelRect.bottom)
-                    quadraticTo(bezelRect.left, bezelRect.bottom, bezelRect.left, bezelRect.bottom - cornerPx)
-                    lineTo(bezelRect.left, bezelRect.top + cornerPx)
-                    quadraticTo(bezelRect.left, bezelRect.top, bezelRect.left + cornerPx, bezelRect.top)
-                    close()
-                }
-                drawPath(bezelPath, bezelColor)
-                val shoulderW = w * 0.2f
-                val shoulderH = 20.dp.toPx()
-                drawRect(color = Color.Black.copy(alpha = 0.1f), topLeft = Offset(0f, 0f), size = Size(shoulderW, shoulderH))
-                drawRect(color = Color.Black.copy(alpha = 0.1f), topLeft = Offset(w - shoulderW, 0f), size = Size(shoulderW, shoulderH))
-            }
-            "psp" -> {
-                val cornerPx = 32.dp.toPx()
-                val bezelPath = Path().apply { addRoundRect(RoundRect(bezelRect, CornerRadius(cornerPx))) }
-                drawPath(bezelPath, bezelColor)
-                val shoulderW = w * 0.25f
-                val shoulderH = 12.dp.toPx()
-                drawRect(color = Color.White.copy(alpha = 0.1f), topLeft = Offset(0f, 0f), size = Size(shoulderW, shoulderH))
-                drawRect(color = Color.White.copy(alpha = 0.1f), topLeft = Offset(w - shoulderW, 0f), size = Size(shoulderW, shoulderH))
-            }
+            "gb" -> GbArt.run { drawHandheld(caseColor, bezelRect, true) }
+            "gbc" -> GbcArt.run { drawHandheld(caseColor, bezelRect, true) }
+            "gba" -> GbaArt.run { drawHandheld(caseColor, bezelRect, true) }
+            "psp" -> PspArt.run { drawHandheld(caseColor, bezelRect, true) }
             else -> {
-                drawRect(color = bezelColor, topLeft = bezelRect.topLeft, size = bezelRect.size)
+                drawRect(Color(0xFF1A1A1A), topLeft = bezelRect.topLeft, size = bezelRect.size)
             }
         }
     }
