@@ -36,6 +36,7 @@
     <string name="setting_mgba_solar_sensor_level">Solar sensor level</string>
     <string name="setting_mgba_allow_sensor" translatable="false">Allow hardware sensors (Solar/Tilt)</string>
     <string name="setting_mgba_interframe_blending">LCD ghosting</string>
+    <string name="setting_mgba_gb_palette">Colorization</string>
     <string name="setting_mgba_frameskip">Frameskip</string>
     <string name="setting_mgba_color_correction">Color correction</string>
     <string name="setting_mupen64plus_43screensize">Screen size 4:3</string>
@@ -80,6 +81,11 @@
     <string name="value_mgba_interframe_blending_mix">Simple</string>
     <string name="value_mgba_interframe_blending_lcd_ghosting">LCD Ghosting (Accurate)</string>
     <string name="value_mgba_interframe_blending_lcd_ghosting_fast">LCD Ghosting (Fast)</string>
+
+    <string name="value_mgba_gb_palette_grayscale">Grayscale</string>
+    <string name="value_mgba_gb_palette_dmg_green">DMG Green</string>
+    <string name="value_mgba_gb_palette_pocket">Pocket</string>
+    <string name="value_mgba_gb_palette_light">Light</string>
 
     <string name="value_mgba_frameskip_disabled">Disabled</string>
     <string name="value_mgba_frameskip_auto">Auto</string>

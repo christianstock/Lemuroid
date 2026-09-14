@@ -64,4 +64,6 @@ val md_theme_dark_surfaceTint = Color(0xFFDDDDDD)
 val md_theme_dark_outlineVariant = Color(0xFF424940)
 val md_theme_dark_scrim = Color(0xFF000000)
 
+val gameboy_screen_medium_gray = Color(0xFF767676)
+
 val seed = Color(0xFF00C64E)

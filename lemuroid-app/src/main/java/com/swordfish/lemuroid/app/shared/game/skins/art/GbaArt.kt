@@ -5,9 +5,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.unit.dp
@@ -38,34 +38,21 @@ object GbaArt {
             }
             drawPath(path, caseColor)
         } else {
-            drawRect(caseColor)
+            if (viewportRect != null) {
+                val bezelPath = calculateBezelPath(viewportRect)
+                val shellPath = Path().apply {
+                    fillType = PathFillType.EvenOdd
+                    addRect(Rect(0f, 0f, w, h))
+                    addPath(bezelPath)
+                }
+                drawPath(shellPath, caseColor)
+            } else {
+                drawRect(caseColor)
+            }
         }
 
-        // 2. Draw Bezel / Cutout
+        // 2. Bezel / Details
         viewportRect?.let { rect ->
-            val cornerPx = 24.dp.toPx()
-            val bulgePx = 16.dp.toPx()
-
-            val bezelPath = Path().apply {
-                moveTo(rect.left + cornerPx, rect.top)
-                lineTo(rect.right - cornerPx, rect.top)
-                quadraticTo(rect.right, rect.top, rect.right, rect.top + cornerPx)
-                lineTo(rect.right, rect.bottom - cornerPx)
-                quadraticTo(rect.right, rect.bottom, rect.right - cornerPx, rect.bottom)
-                quadraticTo(rect.center.x, rect.bottom + bulgePx, rect.left + cornerPx, rect.bottom)
-                quadraticTo(rect.left, rect.bottom, rect.left, rect.bottom - cornerPx)
-                lineTo(rect.left, rect.top + cornerPx)
-                quadraticTo(rect.left, rect.top, rect.left + cornerPx, rect.top)
-                close()
-            }
-
-            if (!isCarouselMode) {
-                drawPath(bezelPath, Color.Transparent, blendMode = BlendMode.Clear)
-            } else {
-                drawPath(bezelPath, Color(0xFF1A1A1A))
-            }
-
-            // 3. Line Art / Details
             val brandingColor = Color.Black.copy(alpha = 0.4f)
             
             drawContext.canvas.nativeCanvas.apply {
@@ -84,11 +71,32 @@ object GbaArt {
             }
 
             if (isCarouselMode) {
+                val bezelPath = calculateBezelPath(rect)
+                drawPath(bezelPath, Color(0xFF1A1A1A))
+
                 val shoulderW = w * 0.2f
                 val shoulderH = 20.dp.toPx()
                 drawRect(color = Color.Black.copy(alpha = 0.1f), topLeft = Offset(0f, 0f), size = Size(shoulderW, shoulderH))
                 drawRect(color = Color.Black.copy(alpha = 0.1f), topLeft = Offset(w - shoulderW, 0f), size = Size(shoulderW, shoulderH))
             }
+        }
+    }
+
+    private fun DrawScope.calculateBezelPath(rect: Rect): Path {
+        val cornerPx = 24.dp.toPx()
+        val bulgePx = 16.dp.toPx()
+
+        return Path().apply {
+            moveTo(rect.left + cornerPx, rect.top)
+            lineTo(rect.right - cornerPx, rect.top)
+            quadraticTo(rect.right, rect.top, rect.right, rect.top + cornerPx)
+            lineTo(rect.right, rect.bottom - cornerPx)
+            quadraticTo(rect.right, rect.bottom, rect.right - cornerPx, rect.bottom)
+            quadraticTo(rect.center.x, rect.bottom + bulgePx, rect.left + cornerPx, rect.bottom)
+            quadraticTo(rect.left, rect.bottom, rect.left, rect.bottom - cornerPx)
+            lineTo(rect.left, rect.top + cornerPx)
+            quadraticTo(rect.left, rect.top, rect.left + cornerPx, rect.top)
+            close()
         }
     }
 }
