@@ -169,8 +169,11 @@ class BaseGameScreenViewModel(
 
     private inline fun withLoading(block: () -> Unit) {
         loadingState.value = true
-        block()
-        loadingState.value = false
+        try {
+            block()
+        } finally {
+            loadingState.value = false
+        }
     }
 
     fun getGameState(): Flow<GameViewModelRetroGameView.GameState> {
@@ -330,11 +333,16 @@ class BaseGameScreenViewModel(
     fun requestFinish() {
         if (loadingState.value) return
         viewModelScope.launch {
-            withLoading {
-                val snapshot = saves.captureSaveSnapshot(true) ?: return@launch
+            loadingState.value = true
+            try {
+                val snapshot = saves.captureSaveSnapshot(true)
                 saves.writeSaveSnapshot(snapshot)
-                sideEffects.requestSuccessfulFinish()
+            } catch (e: Throwable) {
+                Timber.e(e, "Error while saving game before finish")
+            } finally {
+                loadingState.value = false
             }
+            sideEffects.requestSuccessfulFinish()
         }
     }
 

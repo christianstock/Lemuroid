@@ -173,7 +173,7 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
             }
 
             val onGameClick = { game: Game ->
-                navController.navigate("gameinfo/${game.id}")
+                gameInteractor.onGamePlay(game)
             }
 
             val onGameLongClick = { game: Game ->

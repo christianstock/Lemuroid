@@ -169,8 +169,10 @@ abstract class BaseGameActivity : ImmersiveActivity() {
     }
 
     private fun setUpExceptionsHandler() {
-        Thread.setDefaultUncaughtExceptionHandler { thread, exception ->
-            performUnexpectedErrorFinish(exception)
+        Thread.setDefaultUncaughtExceptionHandler { _, exception ->
+            runOnUiThread {
+                performUnexpectedErrorFinish(exception)
+            }
         }
     }
 

@@ -134,7 +134,19 @@ class LemuroidLibrary(
     ) {
         val updatedGames =
             entries
-                .map { it.game.copy(lastIndexedAt = startedAtMs) }
+                .map { (storageFiles, game) ->
+                    // Re-sync fileName from the actual file on disk for non-zipped games.
+                    // This self-heals cases where fileName was accidentally corrupted in the DB
+                    // (e.g. set to a cleaned title instead of the real ROM filename).
+                    // Zipped games are skipped: we cannot recover the inner filename here.
+                    val primaryName = storageFiles.primaryFile.name
+                    val correctedFileName = if (!primaryName.endsWith(".zip", ignoreCase = true)) {
+                        primaryName
+                    } else {
+                        game.fileName
+                    }
+                    game.copy(lastIndexedAt = startedAtMs, fileName = correctedFileName)
+                }
 
         retrogradedb.gameDao().update(updatedGames)
     }
