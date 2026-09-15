@@ -476,7 +476,7 @@ data class GameSystem(
                                         ),
                                     ),
                                     ExposedSetting(
-                                        "mgba_gb_palette",
+                                        "mgba_gb_colors",
                                         R.string.setting_mgba_gb_palette,
                                         arrayListOf(
                                             ExposedSetting.Value(
@@ -484,15 +484,15 @@ data class GameSystem(
                                                 R.string.value_mgba_gb_palette_grayscale,
                                             ),
                                             ExposedSetting.Value(
-                                                "DMG",
+                                                "DMG Green",
                                                 R.string.value_mgba_gb_palette_dmg_green,
                                             ),
                                             ExposedSetting.Value(
-                                                "Pocket",
+                                                "GB Pocket",
                                                 R.string.value_mgba_gb_palette_pocket,
                                             ),
                                             ExposedSetting.Value(
-                                                "Light",
+                                                "GB Light",
                                                 R.string.value_mgba_gb_palette_light,
                                             ),
                                         ),
@@ -509,7 +509,7 @@ data class GameSystem(
                                     CoreVariable("mgba_solar_sensor_level", "0"),
                                     CoreVariable("mgba_skip_bios", "OFF"),
                                     CoreVariable("mgba_gb_model", "Game Boy"),
-                                    CoreVariable("mgba_gb_palette", "DMG"),
+                                    CoreVariable("mgba_gb_colors", "DMG Green"),
                                 ),
                             controllerConfigs =
                                 hashMapOf(

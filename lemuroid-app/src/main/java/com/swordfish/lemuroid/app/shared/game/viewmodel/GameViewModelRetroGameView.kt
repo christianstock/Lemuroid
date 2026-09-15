@@ -343,11 +343,10 @@ class GameViewModelRetroGameView(
 
     private fun printRetroVariables(retroGameView: GLRetroView) {
         scope.launch {
+            // Some cores do not immediately call SET_VARIABLES so we might need to wait a little bit
             delay(1.seconds)
-            val variables = retroGameView.getVariables()
-            Timber.i("mGBA reported variables: ${variables.size}")
-            variables.forEach {
-                Timber.i("Libretro variable: key=${it.key} value=${it.value} desc=${it.description}")
+            retroGameView.getVariables().forEach {
+                Timber.i("Libretro variable: $it")
             }
         }
     }
