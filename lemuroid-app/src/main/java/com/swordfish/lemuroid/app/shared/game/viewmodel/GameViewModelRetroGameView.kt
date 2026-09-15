@@ -50,6 +50,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import kotlin.time.Duration.Companion.seconds
 
 @OptIn(FlowPreview::class)
@@ -238,8 +239,6 @@ class GameViewModelRetroGameView(
                 .apply {
                     isFocusable = false
                     isFocusableInTouchMode = false
-                    setZOrderMediaOverlay(true)
-                    holder.setFormat(android.graphics.PixelFormat.TRANSLUCENT)
                 }
 
         if (!system.hasTouchScreen) {
@@ -345,8 +344,10 @@ class GameViewModelRetroGameView(
     private fun printRetroVariables(retroGameView: GLRetroView) {
         scope.launch {
             delay(1.seconds)
-            retroGameView.getVariables().forEach {
-                // Variables printed in Debug only
+            val variables = retroGameView.getVariables()
+            Timber.i("mGBA reported variables: ${variables.size}")
+            variables.forEach {
+                Timber.i("Libretro variable: key=${it.key} value=${it.value} desc=${it.description}")
             }
         }
     }

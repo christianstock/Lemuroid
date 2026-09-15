@@ -484,15 +484,15 @@ data class GameSystem(
                                                 R.string.value_mgba_gb_palette_grayscale,
                                             ),
                                             ExposedSetting.Value(
-                                                "DMG Green",
+                                                "DMG",
                                                 R.string.value_mgba_gb_palette_dmg_green,
                                             ),
                                             ExposedSetting.Value(
-                                                "GB Pocket",
+                                                "Pocket",
                                                 R.string.value_mgba_gb_palette_pocket,
                                             ),
                                             ExposedSetting.Value(
-                                                "GB Light",
+                                                "Light",
                                                 R.string.value_mgba_gb_palette_light,
                                             ),
                                         ),
@@ -509,7 +509,7 @@ data class GameSystem(
                                     CoreVariable("mgba_solar_sensor_level", "0"),
                                     CoreVariable("mgba_skip_bios", "OFF"),
                                     CoreVariable("mgba_gb_model", "Game Boy"),
-                                    CoreVariable("mgba_gb_palette", "DMG Green"),
+                                    CoreVariable("mgba_gb_palette", "DMG"),
                                 ),
                             controllerConfigs =
                                 hashMapOf(
