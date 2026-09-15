@@ -11,14 +11,14 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
@@ -26,15 +26,12 @@ import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -164,180 +161,160 @@ class GameMenuActivity : RetrogradeComponentActivity() {
                     ?.let { GameMenuRoute.findByRoute(it) }
                     ?: GameMenuRoute.findByRoute(initialRoute)
 
-            SideMenu {
-                TopAppBar(
-                    title = { Text(stringResource(currentRoute.titleId)) },
-                    windowInsets = WindowInsets(0.dp),
-                    navigationIcon = {
-                        AnimatedContent(targetState = currentRoute.canGoBack() && !isDirectAccess, label = "Back") { canGoBack ->
-                            if (canGoBack) {
-                                IconButton(onClick = { navController.popBackStack() }) {
-                                    Icon(
-                                        Icons.AutoMirrored.Filled.ArrowBack,
-                                        stringResource(R.string.back),
-                                    )
-                                }
-                            } else {
-                                IconButton(onClick = { onResult { } }) {
-                                    Icon(
-                                        Icons.Filled.Close,
-                                        stringResource(R.string.close),
-                                    )
-                                }
-                            }
-                        }
-                    },
-                )
-                Divider(modifier = Modifier.fillMaxWidth())
-                NavHost(
-                    modifier =
-                        Modifier
-                            .fillMaxSize(),
-                    navController = navController,
-                    startDestination = initialRoute,
-                    enterTransition = { fadeIn() },
-                    exitTransition = { fadeOut() },
-                ) {
-                    composable(GameMenuRoute.HOME) {
-                        GameMenuHomeScreen(navController, gameMenuRequest, ::onResult)
-                    }
-                    composable(GameMenuRoute.SAVE) {
-                        GameMenuStatesScreen(
-                            viewModel(
-                                factory =
-                                    GameMenuStatesViewModel.Factory(
-                                        application,
-                                        gameMenuRequest,
-                                        statesManager,
-                                        false,
-                                        statesPreviewManager,
-                                    ),
-                            ),
-                            onStateClicked = {
-                                onResult { putExtra(GameMenuContract.RESULT_SAVE, it) }
-                            },
-                        )
-                    }
-                    composable(GameMenuRoute.LOAD) {
-                        GameMenuStatesScreen(
-                            viewModel(
-                                factory =
-                                    GameMenuStatesViewModel.Factory(
-                                        application,
-                                        gameMenuRequest,
-                                        statesManager,
-                                        true,
-                                        statesPreviewManager,
-                                    ),
-                            ),
-                            onStateClicked = {
-                                onResult { putExtra(GameMenuContract.RESULT_LOAD, it) }
-                            },
-                        )
-                    }
-                    composable(GameMenuRoute.OPTIONS) {
-                        GameMenuCoreOptionsScreen(
-                            viewModel(
-                                factory = GameMenuCoreOptionsViewModel.Factory(inputDeviceManager),
-                            ),
-                            gameMenuRequest,
-                        )
-                    }
-                    composable(GameMenuRoute.CHEATS) {
-                        val viewModel: GameMenuCheatsViewModel = viewModel(
-                            factory = GameMenuCheatsViewModel.Factory(
-                                applicationContext,
-                                gameMenuRequest.game.id,
-                                cheatManager
-                            )
-                        )
-                        CheatMenuScreen(
-                            modifier = Modifier.fillMaxSize(),
-                            cheatsFlow = viewModel.cheats,
-                            onCheatToggle = { cheat, enabled ->
-                                viewModel.toggleCheat(cheat, enabled)
-                                cheatsChanged = true
-                            },
-                            onImportCheats = { uri ->
-                                viewModel.importCheats(uri)
-                                cheatsChanged = true
-                            },
-                            onClose = {
-                                navController.popBackStack()
-                            }
-                        )
-                    }
-                    composable(GameMenuRoute.SKINS) {
-                        when (gameMenuRequest.game.systemId) {
-                            "gb" -> {
-                                val gbSkinManager = remember { GbSkinManager.getInstance(applicationContext) }
-                                GbSkinSelectionScreen(
-                                    skinManager = gbSkinManager,
-                                    onSkinSelected = { skinId ->
-                                        gbSkinManager.setSelectedSkin(skinId)
-                                    },
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            }
-                            "gbc" -> {
-                                val gbcSkinManager = remember { GbcSkinManager.getInstance(applicationContext) }
-                                GbcSkinSelectionScreen(
-                                    skinManager = gbcSkinManager,
-                                    onSkinSelected = { skinId ->
-                                        gbcSkinManager.setSelectedSkin(skinId)
-                                    },
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            }
-                            "gba" -> {
-                                val gbaSkinManager = remember { GbaSkinManager.getInstance(applicationContext) }
-                                GbaSkinSelectionScreen(
-                                    skinManager = gbaSkinManager,
-                                    onSkinSelected = { skinId ->
-                                        gbaSkinManager.setSelectedSkin(skinId)
-                                    },
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            }
-                            else -> {
-                                // Default to GBC for unknown systems
-                                val gbcSkinManager = remember { GbcSkinManager.getInstance(applicationContext) }
-                                GbcSkinSelectionScreen(
-                                    skinManager = gbcSkinManager,
-                                    onSkinSelected = { skinId ->
-                                        gbcSkinManager.setSelectedSkin(skinId)
-                                    },
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    @Composable
-    private fun SideMenu(content: @Composable () -> Unit) {
-        BoxWithConstraints(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.CenterEnd,
-        ) {
-            val panelWidth =
-                remember(maxWidth) {
-                    minOf(maxWidth * 0.8f, 400f.dp)
-                }
-
             Surface(
-                modifier =
-                    Modifier
-                        .padding()
-                        .fillMaxHeight()
-                        .width(panelWidth)
-                        .clip(MaterialTheme.shapes.large),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .windowInsetsPadding(WindowInsets.displayCutout)
             ) {
                 Column(modifier = Modifier.fillMaxSize()) {
-                    content()
+                    TopAppBar(
+                        title = { Text(stringResource(currentRoute.titleId)) },
+                        windowInsets = WindowInsets(0.dp),
+                        navigationIcon = {
+                            AnimatedContent(targetState = currentRoute.canGoBack() && !isDirectAccess, label = "Back") { canGoBack ->
+                                if (canGoBack) {
+                                    IconButton(onClick = { navController.popBackStack() }) {
+                                        Icon(
+                                            Icons.AutoMirrored.Filled.ArrowBack,
+                                            stringResource(R.string.back),
+                                        )
+                                    }
+                                } else {
+                                    IconButton(onClick = { onResult { } }) {
+                                        Icon(
+                                            Icons.Filled.Close,
+                                            stringResource(R.string.close),
+                                        )
+                                    }
+                                }
+                            }
+                        },
+                    )
+                    Divider(modifier = Modifier.fillMaxWidth())
+                    NavHost(
+                        modifier = Modifier.fillMaxSize(),
+                        navController = navController,
+                        startDestination = initialRoute,
+                        enterTransition = { fadeIn() },
+                        exitTransition = { fadeOut() },
+                    ) {
+                        composable(GameMenuRoute.HOME) {
+                            GameMenuHomeScreen(navController, gameMenuRequest, ::onResult)
+                        }
+                        composable(GameMenuRoute.SAVE) {
+                            GameMenuStatesScreen(
+                                viewModel(
+                                    factory =
+                                        GameMenuStatesViewModel.Factory(
+                                            application,
+                                            gameMenuRequest,
+                                            statesManager,
+                                            false,
+                                            statesPreviewManager,
+                                        ),
+                                ),
+                                onStateClicked = {
+                                    onResult { putExtra(GameMenuContract.RESULT_SAVE, it) }
+                                },
+                                onCancel = { onResult { } }
+                            )
+                        }
+                        composable(GameMenuRoute.LOAD) {
+                            GameMenuStatesScreen(
+                                viewModel(
+                                    factory =
+                                        GameMenuStatesViewModel.Factory(
+                                            application,
+                                            gameMenuRequest,
+                                            statesManager,
+                                            true,
+                                            statesPreviewManager,
+                                        ),
+                                ),
+                                onStateClicked = {
+                                    onResult { putExtra(GameMenuContract.RESULT_LOAD, it) }
+                                },
+                                onCancel = { onResult { } }
+                            )
+                        }
+                        composable(GameMenuRoute.OPTIONS) {
+                            GameMenuCoreOptionsScreen(
+                                viewModel(
+                                    factory = GameMenuCoreOptionsViewModel.Factory(inputDeviceManager),
+                                ),
+                                gameMenuRequest,
+                            )
+                        }
+                        composable(GameMenuRoute.CHEATS) {
+                            val viewModel: GameMenuCheatsViewModel = viewModel(
+                                factory = GameMenuCheatsViewModel.Factory(
+                                    applicationContext,
+                                    gameMenuRequest.game.id,
+                                    cheatManager
+                                )
+                            )
+                            CheatMenuScreen(
+                                modifier = Modifier.fillMaxSize(),
+                                cheatsFlow = viewModel.cheats,
+                                onCheatToggle = { cheat, enabled ->
+                                    viewModel.toggleCheat(cheat, enabled)
+                                    cheatsChanged = true
+                                },
+                                onImportCheats = { uri ->
+                                    viewModel.importCheats(uri)
+                                    cheatsChanged = true
+                                },
+                                onClose = {
+                                    navController.popBackStack()
+                                }
+                            )
+                        }
+                        composable(GameMenuRoute.SKINS) {
+                            when (gameMenuRequest.game.systemId) {
+                                "gb" -> {
+                                    val gbSkinManager = remember { GbSkinManager.getInstance(applicationContext) }
+                                    GbSkinSelectionScreen(
+                                        skinManager = gbSkinManager,
+                                        onSkinSelected = { skinId ->
+                                            gbSkinManager.setSelectedSkin(skinId)
+                                        },
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
+                                "gbc" -> {
+                                    val gbcSkinManager = remember { GbcSkinManager.getInstance(applicationContext) }
+                                    GbcSkinSelectionScreen(
+                                        skinManager = gbcSkinManager,
+                                        onSkinSelected = { skinId ->
+                                            gbcSkinManager.setSelectedSkin(skinId)
+                                        },
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
+                                "gba" -> {
+                                    val gbaSkinManager = remember { GbaSkinManager.getInstance(applicationContext) }
+                                    GbaSkinSelectionScreen(
+                                        skinManager = gbaSkinManager,
+                                        onSkinSelected = { skinId ->
+                                            gbaSkinManager.setSelectedSkin(skinId)
+                                        },
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
+                                else -> {
+                                    // Default to GBC for unknown systems
+                                    val gbcSkinManager = remember { GbcSkinManager.getInstance(applicationContext) }
+                                    GbcSkinSelectionScreen(
+                                        skinManager = gbcSkinManager,
+                                        onSkinSelected = { skinId ->
+                                            gbcSkinManager.setSelectedSkin(skinId)
+                                        },
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

@@ -72,6 +72,7 @@ import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.launch
 import com.swordfish.lemuroid.app.shared.game.BaseGameScreenViewModel
+import com.swordfish.lemuroid.app.shared.game.viewmodel.GameViewModelRetroGameView
 import com.swordfish.lemuroid.app.shared.game.PhysicalScreenSizeCalculator
 import com.swordfish.lemuroid.app.shared.game.skins.GbSkin
 import com.swordfish.lemuroid.app.shared.game.skins.GbSkinManager
@@ -158,25 +159,29 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
             simulatedState = tiltSimulatedStates,
             simulatedControlIds = tiltSimulatedControls,
         ) {
-            val localContext = LocalContext.current
             val lifecycle = LocalLifecycleOwner.current
 
             val fullScreenPosition = remember { mutableStateOf<Rect?>(null) }
             val viewportPosition = remember { mutableStateOf<Rect?>(null) }
 
+            val gameState by viewModel.getGameState().collectAsState(GameViewModelRetroGameView.GameState.Uninitialized)
+            val isLoaded = gameState is GameViewModelRetroGameView.GameState.Loaded || gameState is GameViewModelRetroGameView.GameState.Ready
+
             Box(modifier = Modifier.fillMaxSize()) {
-                // Root game view that fills the whole PadKit area
-                AndroidView(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .onGloballyPositioned {
-                                fullScreenPosition.value = it.boundsInRoot()
-                            },
-                    factory = {
-                        viewModel.createRetroView(localContext, lifecycle)
-                    },
-                )
+                if (isLoaded) {
+                    // Root game view that fills the whole PadKit area
+                    AndroidView(
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .onGloballyPositioned {
+                                    fullScreenPosition.value = it.boundsInRoot()
+                                },
+                        factory = { ctx ->
+                            viewModel.createRetroView(ctx, lifecycle)!!
+                        },
+                    )
+                }
             }
 
             val fullPos = fullScreenPosition.value
@@ -195,6 +200,7 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
                         (viewPos.bottom - fullPos.top) / fullPos.height,
                     )
                 gameView.viewport = viewport
+                viewModel.retroGameView.currentViewport = viewport
             }
 
             val isVisible =

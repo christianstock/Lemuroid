@@ -208,14 +208,20 @@ class BaseGameScreenViewModel(
     fun createRetroView(
         context: Context,
         lifecycle: LifecycleOwner,
-    ): GLRetroView {
-        val (gameData, result) = retroGameView.createRetroView(context, lifecycle)
-        viewModelScope.launch {
-            gameData.quickSaveData?.let {
-                saves.restoreAutoSaveAsync(it)
+    ): GLRetroView? {
+        val result: Pair<GameLoader.GameData, GLRetroView>? = retroGameView.createRetroViewSafe(context, lifecycle)
+        if (result != null) {
+            val gameData: GameLoader.GameData = result.first
+            val view: GLRetroView = result.second
+            viewModelScope.launch {
+                val quickSave = gameData.quickSaveData
+                if (quickSave != null) {
+                    saves.restoreAutoSaveAsync(quickSave)
+                }
             }
+            return view
         }
-        return result
+        return null
     }
 
     suspend fun loadGame(
@@ -226,7 +232,22 @@ class BaseGameScreenViewModel(
         requestLoadSave: Boolean,
     ) {
         Timber.i("Calling load game: $game")
-        retroGameView.initialize(applicationContext, game, systemCoreConfig, gameLoader, requestLoadSave)
+        
+        // Retry mechanism for core initialization to mitigate intermittent startup crashes
+        var initialized = false
+        var retries = 3
+        while (!initialized && retries > 0) {
+            try {
+                retroGameView.resetToUninitialized()
+                retroGameView.initialize(applicationContext, game, systemCoreConfig, gameLoader, requestLoadSave)
+                initialized = true
+            } catch (e: Exception) {
+                Timber.e(e, "Initialization attempt failed, retries left: ${retries - 1}")
+                retries--
+                if (retries > 0) delay(500) else throw e
+            }
+        }
+        
         // Load enabled cheats after game is initialized
         retroGameView.initializeCheats(game)
     }
@@ -333,16 +354,15 @@ class BaseGameScreenViewModel(
     fun requestFinish() {
         if (loadingState.value) return
         viewModelScope.launch {
-            loadingState.value = true
-            try {
-                val snapshot = saves.captureSaveSnapshot(true)
+            withLoading {
+                val snapshot = saves.captureSaveSnapshot(true) ?: run {
+                    Timber.w("No save snapshot captured; proceeding without save")
+                    sideEffects.requestSuccessfulFinish()
+                    return@launch
+                }
                 saves.writeSaveSnapshot(snapshot)
-            } catch (e: Throwable) {
-                Timber.e(e, "Error while saving game before finish")
-            } finally {
-                loadingState.value = false
+                sideEffects.requestSuccessfulFinish()
             }
-            sideEffects.requestSuccessfulFinish()
         }
     }
 
@@ -350,7 +370,9 @@ class BaseGameScreenViewModel(
         if (loadingState.value) return
         GameService.schedule {
             val snapshot = saves.captureSaveSnapshot(false)
-            saves.writeSaveSnapshot(snapshot)
+            if (snapshot != null) {
+                saves.writeSaveSnapshot(snapshot)
+            }
         }
     }
 

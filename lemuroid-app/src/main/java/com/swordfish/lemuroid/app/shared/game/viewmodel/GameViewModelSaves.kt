@@ -128,7 +128,19 @@ class GameViewModelSaves(
     private suspend fun takeScreenshotPreview(index: Int) {
         val sizeInDp = StatesPreviewManager.PREVIEW_SIZE_DP
         val previewSize = GraphicsUtils.convertDpToPixel(sizeInDp, appContext).roundToInt()
-        val preview = retroGameView.retroGameView?.takeScreenshot(previewSize, 3)
+        
+        val viewport = retroGameView.currentViewport
+        val cropRect = if (viewport != null) {
+            val view = retroGameView.retroGameView!!
+            android.graphics.Rect(
+                (viewport.left * view.width).roundToInt(),
+                (viewport.top * view.height).roundToInt(),
+                (viewport.right * view.width).roundToInt(),
+                (viewport.bottom * view.height).roundToInt()
+            )
+        } else null
+
+        val preview = retroGameView.retroGameView?.takeScreenshot(previewSize, 3, cropRect)
         if (preview != null) {
             statesPreviewManager.setPreviewForSlot(game, preview, systemCoreConfig.coreID, index)
         }
@@ -244,7 +256,19 @@ class GameViewModelSaves(
     private suspend fun takeQuickSavePreview() {
         val sizeInDp = StatesPreviewManager.PREVIEW_SIZE_DP
         val previewSize = GraphicsUtils.convertDpToPixel(sizeInDp, appContext).roundToInt()
-        val preview = retroGameView.retroGameView?.takeScreenshot(previewSize, 3)
+        
+        val viewport = retroGameView.currentViewport
+        val cropRect = if (viewport != null) {
+            val view = retroGameView.retroGameView!!
+            android.graphics.Rect(
+                (viewport.left * view.width).roundToInt(),
+                (viewport.top * view.height).roundToInt(),
+                (viewport.right * view.width).roundToInt(),
+                (viewport.bottom * view.height).roundToInt()
+            )
+        } else null
+
+        val preview = retroGameView.retroGameView?.takeScreenshot(previewSize, 3, cropRect)
         if (preview != null) {
             statesPreviewManager.setQuickSavePreview(game, preview, systemCoreConfig.coreID)
         }

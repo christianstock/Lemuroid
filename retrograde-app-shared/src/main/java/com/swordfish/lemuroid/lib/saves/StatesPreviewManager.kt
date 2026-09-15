@@ -21,8 +21,10 @@ class StatesPreviewManager(private val directoriesManager: DirectoriesManager) {
         withContext(Dispatchers.IO) {
             val screenshotName = getSlotScreenshotName(game, index)
             val file = getPreviewFile(screenshotName, coreID.coreName)
-            val bitmap = BitmapFactory.decodeFile(file.absolutePath)
-            ThumbnailUtils.extractThumbnail(bitmap, size, size)
+            if (!file.exists()) return@withContext null
+            val bitmap = BitmapFactory.decodeFile(file.absolutePath) ?: return@withContext null
+            // Extract a square thumbnail by cropping the center
+            ThumbnailUtils.extractThumbnail(bitmap, size, size, ThumbnailUtils.OPTIONS_RECYCLE_INPUT)
         }
 
     suspend fun setPreviewForSlot(
@@ -56,8 +58,9 @@ class StatesPreviewManager(private val directoriesManager: DirectoriesManager) {
             val screenshotName = "${game.fileName}.quicksave.jpg"
             val file = getPreviewFile(screenshotName, coreID.coreName)
             if (!file.exists()) return@withContext null
-            val bitmap = BitmapFactory.decodeFile(file.absolutePath)
-            ThumbnailUtils.extractThumbnail(bitmap, size, size)
+            val bitmap = BitmapFactory.decodeFile(file.absolutePath) ?: return@withContext null
+            // Extract a square thumbnail by cropping the center
+            ThumbnailUtils.extractThumbnail(bitmap, size, size, ThumbnailUtils.OPTIONS_RECYCLE_INPUT)
         }
 
     suspend fun setQuickSavePreview(
@@ -78,6 +81,7 @@ class StatesPreviewManager(private val directoriesManager: DirectoriesManager) {
     ) = "${game.fileName}.slot${index + 1}.jpg"
 
     companion object {
-        val PREVIEW_SIZE_DP = 96f
+        // Increased preview size to accommodate full-screen grid display
+        val PREVIEW_SIZE_DP = 192f
     }
 }

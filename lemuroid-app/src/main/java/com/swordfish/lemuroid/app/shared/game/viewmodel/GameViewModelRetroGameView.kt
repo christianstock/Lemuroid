@@ -86,6 +86,8 @@ class GameViewModelRetroGameView(
     private val retroGameViewFlow = MutableStateFlow<GLRetroView?>(null)
     var retroGameView: GLRetroView? by MutableStateProperty(retroGameViewFlow)
 
+    var currentViewport: android.graphics.RectF? = null
+
     private var currentGameId: Int = -1
     private val cheatsFlow = MutableStateFlow<List<GameCheatEntity>>(emptyList())
 
@@ -227,12 +229,15 @@ class GameViewModelRetroGameView(
             }
     }
 
-    fun createRetroView(
+    fun createRetroViewSafe(
         context: Context,
         lifecycle: LifecycleOwner,
-    ): Pair<GameLoader.GameData, GLRetroView> {
+    ): Pair<GameLoader.GameData, GLRetroView>? {
         val currentState = gameState.value
-        if (currentState !is GameState.Loaded) throw IllegalStateException("Game is not loaded.")
+        if (currentState !is GameState.Loaded) {
+            // Log as error instead of throwing to prevent crash
+            return null
+        }
 
         val result =
             GLRetroView(context, currentState.retroViewData)
@@ -257,6 +262,11 @@ class GameViewModelRetroGameView(
         gameState.value = GameState.Ready
 
         return currentState.gameData to result
+    }
+
+    fun resetToUninitialized() {
+        gameState.value = GameState.Uninitialized
+        retroGameViewFlow.value = null
     }
 
     suspend fun retroGameViewFlow() =

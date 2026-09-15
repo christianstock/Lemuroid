@@ -495,6 +495,10 @@ data class GameSystem(
                                                 "GB Light",
                                                 R.string.value_mgba_gb_palette_light,
                                             ),
+                                            ExposedSetting.Value(
+                                                "GBC Brown ↑",
+                                                R.string.value_mgba_gb_palette_grayscale, // Temporary mapping
+                                            ),
                                         ),
                                     ),
                                 ),

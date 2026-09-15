@@ -64,7 +64,7 @@ class GameMenuStatesViewModel(
                     val preview = statesPreviewManager.getQuickSavePreview(
                         gameMenuRequest.game,
                         gameMenuRequest.coreConfig.coreID,
-                        (96 * 2)  // size in pixels
+                        (StatesPreviewManager.PREVIEW_SIZE_DP * 2).toInt() // Ensure enough resolution for the grid
                     )
                     val formatter = SimpleDateFormat.getDateTimeInstance()
                     val description = formatter.format(Date(quickSaveTimestamp))
@@ -78,7 +78,6 @@ class GameMenuStatesViewModel(
                         )
                     )
                 } catch (e: Exception) {
-                    // Quick save might not have a preview, show without image
                     val formatter = SimpleDateFormat.getDateTimeInstance()
                     val description = formatter.format(Date(quickSaveTimestamp))
                     entries.add(
@@ -95,22 +94,19 @@ class GameMenuStatesViewModel(
 
             // Add regular slot saves
             slotsInfo.forEachIndexed { index, slotInfo ->
-                val title =
-                    application.applicationContext.getString(
-                        R.string.game_menu_state,
-                        (index + 1).toString(),
-                    )
+                val title = "" // Hiding "State X" label as requested
                 val description = GameMenuHelper.getSaveStateDescription(slotInfo)
                 val isEnabled = !disableMissingEntries || slotInfo.exists
-                val preview =
-                    GameMenuHelper.getSaveStateBitmap(
-                        application.applicationContext,
-                        statesPreviewManager,
-                        slotInfo,
+                
+                val previewSize = (StatesPreviewManager.PREVIEW_SIZE_DP * 2).toInt()
+                val preview = if (slotInfo.exists) {
+                    statesPreviewManager.getPreviewForSlot(
                         gameMenuRequest.game,
                         gameMenuRequest.coreConfig.coreID,
                         index,
+                        previewSize
                     )
+                } else null
 
                 entries.add(StateEntry(title, description, isEnabled, preview))
             }
