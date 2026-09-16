@@ -203,7 +203,7 @@ class GameMenuActivity : RetrogradeComponentActivity() {
                         }
                         composable(GameMenuRoute.SAVE) {
                             GameMenuStatesScreen(
-                                viewModel(
+                                viewModel = viewModel(
                                     factory =
                                         GameMenuStatesViewModel.Factory(
                                             application,
@@ -213,6 +213,7 @@ class GameMenuActivity : RetrogradeComponentActivity() {
                                             statesPreviewManager,
                                         ),
                                 ),
+                                isSaveRoute = true,
                                 onStateClicked = {
                                     onResult { putExtra(GameMenuContract.RESULT_SAVE, it) }
                                 },
@@ -221,7 +222,7 @@ class GameMenuActivity : RetrogradeComponentActivity() {
                         }
                         composable(GameMenuRoute.LOAD) {
                             GameMenuStatesScreen(
-                                viewModel(
+                                viewModel = viewModel(
                                     factory =
                                         GameMenuStatesViewModel.Factory(
                                             application,
@@ -231,6 +232,7 @@ class GameMenuActivity : RetrogradeComponentActivity() {
                                             statesPreviewManager,
                                         ),
                                 ),
+                                isSaveRoute = false,
                                 onStateClicked = {
                                     onResult { putExtra(GameMenuContract.RESULT_LOAD, it) }
                                 },

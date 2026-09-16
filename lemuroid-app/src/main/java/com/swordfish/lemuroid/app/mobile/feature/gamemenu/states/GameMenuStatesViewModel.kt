@@ -45,10 +45,17 @@ class GameMenuStatesViewModel(
         val enabled: Boolean,
         val preview: Bitmap?,
         val isQuickSave: Boolean = false,
+        val customName: String? = null,
+        val slotIndex: Int = -1,
     )
 
     data class State(val entries: List<StateEntry> = emptyList()) {
         val hasQuickSave: Boolean get() = entries.any { it.isQuickSave }
+    }
+
+    fun saveSlotName(slotIndex: Int, name: String) {
+        val prefs = application.getSharedPreferences("slot_names", android.content.Context.MODE_PRIVATE)
+        prefs.edit().putString("${gameMenuRequest.game.id}_slot_$slotIndex", name).apply()
     }
 
     val uiStates =
@@ -56,6 +63,7 @@ class GameMenuStatesViewModel(
             val slotsInfo = statesManager.getSavedSlotsInfo(gameMenuRequest.game, gameMenuRequest.coreConfig.coreID)
 
             val entries = mutableListOf<StateEntry>()
+            val slotNamesPrefs = application.getSharedPreferences("slot_names", android.content.Context.MODE_PRIVATE)
 
             // Add quick save entry at the top if it exists
             val quickSaveTimestamp = GameViewModelSaves.getQuickSaveTimestampForGame(application, gameMenuRequest.game.id.toLong())
@@ -74,7 +82,8 @@ class GameMenuStatesViewModel(
                             description = description,
                             enabled = true,
                             preview = preview,
-                            isQuickSave = true
+                            isQuickSave = true,
+                            slotIndex = -1
                         )
                     )
                 } catch (e: Exception) {
@@ -86,7 +95,8 @@ class GameMenuStatesViewModel(
                             description = description,
                             enabled = true,
                             preview = null,
-                            isQuickSave = true
+                            isQuickSave = true,
+                            slotIndex = -1
                         )
                     )
                 }
@@ -108,7 +118,9 @@ class GameMenuStatesViewModel(
                     )
                 } else null
 
-                entries.add(StateEntry(title, description, isEnabled, preview))
+                val customName = slotNamesPrefs.getString("${gameMenuRequest.game.id}_slot_$index", null)
+
+                entries.add(StateEntry(title, description, isEnabled, preview, isQuickSave = false, customName = customName, slotIndex = index))
             }
 
             emit(State(entries))
