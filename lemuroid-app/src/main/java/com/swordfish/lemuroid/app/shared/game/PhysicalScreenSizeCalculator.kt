@@ -18,7 +18,7 @@ object PhysicalScreenSizeCalculator {
     )
 
     private val HANDHELD_DIMENSIONS = mapOf(
-        SystemID.GB to PhysicalDimensions(widthMm = 43.5f, heightMm = 39.15f),
+        SystemID.GB to PhysicalDimensions(widthMm = 47.0f, heightMm = 42.0f),
         SystemID.GBC to PhysicalDimensions(widthMm = 43.0f, heightMm = 39.0f),
         SystemID.GBA to PhysicalDimensions(widthMm = 61.2f, heightMm = 40.8f),
     )

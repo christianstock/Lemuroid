@@ -57,54 +57,8 @@ object GbArt {
 
         // 2. Bezel / Details
         viewportRect?.let { rect ->
-            // Top Details: Blue line, Red line, and Text
-            val topLabelColor = Color.Black.copy(alpha = 0.6f)
-            val lineBlue = Color(0xFF3639a0).copy(alpha = 0.8f)
-            val lineRed = Color(0xFFa03636).copy(alpha = 0.8f)
 
-            val lineY = rect.top - 12.dp.toPx()
-            drawLine(lineBlue, Offset(rect.left + 8.dp.toPx(), lineY - 2.dp.toPx()), Offset(rect.right - 8.dp.toPx(), lineY - 2.dp.toPx()), strokeWidth = 1.dp.toPx())
-            drawLine(lineRed, Offset(rect.left + 8.dp.toPx(), lineY + 2.dp.toPx()), Offset(rect.right - 8.dp.toPx(), lineY + 2.dp.toPx()), strokeWidth = 1.dp.toPx())
 
-            drawContext.canvas.nativeCanvas.apply {
-                val topPaint = android.graphics.Paint().apply {
-                    color = android.graphics.Color.argb(
-                        (topLabelColor.alpha * 255).toInt(),
-                        (topLabelColor.red * 255).toInt(),
-                        (topLabelColor.green * 255).toInt(),
-                        (topLabelColor.blue * 255).toInt()
-                    )
-                    textSize = 9.sp.toPx()
-                    typeface = android.graphics.Typeface.create("sans-serif-condensed", android.graphics.Typeface.BOLD)
-                    textAlign = android.graphics.Paint.Align.CENTER
-                }
-                drawText("DOT MATRIX WITH STEREO SOUND", w / 2, rect.top - 18.dp.toPx(), topPaint)
-
-                // Bottom "Nintendo GAME BOY" text
-                val bottomLabelColor = Color(0xFF3639a0)
-                val bottomPaint = android.graphics.Paint().apply {
-                    color = android.graphics.Color.argb(
-                        255,
-                        (bottomLabelColor.red * 255).toInt(),
-                        (bottomLabelColor.green * 255).toInt(),
-                        (bottomLabelColor.blue * 255).toInt()
-                    )
-                    textSize = 16.sp.toPx()
-                    typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)
-                    textAlign = android.graphics.Paint.Align.LEFT
-                }
-                
-                val nintendoText = "Nintendo "
-                val gbText = "GAME BOY"
-                val nintendoWidth = bottomPaint.measureText(nintendoText)
-                val totalWidth = nintendoWidth + bottomPaint.measureText(gbText)
-                
-                val startX = (w - totalWidth) / 2
-                drawText(nintendoText, startX, rect.bottom + 28.dp.toPx(), bottomPaint)
-                
-                bottomPaint.typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD_ITALIC)
-                drawText(gbText, startX + nintendoWidth, rect.bottom + 28.dp.toPx(), bottomPaint)
-            }
 
             if (isCarouselMode) {
                 // Background for screen in carousel mode
@@ -125,7 +79,7 @@ object GbArt {
                 }
             } else if (gameRect != null) {
                 val bezelPath = calculateBezelPath(rect)
-                drawPath(bezelPath, Color(0xFF3F4238))   // the grey/dark LCD plate
+                drawPath(bezelPath, Color(0xFF4F5248))   // the grey/dark LCD plate
 
                 drawRect(
                     color = Color.Transparent,
@@ -133,6 +87,58 @@ object GbArt {
                     size = gameRect.size,
                     blendMode = BlendMode.Clear
                 )
+            }
+
+            // Top Details: Blue line, Red line, and Text
+            val topLabelColor = Color.White.copy(alpha = 0.6f)
+            val lineBlue = Color(0xFF3639a0).copy(alpha = 0.8f)
+            val lineRed = Color(0xFFa03636).copy(alpha = 0.8f)
+
+            val lineY = rect.top + 22.dp.toPx()
+            drawLine(lineRed, Offset(rect.left + 8.dp.toPx(), lineY - 3.dp.toPx()), Offset(rect.right - 190.dp.toPx(), lineY - 2.dp.toPx()), strokeWidth = 3.dp.toPx())
+            drawLine(lineBlue, Offset(rect.left + 8.dp.toPx(), lineY + 3.dp.toPx()), Offset(rect.right - 190.dp.toPx(), lineY + 2.dp.toPx()), strokeWidth = 3.dp.toPx())
+            drawLine(lineRed, Offset(rect.right - 38.dp.toPx(), lineY - 3.dp.toPx()), Offset(rect.right - 8.dp.toPx(), lineY - 2.dp.toPx()), strokeWidth = 3.dp.toPx())
+            drawLine(lineBlue, Offset(rect.right - 38.dp.toPx(), lineY + 3.dp.toPx()), Offset(rect.right - 8.dp.toPx(), lineY + 2.dp.toPx()), strokeWidth = 3.dp.toPx())
+
+
+            drawContext.canvas.nativeCanvas.apply {
+                val topPaint = android.graphics.Paint().apply {
+                    color = android.graphics.Color.argb(
+                        (topLabelColor.alpha * 255).toInt(),
+                        (topLabelColor.red * 255).toInt(),
+                        (topLabelColor.green * 255).toInt(),
+                        (topLabelColor.blue * 255).toInt()
+                    )
+                    textSize = 9.sp.toPx()
+                    typeface = android.graphics.Typeface.create("sans-serif-condensed", android.graphics.Typeface.BOLD)
+                    textAlign = android.graphics.Paint.Align.CENTER
+                }
+                drawText("DOT MATRIX WITH STEREO SOUND", w / 2 + 200, rect.top + 25.dp.toPx(), topPaint)
+
+                // Bottom "Nintendo GAME BOY" text
+                val bottomLabelColor = Color(0xFF3639a0)
+                val bottomPaint = android.graphics.Paint().apply {
+                    color = android.graphics.Color.argb(
+                        255,
+                        (bottomLabelColor.red * 255).toInt(),
+                        (bottomLabelColor.green * 255).toInt(),
+                        (bottomLabelColor.blue * 255).toInt()
+                    )
+                    textSize = 16.sp.toPx()
+                    typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)
+                    textAlign = android.graphics.Paint.Align.LEFT
+                }
+
+                val nintendoText = "Nintendo "
+                val gbText = "GAME BOY"
+                val nintendoWidth = bottomPaint.measureText(nintendoText)
+                val totalWidth = nintendoWidth + bottomPaint.measureText(gbText)
+
+                val startX = (w - totalWidth) / 2
+                drawText(nintendoText, startX, rect.bottom + 28.dp.toPx(), bottomPaint)
+
+                bottomPaint.typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD_ITALIC)
+                drawText(gbText, startX + nintendoWidth, rect.bottom + 28.dp.toPx(), bottomPaint)
             }
         }
     }
