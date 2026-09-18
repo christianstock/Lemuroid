@@ -379,6 +379,7 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
                                 interactiveBar = {
                                     interactiveBarContent(Modifier.fillMaxWidth().height(56.dp))
                                 },
+                                viewportPositionInRoot = viewportPosition.value,
                                 modifier = Modifier.fillMaxSize()
                             )
                         }

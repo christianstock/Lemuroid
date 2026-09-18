@@ -4,6 +4,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathFillType
@@ -16,6 +17,7 @@ object GbArt {
     fun DrawScope.drawHandheld(
         caseColor: Color,
         viewportRect: Rect?,
+        gameRect: Rect?,
         isCarouselMode: Boolean
     ) {
         val w = size.width
@@ -36,7 +38,7 @@ object GbArt {
                 )
             }
             drawPath(path, caseColor)
-        } else {
+        } /*else {
             if (viewportRect != null) {
                 val bezelPath = calculateBezelPath(viewportRect)
                 val shellPath = Path().apply {
@@ -48,6 +50,9 @@ object GbArt {
             } else {
                 drawRect(caseColor)
             }
+        }*/
+        else {
+            drawRect(caseColor)   // plain shell, no cutout — the cutout happens below now
         }
 
         // 2. Bezel / Details
@@ -118,6 +123,16 @@ object GbArt {
                         strokeWidth = 2.dp.toPx()
                     )
                 }
+            } else if (gameRect != null) {
+                val bezelPath = calculateBezelPath(rect)
+                drawPath(bezelPath, Color(0xFF3F4238))   // the grey/dark LCD plate
+
+                drawRect(
+                    color = Color.Transparent,
+                    topLeft = gameRect.topLeft,
+                    size = gameRect.size,
+                    blendMode = BlendMode.Clear
+                )
             }
         }
     }

@@ -21,6 +21,7 @@ import com.swordfish.lemuroid.app.shared.game.viewmodel.GameViewModelSaves
 import com.swordfish.lemuroid.app.shared.game.viewmodel.GameViewModelSideEffects
 import com.swordfish.lemuroid.app.shared.game.viewmodel.GameViewModelTilt
 import com.swordfish.lemuroid.app.shared.game.viewmodel.GameViewModelTouchControls
+import com.swordfish.lemuroid.app.shared.gamecrash.GameCrashActivity.Companion.launch
 import com.swordfish.lemuroid.app.shared.input.InputDeviceManager
 import com.swordfish.lemuroid.app.shared.motion.MotionManager
 import com.swordfish.lemuroid.app.shared.rumble.RumbleManager
@@ -45,6 +46,7 @@ import com.swordfish.touchinput.radial.settings.TouchControllerSettingsManager
 import gg.padkit.inputevents.InputEvent
 import gg.padkit.inputstate.InputState
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -493,13 +495,22 @@ class BaseGameScreenViewModel(
 
         // Periodic rewind capture loop
         owner.launchOnState(androidx.lifecycle.Lifecycle.State.RESUMED) {
-            // Move loop to background thread to prevent audio jitter on the Main thread
             withContext(Dispatchers.Default) {
-                while (true) {
-                    if (isPlaying.value) {
-                        captureRewindState()
+                coroutineScope {
+                    var isCoreReady = false
+
+                    launch {
+                        retroGameView.getGameState().collect { state ->
+                            isCoreReady = state is GameViewModelRetroGameView.GameState.Ready
+                        }
                     }
-                    delay(100) // 10 snapshots per second for smooth rewind
+
+                    while (true) {
+                        if (isPlaying.value && isCoreReady) {
+                            captureRewindState()
+                        }
+                        delay(100)
+                    }
                 }
             }
         }

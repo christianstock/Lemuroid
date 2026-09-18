@@ -16,14 +16,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.boundsInParent
+import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.dp
 import com.swordfish.lemuroid.app.shared.game.skins.GbSkin
 import com.swordfish.lemuroid.app.shared.game.skins.art.GbArt
+import com.swordfish.lemuroid.app.shared.game.skins.art.GbaArt.drawHandheld
 
 @Composable
 fun GbPortraitSkin(
@@ -32,19 +35,26 @@ fun GbPortraitSkin(
     leftPad: @Composable (Modifier) -> Unit,
     rightPad: @Composable (Modifier) -> Unit,
     interactiveBar: @Composable () -> Unit,
+    viewportPositionInRoot: Rect?,
     modifier: Modifier = Modifier,
 ) {
     val bezelRect = remember { mutableStateOf<Rect?>(null) }
+    val rootOffset = remember { mutableStateOf(Offset.Zero) }
+
+    val gameRect = remember(viewportPositionInRoot, rootOffset.value) {
+        viewportPositionInRoot?.translate(-rootOffset.value)
+    }
 
     Column(
         modifier = modifier
             .fillMaxSize()
+            .onGloballyPositioned { rootOffset.value = it.boundsInRoot().topLeft }
             .graphicsLayer {
                 compositingStrategy = CompositingStrategy.Offscreen
             }
             .drawBehind {
                 GbArt.run {
-                    drawHandheld(skin.caseColor, bezelRect.value, false)
+                    drawHandheld(skin.caseColor, bezelRect.value, gameRect,false)
                 }
             },
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -55,7 +65,7 @@ fun GbPortraitSkin(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(1.1f)
+                .aspectRatio(160f / 144f)
                 .padding(16.dp)
                 .onGloballyPositioned {
                     bezelRect.value = it.boundsInParent()
