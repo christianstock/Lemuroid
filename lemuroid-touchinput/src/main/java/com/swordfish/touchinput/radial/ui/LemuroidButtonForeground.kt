@@ -28,6 +28,11 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -204,11 +209,25 @@ fun GbButtonForeground(
             },
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // 1. GBA-Style Thin Pillow Button Box
+        // Outer Container to stack the background oval behind the button
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(2.6f)
+                .drawBehind {
+                    // Calculate a larger size (e.g., 15% padding outward)
+                    val expansion = 6.dp.toPx()
+                    val outerWidth = size.width + (expansion * 2)
+                    val outerHeight = size.height + (expansion * 2)
+                    val cornerRadius = outerHeight / 2f // Pill shape radius
+
+                    drawRoundRect(
+                        color = Color.Black.copy(alpha = 0.05f),
+                        topLeft = Offset(-expansion, -expansion),
+                        size = Size(outerWidth, outerHeight),
+                        cornerRadius = CornerRadius(cornerRadius, cornerRadius)
+                    )
+                }
                 .background(
                     color = theme.secondaryButtonFill(pressed.value),
                     shape = RoundedCornerShape(percent = 50)
@@ -232,21 +251,17 @@ fun GbButtonForeground(
             Text(
                 modifier = Modifier
                     .layout { measurable, constraints ->
-                        // FIXED: Measure the text with completely unconstrained max width
-                        // to guarantee it stays strictly on one line.
+                        // Measure the text with completely unconstrained max width
                         val placeable = measurable.measure(constraints.copy(maxWidth = Int.MAX_VALUE))
 
-                        // Report the real height, but pretend the width matches the
-                        // parent column's width constraint to stop it from pushing the column out.
                         layout(constraints.maxWidth, placeable.height) {
-                            // Center the overflowing text horizontally over the button axis
                             val xOffset = (constraints.maxWidth - placeable.width) / 2
                             placeable.place(xOffset, 0)
                         }
                     },
                 textAlign = TextAlign.Center,
-                maxLines = 1, // Enforce single line behavior
-                softWrap = false, // Stop internal wrapping engines
+                maxLines = 1,
+                softWrap = false,
                 fontWeight = FontWeight.Black,
                 fontFamily = FontFamily.SansSerif,
                 text = label,

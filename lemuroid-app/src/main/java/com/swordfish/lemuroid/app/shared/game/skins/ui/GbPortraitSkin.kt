@@ -1,4 +1,5 @@
 import android.view.KeyEvent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,8 +9,10 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
@@ -19,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.boundsInParent
@@ -129,7 +133,22 @@ fun PadKitScope.GbPortraitSkin(
                     Id.Key(KeyEvent.KEYCODE_BUTTON_A),
                     Id.Key(KeyEvent.KEYCODE_BUTTON_B),
                 ),
-                background = { },
+                background = {
+                    // Shared oval background behind both A and B buttons
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize(0.9f)
+                            .aspectRatio(2.2f)
+                            .graphicsLayer {
+                                rotationZ = -30f // Rotates oval to match button angle
+                            }
+                            .offset(y = (-4).dp)
+                            .background(
+                                color = Color.Black.copy(alpha = 0.05f),
+                                shape = RoundedCornerShape(percent = 50) // Creates an oval/pill shape
+                            )
+                    )
+                },
                 idsForegrounds = persistentMapOf<Id.Key, @Composable (State<Boolean>) -> Unit>(
                     Id.Key(KeyEvent.KEYCODE_BUTTON_A) to {
                         DmgRoundButtonForeground(

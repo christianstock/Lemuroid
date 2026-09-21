@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -117,8 +118,61 @@ fun GbDpadForeground(
                     val crossHeight = size.height * 0.33f
                     val centerX = size.width / 2f
                     val centerY = size.height / 2f
-
                     val armVal = 1.8f;
+
+                    // --- 0. Background Circle & Alpha Reversion Triangles ---
+                    // Draw full background circle (alpha 0.1)
+                    val circleRadius = size.minDimension / 1.6f
+                    drawCircle(
+                        color = Color.Black.copy(alpha = 0.05f),
+                        radius = circleRadius,
+                        center = Offset(centerX, centerY)
+                    )
+
+                    // Draw clearing triangles to revert the circle alpha at the end of each arm
+                    val triWidth = 10.dp.toPx()
+                    val triHeight = 8.dp.toPx()
+                    val armOffset = 4.dp.toPx()
+
+                    val topTriPath = Path().apply {
+                        val baseY = -armOffset
+                        moveTo(centerX - triWidth / 2f, baseY)
+                        lineTo(centerX + triWidth / 2f, baseY)
+                        lineTo(centerX, baseY - triHeight) // Pointing UP (Away)
+                        close()
+                    }
+
+                    val bottomTriPath = Path().apply {
+                        val baseY = size.height + armOffset
+                        moveTo(centerX - triWidth / 2f, baseY)
+                        lineTo(centerX + triWidth / 2f, baseY)
+                        lineTo(centerX, baseY + triHeight) // Pointing DOWN (Away)
+                        close()
+                    }
+
+                    val leftTriPath = Path().apply {
+                        val baseX = -armOffset
+                        moveTo(baseX, centerY - triWidth / 2f)
+                        lineTo(baseX, centerY + triWidth / 2f)
+                        lineTo(baseX - triHeight, centerY) // Pointing LEFT (Away)
+                        close()
+                    }
+
+                    val rightTriPath = Path().apply {
+                        val baseX = size.width + armOffset
+                        moveTo(baseX, centerY - triWidth / 2f)
+                        lineTo(baseX, centerY + triWidth / 2f)
+                        lineTo(baseX + triHeight, centerY) // Pointing RIGHT (Away)
+                        close()
+                    }
+
+                    // Clear the circle alpha in the triangle shapes
+                    listOf(topTriPath, bottomTriPath, leftTriPath, rightTriPath).forEach { triPath ->
+                        drawPath(
+                            path = triPath,
+                            color = Color.Black.copy(alpha = 0.1f),
+                        )
+                    }
 
                     // --- 1. Core D-Pad Path Construction ---
                     val crossPath = Path().apply {
@@ -166,7 +220,7 @@ fun GbDpadForeground(
                     }*/
 
                     // --- 2. Directional Accent Lines (Classic Game Boy Style) ---
-                    val lineStrokeWidth = 2.dp.toPx()
+                    val lineStrokeWidth = 3.dp.toPx()
                     val lineLength = crossWidth * 0.8f // Length of the lines across the arm
                     val lineSpacing = 10.dp.toPx()       // Gap between the parallel lines
 
