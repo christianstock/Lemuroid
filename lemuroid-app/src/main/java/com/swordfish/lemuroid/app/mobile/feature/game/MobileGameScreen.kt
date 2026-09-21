@@ -364,7 +364,7 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
                             val gbSkin = currentSkin as? GbSkin ?: GbSkin.GREY
                             GbPortraitSkin(
                                 skin = gbSkin,
-                                gameScreenContent = {
+                                gameScreen = {
                                     Box(modifier = Modifier.fillMaxSize()) {
                                         gameScreenContent()
                                         overlaysContent(Modifier.matchParentSize())
@@ -376,10 +376,10 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
                                 rightPad = { mod ->
                                     rightGamePad?.invoke(this, mod, touchControllerSettings)
                                 },
-                                interactiveBar = {
+                                actionBar = {
                                     interactiveBarContent(Modifier.fillMaxWidth().height(56.dp))
                                 },
-                                viewportPositionInRoot = viewportPosition.value,
+                                gameScreenPos = viewportPosition.value,
                                 modifier = Modifier.fillMaxSize()
                             )
                         }

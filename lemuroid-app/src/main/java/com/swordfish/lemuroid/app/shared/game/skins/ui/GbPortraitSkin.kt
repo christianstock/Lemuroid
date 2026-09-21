@@ -26,62 +26,81 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.dp
 import com.swordfish.lemuroid.app.shared.game.skins.GbSkin
 import com.swordfish.lemuroid.app.shared.game.skins.art.GbArt
-import com.swordfish.lemuroid.app.shared.game.skins.art.GbaArt.drawHandheld
 
 @Composable
 fun GbPortraitSkin(
     skin: GbSkin,
-    gameScreenContent: @Composable () -> Unit,
+    gameScreen: @Composable () -> Unit,
     leftPad: @Composable (Modifier) -> Unit,
     rightPad: @Composable (Modifier) -> Unit,
-    interactiveBar: @Composable () -> Unit,
-    viewportPositionInRoot: Rect?,
+    actionBar: @Composable () -> Unit,
+    gameScreenPos: Rect?,
     modifier: Modifier = Modifier,
 ) {
     val bezelRect = remember { mutableStateOf<Rect?>(null) }
     val rootOffset = remember { mutableStateOf(Offset.Zero) }
 
-    val gameRect = remember(viewportPositionInRoot, rootOffset.value) {
-        viewportPositionInRoot?.translate(-rootOffset.value)
+    val gameScreenRect = remember(gameScreenPos, rootOffset.value) {
+        gameScreenPos?.translate(-rootOffset.value)
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .onGloballyPositioned { rootOffset.value = it.boundsInRoot().topLeft }
-            .graphicsLayer {
-                compositingStrategy = CompositingStrategy.Offscreen
+    val deviceModifier = modifier
+        .fillMaxSize()
+        .onGloballyPositioned {
+            rootOffset.value = it.boundsInRoot().topLeft
+        }
+        .graphicsLayer {
+            compositingStrategy = CompositingStrategy.Offscreen
+        }
+        .drawBehind {
+            GbArt.run {
+                drawHandheld(gameScreenRect, bezelRect.value, skin, false)
             }
-            .drawBehind {
-                GbArt.run {
-                    drawHandheld(skin.caseColor, bezelRect.value, gameRect,false)
-                }
-            },
+        }
+
+    val gameScreenModifier = Modifier
+        .fillMaxWidth()
+        .aspectRatio(160f / 144f)
+        .padding(16.dp)
+        .onGloballyPositioned {
+            bezelRect.value = it.boundsInParent()
+        }
+
+    val controlsModifier = Modifier
+        .fillMaxWidth()
+        .padding(horizontal = 12.dp, vertical = 8.dp)
+
+    val actionBarModifier = Modifier
+        .fillMaxWidth()
+        .height(56.dp)
+        .padding(horizontal = 12.dp)
+
+    Column(
+        modifier = deviceModifier,
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top
     ) {
-        Spacer(modifier = Modifier.fillMaxWidth().height(64.dp))
+        Spacer(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(64.dp)
+        )
 
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(160f / 144f)
-                .padding(16.dp)
-                .onGloballyPositioned {
-                    bezelRect.value = it.boundsInParent()
-                },
+            modifier = gameScreenModifier,
             contentAlignment = Alignment.Center
         ) {
-            gameScreenContent()
+            gameScreen()
         }
 
-        Spacer(modifier = Modifier.fillMaxWidth().height(48.dp))
-
-        Row(
+        Spacer(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f)
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .height(48.dp)
+        )
+
+        Row(
+            modifier = controlsModifier.weight(1f),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Top
         ) {
@@ -90,13 +109,10 @@ fun GbPortraitSkin(
         }
 
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp)
-                .padding(horizontal = 12.dp),
+            modifier = actionBarModifier,
             contentAlignment = Alignment.Center
         ) {
-            interactiveBar()
+            actionBar()
         }
     }
 }

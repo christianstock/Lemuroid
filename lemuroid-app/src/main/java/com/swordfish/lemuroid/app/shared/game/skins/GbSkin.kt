@@ -9,6 +9,8 @@ data class GbSkin(
     val id: String,
     val name: String,
     val caseColor: Color,
+    val screenLensColor: Color,
+    val labelColor: Color,
     val buttonsColor: Color,
 ) {
     companion object {
@@ -16,13 +18,17 @@ data class GbSkin(
             id = "gb_grey",
             name = "Classic Grey",
             caseColor = Color(0xFFDDD8CC),
-            buttonsColor = Color(0xFF730551), // Maroon
+            screenLensColor = Color(0xFF4F5248),
+            labelColor = Color(0xFF3639a0),
+            buttonsColor = Color(0xFF730551),
         )
 
         val RED = GbSkin(
             id = "gb_red",
             name = "Red",
             caseColor = Color(0xFFcf2d39),
+            screenLensColor = Color(0xFF4F5248),
+            labelColor = Color(0xFF3639a0),
             buttonsColor = Color(0xFF1C1C1C),
         )
 
@@ -30,6 +36,8 @@ data class GbSkin(
             id = "gb_yellow",
             name = "Yellow",
             caseColor = Color(0xFFedbc16),
+            screenLensColor = Color(0xFF4F5248),
+            labelColor = Color(0xFF3639a0),
             buttonsColor = Color(0xFF1C1C1C),
         )
 
@@ -37,6 +45,8 @@ data class GbSkin(
             id = "gb_green",
             name = "Green",
             caseColor = Color(0xFF027d5d),
+            screenLensColor = Color(0xFF4F5248),
+            labelColor = Color(0xFF3639a0),
             buttonsColor = Color(0xFF1C1C1C),
         )
 
@@ -44,6 +54,8 @@ data class GbSkin(
             id = "gb_blue",
             name = "Blue",
             caseColor = Color(0xFF1148a0),
+            screenLensColor = Color(0xFF4F5248),
+            labelColor = Color(0xFF3639a0),
             buttonsColor = Color(0xFF1C1C1C),
         )
 
@@ -51,6 +63,8 @@ data class GbSkin(
             id = "gb_black",
             name = "Black",
             caseColor = Color(0xFF1C1C1C),
+            screenLensColor = Color(0xFF4F5248),
+            labelColor = Color(0xFF3639a0),
             buttonsColor = Color(0xFF555555),
         )
 
@@ -58,6 +72,8 @@ data class GbSkin(
             id = "gb_white",
             name = "White",
             caseColor = Color(0xFFdbd9d5),
+            screenLensColor = Color(0xFF4F5248),
+            labelColor = Color(0xFF3639a0),
             buttonsColor = Color(0xFF1C1C1C),
         )
 

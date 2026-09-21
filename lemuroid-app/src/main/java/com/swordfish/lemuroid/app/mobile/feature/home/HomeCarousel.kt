@@ -330,7 +330,7 @@ private fun SystemForegroundView(
         val bezelRect = Rect(bezelX, bezelY, bezelX + bezelW, bezelY + bezelH)
 
         when (systemIdNorm) {
-            "gb" -> GbArt.run { drawHandheld(caseColor, bezelRect,bezelRect, true) }
+            "gb" -> GbArt.run { drawHandheld( bezelRect,bezelRect, GbSkinManager.getInstance(context).getSelectedSkin(),true) }
             "gbc" -> GbcArt.run { drawHandheld(caseColor, bezelRect, true) }
             "gba" -> GbaArt.run { drawHandheld(caseColor, bezelRect, true) }
             "psp" -> PspArt.run { drawHandheld(caseColor, bezelRect, true) }
