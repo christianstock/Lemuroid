@@ -1,5 +1,6 @@
 package com.swordfish.lemuroid.app.mobile.feature.game
 
+import GbPortraitSkin
 import android.graphics.RectF
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -81,7 +82,6 @@ import com.swordfish.lemuroid.app.shared.game.skins.GbaSkinManager
 import com.swordfish.lemuroid.app.shared.game.skins.GbcSkin
 import com.swordfish.lemuroid.app.shared.game.skins.GbcSkinManager
 import com.swordfish.lemuroid.app.shared.game.skins.ui.GbaLandscapeSkin
-import com.swordfish.lemuroid.app.shared.game.skins.ui.GbPortraitSkin
 import com.swordfish.lemuroid.app.shared.game.skins.ui.GbcPortraitSkin
 import com.swordfish.lemuroid.app.shared.game.skins.ui.PspLandscapeSkin
 import com.swordfish.lemuroid.app.shared.game.viewmodel.GameViewModelTouchControls.Companion.MENU_LOADING_ANIMATION_MILLIS
@@ -266,10 +266,15 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
                         "gba" -> (currentSkin as? GbaSkin)?.buttonsColor
                         else -> null
                     }
+                    val dPadColor = when (viewModel.game.systemId) {
+                        "gb" -> (currentSkin as? GbSkin)?.dPadColor
+                        else -> null
+                    }
                     getThemeForSystem(
                         viewModel.game.systemId,
                         shellColor = shellColor,
-                        buttonColor = buttonColor
+                        buttonColor = buttonColor,
+                        dPadColor = dPadColor,
                     )
                 }
 
@@ -370,15 +375,10 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
                                         overlaysContent(Modifier.matchParentSize())
                                     }
                                 },
-                                leftPad = { mod ->
-                                    leftGamePad?.invoke(this, mod, touchControllerSettings)
-                                },
-                                rightPad = { mod ->
-                                    rightGamePad?.invoke(this, mod, touchControllerSettings)
-                                },
                                 actionBar = {
                                     interactiveBarContent(Modifier.fillMaxWidth().height(56.dp))
                                 },
+                                touchControllerSettings = touchControllerSettings!!,
                                 gameScreenPos = viewportPosition.value,
                                 modifier = Modifier.fillMaxSize()
                             )

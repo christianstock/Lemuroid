@@ -28,6 +28,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
@@ -41,6 +42,77 @@ import com.swordfish.lemuroid.common.compose.textUnit
 import com.swordfish.touchinput.radial.LocalLemuroidPadTheme
 
 @Composable
+fun DmgRoundButtonForeground(pressed: State<Boolean>, label: String) {
+    val theme = LocalLemuroidPadTheme.current
+    val buttonActiveColor = theme.buttonFill(pressed.value)
+
+    val highlightMaroon = if (pressed.value) buttonActiveColor.copy(alpha = 0.7f) else Color.White.copy(alpha = 0.35f)
+    val shadowMaroon = if (pressed.value) Color.White.copy(alpha = 0.2f) else Color.Black.copy(alpha = 0.45f)
+
+// 2. Add a very slight tint change to the inner face when pressed
+    val faceColor = if (pressed.value) buttonActiveColor.copy(alpha = 0.85f) else buttonActiveColor
+
+    // Rotate the entire component (button + label) 30 degrees counter-clockwise
+    Column(
+        modifier = Modifier
+            .graphicsLayer {
+                rotationZ = -30f
+            },
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // 1. The Circular Physical Button Base
+        Box(
+            modifier = Modifier
+                .size(56.dp)
+                // Draw the outer bevel container layer
+                .background(
+                    color = buttonActiveColor, // Provides the maroon foundation base
+                    shape = CircleShape
+                )
+                // Overlay the directional lighting gradient directly on top of the base maroon
+                .background(
+                    brush = Brush.linearGradient(
+                        colors = listOf(highlightMaroon, shadowMaroon)
+                    ),
+                    shape = CircleShape
+                )
+                // 3. Inset the button face by 2.dp to expose the maroon bevel edge ring
+                .padding(3.dp)
+                .background(
+                    color = faceColor,
+                    shape = CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            // Drop your "A" or "B" text components here
+        }
+
+        // 2. Snug layout gap below the circle
+        Spacer(modifier = Modifier.height(4.dp))
+
+        // 3. The Label below the button that pokes out without wrapping
+        Text(
+            text = label,
+            color = theme.labelColor ?: Color(0xff3639a0),
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Black,
+            fontFamily = FontFamily.SansSerif,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            softWrap = false,
+            modifier = Modifier
+                .layout { measurable, constraints ->
+                    val placeable = measurable.measure(constraints.copy(maxWidth = Int.MAX_VALUE))
+                    layout(constraints.maxWidth, placeable.height) {
+                        val xOffset = (constraints.maxWidth - placeable.width) / 2
+                        placeable.place(xOffset, 0)
+                    }
+                }
+        )
+    }
+}
+
+@Composable
 fun LemuroidButtonForeground(
     modifier: Modifier = Modifier,
     pressed: State<Boolean>,
@@ -51,7 +123,7 @@ fun LemuroidButtonForeground(
 
     GlassSurface(
         modifier = modifier.fillMaxSize().padding(theme.foregroundPadding),
-        fillColor = theme.foregroundFill(pressed.value),
+        fillColor = theme.buttonFill(pressed.value),
         shadowColor = theme.level3Shadow,
         shadowWidth = theme.level3ShadowWidth,
         content = {
@@ -101,13 +173,14 @@ private fun BoxWithConstraintsScope.LemuroidButtonForegroundLabel(
     pressedState: State<Boolean>,
 ) {
     if (label == null) return
+    val theme = LocalLemuroidPadTheme.current
     val fontSize = minOf(maxHeight * 0.5f * scale, maxWidth / label.length * scale)
     Text(
         modifier = Modifier.wrapContentSize(),
         textAlign = TextAlign.Center,
         fontWeight = FontWeight.Bold,
         text = label,
-        color = LocalLemuroidPadTheme.current.icons(pressedState.value),
+        color = theme.labelColor ?: theme.icons(pressedState.value),
         fontSize = fontSize.textUnit(),
     )
 }
@@ -122,6 +195,7 @@ fun GbButtonForeground(
     iconScale: Float = 0.6f,
     labelScale: Float = 1.0f,
 ) {
+    val theme = LocalLemuroidPadTheme.current
     Column(
         modifier = modifier
             .fillMaxWidth(0.7f) // Keeps the button itself shrunk down nicely
@@ -136,7 +210,7 @@ fun GbButtonForeground(
                 .fillMaxWidth()
                 .aspectRatio(2.6f)
                 .background(
-                    color = if (pressed.value) Color(0xFF444444) else Color(0xFF666666),
+                    color = theme.secondaryButtonFill(pressed.value),
                     shape = RoundedCornerShape(percent = 50)
                 ),
             contentAlignment = Alignment.Center
@@ -173,11 +247,11 @@ fun GbButtonForeground(
                 textAlign = TextAlign.Center,
                 maxLines = 1, // Enforce single line behavior
                 softWrap = false, // Stop internal wrapping engines
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.Black,
                 fontFamily = FontFamily.SansSerif,
                 text = label,
-                color = Color(0xFF3639a0),
-                fontSize = (12f * labelScale).sp
+                color = theme.labelColor ?: Color(0xFF3639a0),
+                fontSize = (16f * labelScale).sp
             )
         }
     }
@@ -209,17 +283,7 @@ fun GbcButtonForeground(
     val theme = LocalLemuroidPadTheme.current
 
     // Darken the button body color on press
-    val baseFillColor = theme.foregroundFill(pressed.value)
-    val finalFillColor = if (pressed.value) {
-        Color(
-            red = baseFillColor.red * 0.50f,
-            green = baseFillColor.green * 0.50f,
-            blue = baseFillColor.blue * 0.50f,
-            alpha = baseFillColor.alpha
-        )
-    } else {
-        baseFillColor
-    }
+    val finalFillColor = theme.secondaryButtonFill(pressed.value)
 
     Column(
         modifier = modifier.padding(theme.foregroundPadding),
@@ -298,11 +362,9 @@ private fun GbcButtonForegroundLabelComposable(
 
     val theme = LocalLemuroidPadTheme.current
 
-
-
 // Create a darker shade of the theme color for the label
 
-    val labelColor = theme.icons(false).let { baseColor ->
+    val labelColor = theme.labelColor ?: theme.icons(false).let { baseColor ->
         Color(
             red = (baseColor.red).coerceAtMost(1f),
             green = (baseColor.green).coerceAtMost(1f),
@@ -334,8 +396,7 @@ fun GbcRoundButton(
 ) {
     // Pick your favorite color palette (e.g., deep maroon/dark purple for GBC)
     val theme = LocalLemuroidPadTheme.current
-    val baseColor = theme.foregroundFill(pressed.value)
-    val buttonColor = if (pressed.value) baseColor.copy(alpha = 0.7f) else baseColor
+    val buttonColor = theme.buttonFill(pressed.value)
     val labelColor = buttonColor.copy(alpha = 0.5f)
 
     Box(
@@ -374,8 +435,7 @@ fun GbaRoundButton(
 ) {
     // Pick your favorite color palette (e.g., deep maroon/dark purple for GBC)
     val theme = LocalLemuroidPadTheme.current
-    val baseColor = theme.foregroundFill(pressed.value)
-    val buttonColor = if (pressed.value) baseColor.copy(alpha = 0.7f) else baseColor
+    val buttonColor = theme.buttonFill(pressed.value)
     val labelColor = buttonColor.copy(alpha = 0.5f)
 
     Box(
@@ -417,12 +477,7 @@ fun GbaButtonForeground(
 ) {
     val theme = LocalLemuroidPadTheme.current
 
-    val baseFillColor = theme.foregroundFill(pressed.value)
-    val containerBgColor = if (pressed.value) {
-        baseFillColor.copy(alpha = baseFillColor.alpha * 0.7f)
-    } else {
-        baseFillColor.copy(alpha = baseFillColor.alpha * 0.4f)
-    }
+    val containerBgColor = theme.secondaryButtonFill(pressed.value)
 
     Row(
         modifier = modifier
@@ -491,7 +546,7 @@ fun GbaButtonForeground(
             modifier = Modifier
                 .size(24.dp)
                 .background(
-                    color = theme.foregroundFill(pressed.value),
+                    color = theme.buttonFill(pressed.value),
                     shape = CircleShape
                 ),
             contentAlignment = Alignment.Center

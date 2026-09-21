@@ -89,7 +89,7 @@ fun LemuroidCrossForeground(
 }
 
 @Composable
-fun GbCrossForeground(
+fun GbDpadForeground(
     allowDiagonals: Boolean,
     directionState: State<Offset>,
 ) {
@@ -118,114 +118,117 @@ fun GbCrossForeground(
                     val centerX = size.width / 2f
                     val centerY = size.height / 2f
 
+                    val armVal = 1.8f;
+
                     // --- 1. Core D-Pad Path Construction ---
                     val crossPath = Path().apply {
                         // Top arm
-                        moveTo(centerX - crossWidth / 2f, 0f)
-                        lineTo(centerX + crossWidth / 2f, 0f)
-                        lineTo(centerX + crossWidth / 2f, centerY - crossHeight / 2f)
+                        moveTo(centerX - crossWidth / armVal, 0f)
+                        lineTo(centerX + crossWidth / armVal, 0f)
+                        lineTo(centerX + crossWidth / armVal, centerY - crossHeight / armVal)
                         // Right arm
-                        lineTo(size.width, centerY - crossHeight / 2f)
-                        lineTo(size.width, centerY + crossHeight / 2f)
-                        lineTo(centerX + crossWidth / 2f, centerY + crossHeight / 2f)
+                        lineTo(size.width, centerY - crossHeight / armVal)
+                        lineTo(size.width, centerY + crossHeight / armVal)
+                        lineTo(centerX + crossWidth / armVal, centerY + crossHeight / armVal)
                         // Bottom arm
-                        lineTo(centerX + crossWidth / 2f, size.height)
-                        lineTo(centerX - crossWidth / 2f, size.height)
-                        lineTo(centerX - crossWidth / 2f, centerY + crossHeight / 2f)
+                        lineTo(centerX + crossWidth / armVal, size.height)
+                        lineTo(centerX - crossWidth / armVal, size.height)
+                        lineTo(centerX - crossWidth / armVal, centerY + crossHeight / armVal)
                         // Left arm
-                        lineTo(0f, centerY + crossHeight / 2f)
-                        lineTo(0f, centerY - crossHeight / 2f)
-                        lineTo(centerX - crossWidth / 2f, centerY - crossHeight / 2f)
+                        lineTo(armVal, centerY + crossHeight / armVal)
+                        lineTo(armVal, centerY - crossHeight / armVal)
+                        lineTo(centerX - crossWidth / armVal, centerY - crossHeight / armVal)
                         close()
                     }
 
                     // Draw bevel shadow
-                    theme.bevelColorDark?.let {
+                    /*theme.bevelColorDark?.let {
                         drawPath(
                             path = crossPath,
                             color = it,
                             alpha = if (isPressed) 0.8f else 0.5f
                         )
-                    }
+                    }*/
 
                     // Draw main cross
                     drawPath(
                         path = crossPath,
-                        //color = theme.foregroundFill(isPressed),
-                        color = Color(0xFF222222)
+                        color = theme.dpadFill(isPressed),
                     )
 
                     // Draw bevel highlight
-                    theme.bevelColorLight?.let {
+                    /*theme.bevelColorLight?.let {
                         drawPath(
                             path = crossPath,
                             color = it,
                             style = Stroke(width = 1.dp.toPx())
                         )
+                    }*/
+
+                    // --- 2. Directional Accent Lines (Classic Game Boy Style) ---
+                    val lineStrokeWidth = 2.dp.toPx()
+                    val lineLength = crossWidth * 0.8f // Length of the lines across the arm
+                    val lineSpacing = 10.dp.toPx()       // Gap between the parallel lines
+
+                    val defaultLineColor = Color.Black.copy(alpha = 0.3f)
+                    val pressedLineColor = Color.Black.copy(alpha = 0.6f)
+
+                    // 1. Top Arm (Horizontal Lines)
+                    val topColor = if (isUpPressed) pressedLineColor else defaultLineColor
+                    val topStartY = 8.dp.toPx() // Distance from the top edge
+                    repeat(3) { i ->
+                        val y = topStartY + (i * lineSpacing)
+                        drawLine(
+                            color = topColor,
+                            start = Offset(centerX - lineLength / 2f, y),
+                            end = Offset(centerX + lineLength / 2f, y),
+                            strokeWidth = lineStrokeWidth
+                        )
                     }
 
-                    // --- 2. Directional Triangles ---
-                    val arrowWidth = crossWidth * 0.6f
-                    val arrowHeight = crossHeight * 0.63f
-
-                    val defaultColor = Color.Black.copy(alpha = 0.25f)
-                    val pressedColor = Color.Black.copy(alpha = 0.55f)
-
-                    // Pro-Tip: Scale the edge offset slightly down if you make the D-Pad tiny
-                    val edgeOffset = 6.dp.toPx()
-
-                    // Top Arrow (Points Up)
-                    val topArrow = Path().apply {
-                        moveTo(centerX, edgeOffset)
-                        lineTo(centerX - arrowWidth / 2f, edgeOffset + arrowHeight)
-                        lineTo(centerX + arrowWidth / 2f, edgeOffset + arrowHeight)
-                        close()
+                    // 2. Bottom Arm (Horizontal Lines)
+                    val bottomColor = if (isDownPressed) pressedLineColor else defaultLineColor
+                    val bottomStartY = size.height - 8.dp.toPx() // Measured from the bottom edge upwards
+                    repeat(3) { i ->
+                        val y = bottomStartY - (i * lineSpacing)
+                        drawLine(
+                            color = bottomColor,
+                            start = Offset(centerX - lineLength / 2f, y),
+                            end = Offset(centerX + lineLength / 2f, y),
+                            strokeWidth = lineStrokeWidth
+                        )
                     }
-                    drawPath(
-                        path = topArrow,
-                        color = if (isUpPressed) pressedColor else defaultColor
-                    )
 
-                    // Bottom Arrow (Points Down)
-                    val bottomArrow = Path().apply {
-                        moveTo(centerX, size.height - edgeOffset)
-                        lineTo(centerX - arrowWidth / 2f, size.height - edgeOffset - arrowHeight)
-                        lineTo(centerX + arrowWidth / 2f, size.height - edgeOffset - arrowHeight)
-                        close()
+                    // 3. Left Arm (Vertical Lines)
+                    val leftColor = if (isLeftPressed) pressedLineColor else defaultLineColor
+                    val leftStartX = 8.dp.toPx() // Distance from the left edge
+                    repeat(3) { i ->
+                        val x = leftStartX + (i * lineSpacing)
+                        drawLine(
+                            color = leftColor,
+                            start = Offset(x, centerY - lineLength / 2f),
+                            end = Offset(x, centerY + lineLength / 2f),
+                            strokeWidth = lineStrokeWidth
+                        )
                     }
-                    drawPath(
-                        path = bottomArrow,
-                        color = if (isDownPressed) pressedColor else defaultColor
-                    )
 
-                    // Left Arrow (Points Left)
-                    val leftArrow = Path().apply {
-                        moveTo(edgeOffset, centerY)
-                        lineTo(edgeOffset + arrowHeight, centerY - arrowWidth / 2f)
-                        lineTo(edgeOffset + arrowHeight, centerY + arrowWidth / 2f)
-                        close()
+                    // 4. Right Arm (Vertical Lines)
+                    val rightColor = if (isRightPressed) pressedLineColor else defaultLineColor
+                    val rightStartX = size.width - 8.dp.toPx() // Measured from the right edge inwards
+                    repeat(3) { i ->
+                        val x = rightStartX - (i * lineSpacing)
+                        drawLine(
+                            color = rightColor,
+                            start = Offset(x, centerY - lineLength / 2f),
+                            end = Offset(x, centerY + lineLength / 2f),
+                            strokeWidth = lineStrokeWidth
+                        )
                     }
-                    drawPath(
-                        path = leftArrow,
-                        color = if (isLeftPressed) pressedColor else defaultColor
-                    )
-
-                    // Right Arrow (Points Right)
-                    val rightArrow = Path().apply {
-                        moveTo(size.width - edgeOffset, centerY)
-                        lineTo(size.width - edgeOffset - arrowHeight, centerY - arrowWidth / 2f)
-                        lineTo(size.width - edgeOffset - arrowHeight, centerY + arrowWidth / 2f)
-                        close()
-                    }
-                    drawPath(
-                        path = rightArrow,
-                        color = if (isRightPressed) pressedColor else defaultColor
-                    )
 
                     // --- 3. Center Indentation ---
                     drawCircle(
-                        color = Color.Black.copy(alpha = 0.1f),
-                        radius = crossWidth / 3f,
+                        color = Color.Black.copy(alpha = 0.2f),
+                        radius = crossWidth / 2.2f,
                         center = Offset(centerX, centerY)
                     )
                 }
@@ -296,7 +299,7 @@ fun GbcCrossForeground(
                     // Draw main cross
                     drawPath(
                         path = crossPath,
-                        color = theme.foregroundFill(isPressed),
+                        color = theme.dpadFill(isPressed),
                     )
 
                     // Draw bevel highlight
@@ -441,7 +444,7 @@ fun GbaCrossForeground(
                     // Draw main cross
                     drawPath(
                         path = crossPath,
-                        color = theme.foregroundFill(isPressed),
+                        color = theme.dpadFill(isPressed),
                     )
 
                     // Draw bevel highlight

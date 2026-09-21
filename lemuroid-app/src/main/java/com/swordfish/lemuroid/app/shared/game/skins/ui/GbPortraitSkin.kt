@@ -1,5 +1,4 @@
-package com.swordfish.lemuroid.app.shared.game.skins.ui
-
+import android.view.KeyEvent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,7 +9,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -26,14 +27,23 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.dp
 import com.swordfish.lemuroid.app.shared.game.skins.GbSkin
 import com.swordfish.lemuroid.app.shared.game.skins.art.GbArt
+import com.swordfish.touchinput.radial.controls.GbControlFaceButtons
+import com.swordfish.touchinput.radial.controls.GBControlButton
+import com.swordfish.touchinput.radial.controls.GbControlCross
+import com.swordfish.touchinput.radial.layouts.shared.ComposeTouchLayouts
+import com.swordfish.touchinput.radial.settings.TouchControllerSettingsManager
+import com.swordfish.touchinput.radial.ui.DmgRoundButtonForeground
+import gg.padkit.PadKitScope
+import gg.padkit.ids.Id
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentMapOf
 
 @Composable
-fun GbPortraitSkin(
+fun PadKitScope.GbPortraitSkin(
     skin: GbSkin,
     gameScreen: @Composable () -> Unit,
-    leftPad: @Composable (Modifier) -> Unit,
-    rightPad: @Composable (Modifier) -> Unit,
     actionBar: @Composable () -> Unit,
+    touchControllerSettings: TouchControllerSettingsManager.Settings,
     gameScreenPos: Rect?,
     modifier: Modifier = Modifier,
 ) {
@@ -66,10 +76,6 @@ fun GbPortraitSkin(
             bezelRect.value = it.boundsInParent()
         }
 
-    val controlsModifier = Modifier
-        .fillMaxWidth()
-        .padding(horizontal = 12.dp, vertical = 8.dp)
-
     val actionBarModifier = Modifier
         .fillMaxWidth()
         .height(56.dp)
@@ -96,16 +102,87 @@ fun GbPortraitSkin(
         Spacer(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(48.dp)
+                .height(60.dp)
         )
 
-        Row(
-            modifier = controlsModifier.weight(1f),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .padding(horizontal = 12.dp)
         ) {
-            leftPad(Modifier.weight(1f))
-            rightPad(Modifier.weight(1f))
+            GbControlCross(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .size(160.dp),
+                id = Id.DiscreteDirection(ComposeTouchLayouts.MOTION_SOURCE_DPAD),
+                background = { }
+            )
+
+            // A/B Buttons
+            GbControlFaceButtons(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .size(180.dp),
+                rotationInDegrees = -30f,
+                ids = persistentListOf(
+                    Id.Key(KeyEvent.KEYCODE_BUTTON_A),
+                    Id.Key(KeyEvent.KEYCODE_BUTTON_B),
+                ),
+                background = { },
+                idsForegrounds = persistentMapOf<Id.Key, @Composable (State<Boolean>) -> Unit>(
+                    Id.Key(KeyEvent.KEYCODE_BUTTON_A) to {
+                        DmgRoundButtonForeground(
+                            pressed = it,
+                            label = "A"
+                        )
+                    },
+                    Id.Key(KeyEvent.KEYCODE_BUTTON_B) to {
+                        DmgRoundButtonForeground(
+                            pressed = it,
+                            label = "B"
+                        )
+                    },
+                ),
+            )
+
+
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .padding(horizontal = 12.dp)
+        ) {
+            // Start/Select Buttons
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(bottom = 32.dp),
+            ) {
+                // 1. Constrain SELECT Button
+                Box(
+                    modifier = Modifier.size(width = 90.dp, height = 60.dp), // Adjust these bounds to your liking!
+                    contentAlignment = Alignment.TopCenter
+                ) {
+                    GBControlButton(
+                        id = Id.Key(KeyEvent.KEYCODE_BUTTON_SELECT),
+                        label = "SELECT"
+                    )
+                }
+
+                // 2. Constrain START Button
+                Box(
+                    modifier = Modifier.size(width = 90.dp, height = 60.dp), // Keeps them completely uniform
+                    contentAlignment = Alignment.TopCenter
+                ) {
+                    GBControlButton(
+                        id = Id.Key(KeyEvent.KEYCODE_BUTTON_START),
+                        label = "START"
+                    )
+                }
+            }
         }
 
         Box(

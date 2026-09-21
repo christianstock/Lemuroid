@@ -6,18 +6,17 @@ import androidx.compose.runtime.State
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import com.swordfish.touchinput.radial.LocalLemuroidPadTheme
-import com.swordfish.touchinput.radial.ui.GbCrossForeground
+import com.swordfish.touchinput.radial.ui.GbDpadBackground
+import com.swordfish.touchinput.radial.ui.GbDpadForeground
 import com.swordfish.touchinput.radial.ui.GbaCrossForeground
 import com.swordfish.touchinput.radial.ui.GbcCrossForeground
-import com.swordfish.touchinput.radial.ui.LemuroidControlBackground
 import com.swordfish.touchinput.radial.ui.LemuroidCrossForeground
 import gg.padkit.PadKitScope
 import gg.padkit.controls.ControlCross
 import gg.padkit.ids.Id
 
-context(PadKitScope)
 @Composable
-fun LemuroidControlCross(
+fun PadKitScope.LemuroidControlCross(
     modifier: Modifier = Modifier,
     id: Id.DiscreteDirection,
     allowDiagonals: Boolean = true,
@@ -41,17 +40,16 @@ fun LemuroidControlCross(
     )
 }
 
-context(PadKitScope)
 @Composable
-fun GbControlCross(
+fun PadKitScope.GbControlCross(
     modifier: Modifier = Modifier,
     id: Id.DiscreteDirection,
     allowDiagonals: Boolean = true,
     background: @Composable () -> Unit = {
-        //LemuroidControlBackground()
+        GbDpadBackground()
     },
     foreground: @Composable (State<Offset>) -> Unit = {
-        GbCrossForeground(
+        GbDpadForeground(
             allowDiagonals = allowDiagonals,
             directionState = it,
         )
@@ -67,9 +65,8 @@ fun GbControlCross(
     )
 }
 
-context(PadKitScope)
 @Composable
-fun GbcControlCross(
+fun PadKitScope.GbcControlCross(
     modifier: Modifier = Modifier,
     id: Id.DiscreteDirection,
     allowDiagonals: Boolean = true,
@@ -94,9 +91,8 @@ fun GbcControlCross(
 }
 
 
-context(PadKitScope)
 @Composable
-fun GbaControlCross(
+fun PadKitScope.GbaControlCross(
     modifier: Modifier = Modifier,
     id: Id.DiscreteDirection,
     allowDiagonals: Boolean = true,

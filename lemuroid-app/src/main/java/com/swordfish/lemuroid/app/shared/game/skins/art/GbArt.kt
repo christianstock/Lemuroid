@@ -9,6 +9,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
@@ -103,7 +104,7 @@ object GbArt {
         val fontColor = Color.White.copy(alpha = 0.6f)
         val textPaint = android.graphics.Paint().apply {
             color = fontColor.toArgb()
-            textSize = 9.sp.toPx()
+            textSize = 12.sp.toPx()
             typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)
             textAlign = android.graphics.Paint.Align.RIGHT
         }
@@ -165,36 +166,52 @@ object GbArt {
             color = fontColor.toArgb()
         }
 
-        paint.typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)
-        paint.textSize = 18.dp.toPx()
+        paint.typeface = android.graphics.Typeface.create("sans-serif-black", android.graphics.Typeface.BOLD)
+        paint.textSize = 22.dp.toPx()
         val nintendoWidth = paint.measureText(nintendoText)
         canvas.drawText(nintendoText, startX, baselineY, paint)
 
-        paint.typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD_ITALIC)
-        paint.textSize = 26.dp.toPx()
+        paint.typeface = android.graphics.Typeface.create("sans-serif-condensed", android.graphics.Typeface.BOLD_ITALIC)
+        paint.textSize = 32.dp.toPx()
         val gbWidth = paint.measureText(gbText)
         canvas.drawText(gbText, startX + nintendoWidth, baselineY, paint)
 
-        paint.typeface = android.graphics.Typeface.DEFAULT
-        paint.textSize = 18.dp.toPx()
+        paint.typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)
+        paint.textSize = 12.dp.toPx()
         canvas.drawText(tmText, startX + nintendoWidth + gbWidth, baselineY, paint)
     }
 }
 
 private fun DrawScope.drawSpeakerGrill(w: Float, h: Float) {
     val detailColor = Color.Black.copy(alpha = 0.2f)
-    val speakerX = w - 40.dp.toPx()
-    val speakerY = h - 80.dp.toPx()
 
-    repeat(5) { i ->
-        val x = speakerX - (i * 15.dp.toPx())
-        drawLine(
-            color = detailColor,
-            start = Offset(x, speakerY),
-            end = Offset(x - 50.dp.toPx(), speakerY - 100.dp.toPx()),
-            strokeWidth = 10.dp.toPx(),
-            cap = StrokeCap.Round
-        )
+    val grillCenterX = w - 80.dp.toPx()
+    val grillCenterY = h - 150.dp.toPx()
+
+    val totalLines = 6
+    val lineSpacing = 20.dp.toPx()
+    val lineHeight = 70.dp.toPx()
+    val strokeWidthPx = 10.dp.toPx()
+
+    val totalGrillWidth = (totalLines - 1) * lineSpacing
+
+    withTransform({
+        rotate(degrees = -30f, pivot = Offset(grillCenterX, grillCenterY))
+    }) {
+        val startX = grillCenterX - (totalGrillWidth / 2f)
+        val startY = grillCenterY - (lineHeight / 2f)
+        val endY = grillCenterY + (lineHeight / 2f)
+
+        repeat(totalLines) { i ->
+            val x = startX + (i * lineSpacing)
+            drawLine(
+                color = detailColor,
+                start = Offset(x, startY),
+                end = Offset(x, endY),
+                strokeWidth = strokeWidthPx,
+                cap = StrokeCap.Round
+            )
+        }
     }
 }
 

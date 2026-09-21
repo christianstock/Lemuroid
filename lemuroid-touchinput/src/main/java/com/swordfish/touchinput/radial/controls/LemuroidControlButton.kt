@@ -38,9 +38,8 @@ fun LemuroidControlButton(
     )
 }
 
-context(PadKitScope, LayoutRadialSecondaryDialsScope)
 @Composable
-fun GBControlButton(
+fun PadKitScope.GBControlButton(
     modifier: Modifier = Modifier,
     id: Id.Key,
     label: String? = null,
@@ -55,9 +54,8 @@ fun GBControlButton(
     )
 }
 
-context(PadKitScope, LayoutRadialSecondaryDialsScope)
 @Composable
-fun GBCControlButton(
+fun PadKitScope.GBCControlButton(
     modifier: Modifier = Modifier,
     id: Id.Key,
     label: String? = null,
@@ -72,9 +70,8 @@ fun GBCControlButton(
     )
 }
 
-context(PadKitScope, LayoutRadialSecondaryDialsScope)
 @Composable
-fun GBAControlButton(
+fun PadKitScope.GBAControlButton(
     modifier: Modifier = Modifier,
     id: Id.Key,
     label: String? = null,

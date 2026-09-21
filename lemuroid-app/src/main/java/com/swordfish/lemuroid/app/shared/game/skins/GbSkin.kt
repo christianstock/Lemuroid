@@ -13,28 +13,31 @@ data class GbSkin(
     val labelColor: Color,
     val lineBlue: Color,
     val lineRed: Color,
+    val dPadColor: Color,
     val buttonsColor: Color,
 ) {
     companion object {
         val GREY = GbSkin(
             id = "gb_grey",
             name = "Classic Grey",
-            caseColor = Color(0xFFDDD8CC),
-            screenLensColor = Color(0xFF4F5248),
-            labelColor = Color(0xFF3639a0),
+            caseColor = Color(0xFFDBD3CD),
+            screenLensColor = Color(0xFF656574),
+            labelColor = Color(0xFF111b91),
             lineBlue = Color(0xFF3639a0),
-            lineRed = Color(0xFFa03636),
-            buttonsColor = Color(0xFF730551),
+            lineRed = Color(0xFF930551),
+            dPadColor = Color(0xFF222222),
+            buttonsColor = Color(0xFF930551),
         )
 
         val RED = GbSkin(
             id = "gb_red",
             name = "Red",
-            caseColor = Color(0xFFcf2d39),
+            caseColor = Color(0xFFe1e0dd),
             screenLensColor = Color(0xFF4F5248),
             labelColor = Color(0xFF3639a0),
             lineBlue = Color(0xFF3639a0),
             lineRed = Color(0xFFa03636),
+            dPadColor = Color(0xFF222222),
             buttonsColor = Color(0xFF1C1C1C),
         )
 
@@ -46,6 +49,7 @@ data class GbSkin(
             labelColor = Color(0xFF3639a0),
             lineBlue = Color(0xFF3639a0),
             lineRed = Color(0xFFa03636),
+            dPadColor = Color(0xFF222222),
             buttonsColor = Color(0xFF1C1C1C),
         )
 
@@ -57,6 +61,7 @@ data class GbSkin(
             labelColor = Color(0xFF3639a0),
             lineBlue = Color(0xFF3639a0),
             lineRed = Color(0xFFa03636),
+            dPadColor = Color(0xFF222222),
             buttonsColor = Color(0xFF1C1C1C),
         )
 
@@ -68,6 +73,7 @@ data class GbSkin(
             labelColor = Color(0xFF3639a0),
             lineBlue = Color(0xFF3639a0),
             lineRed = Color(0xFFa03636),
+            dPadColor = Color(0xFF222222),
             buttonsColor = Color(0xFF1C1C1C),
         )
 
@@ -78,7 +84,8 @@ data class GbSkin(
             screenLensColor = Color(0xFF4F5248),
             labelColor = Color(0xFF3639a0),
             lineBlue = Color(0xFF3639a0),
-            lineRed = Color(0xFFa03636),
+            lineRed = Color(0xFF555555),
+            dPadColor = Color(0xFF222222),
             buttonsColor = Color(0xFF555555),
         )
 
@@ -90,6 +97,7 @@ data class GbSkin(
             labelColor = Color(0xFF3639a0),
             lineBlue = Color(0xFF3639a0),
             lineRed = Color(0xFFa03636),
+            dPadColor = Color(0xFF222222),
             buttonsColor = Color(0xFF1C1C1C),
         )
 
