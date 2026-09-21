@@ -7,6 +7,7 @@ import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
@@ -29,7 +30,7 @@ object GbArt {
         bezelRect?.let { rect ->
             drawScreenLens(rect, gameScreenRect, skin.screenLensColor, width, height, isCarouselMode)
 
-            drawTopBezelBranding(drawContext.canvas.nativeCanvas, rect, gameScreenRect)
+            drawTopBezelBranding(drawContext.canvas.nativeCanvas, rect, gameScreenRect, skin)
 
             drawNintendoBrandingLabel(
                 drawContext.canvas.nativeCanvas,
@@ -37,6 +38,10 @@ object GbArt {
                 baselineY = rect.bottom + 28.dp.toPx(),
                 skin.labelColor
             )
+
+            if (!isCarouselMode) {
+                drawSpeakerGrill(width, height)
+            }
         }
     }
 
@@ -71,71 +76,79 @@ object GbArt {
         val bezelPath = calculateBezelPath(bezelRect)
         drawPath(bezelPath, lensColor)
 
-        if (isCarouselMode) {
-            // Draw the handheld speaker grill lines
-            val detailColor = Color.Black.copy(alpha = 0.2f)
-            val speakerX = w - 40.dp.toPx()
-            val speakerY = h - 30.dp.toPx()
-            repeat(5) { i ->
-                val x = speakerX + (i * 6.dp.toPx())
-                drawLine(
-                    color = detailColor,
-                    start = Offset(x, speakerY),
-                    end = Offset(x - 10.dp.toPx(), speakerY + 20.dp.toPx()),
-                    strokeWidth = 2.dp.toPx()
+        if (gameScreenRect != null) {
+            if (isCarouselMode) {
+                drawRect(
+                    color = Color.Black,
+                    topLeft = gameScreenRect.topLeft,
+                    size = gameScreenRect.size
+                )
+            } else {
+                drawRect(
+                    color = Color.Transparent,
+                    topLeft = gameScreenRect.topLeft,
+                    size = gameScreenRect.size,
+                    blendMode = BlendMode.Clear
                 )
             }
-        } else if (gameScreenRect != null) {
-            drawRect(
-                color = Color.Transparent,
-                topLeft = gameScreenRect.topLeft,
-                size = gameScreenRect.size,
-                blendMode = BlendMode.Clear
-            )
         }
     }
 
     private fun DrawScope.drawTopBezelBranding(
         canvas: android.graphics.Canvas,
         bezelRect: Rect,
-        gameScreenRect: Rect?
+        gameScreenRect: Rect?,
+        skin: GbSkin
     ) {
         val fontColor = Color.White.copy(alpha = 0.6f)
         val textPaint = android.graphics.Paint().apply {
             color = fontColor.toArgb()
             textSize = 9.sp.toPx()
             typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)
-            textAlign = android.graphics.Paint.Align.RIGHT // 💡 CHANGE HERE: Right align makes the text end perfectly at gameScreenRect.right
+            textAlign = android.graphics.Paint.Align.RIGHT
         }
 
         val labelText = "DOT MATRIX WITH STEREO SOUND"
         val textWidth = textPaint.measureText(labelText)
         val textPadding = 12.dp.toPx()
 
-        // 💡 ANCHOR POINT: Everything shifts relative to the screen width bounds, not the bezel edge
-        val screenRight = gameScreenRect?.right ?: bezelRect.right - 24.dp.toPx()
-        val textRightPoint = screenRight
-        val leftLineEnd = textRightPoint - textWidth - textPadding
+        val screenRight = gameScreenRect?.right ?: (bezelRect.right - 24.dp.toPx())
+        val leftLineEnd = screenRight - textWidth - textPadding
 
         val textY = bezelRect.top + 25.dp.toPx()
         val lineY = bezelRect.top + 22.dp.toPx()
 
-        val lineBlue = Color(0xFF3639a0).copy(alpha = 0.8f)
-        val lineRed = Color(0xFFa03636).copy(alpha = 0.8f)
         val stroke = 3.dp.toPx()
-        val lineMargin = 8.dp.toPx() // Outer padding from the left bezel edge
+        val lineMargin = 8.dp.toPx()
 
-        // 1. Draw Left Side Accent Lines (stretches from left bezel edge up to where text starts)
-        drawLine(lineRed, Offset(bezelRect.left + lineMargin, lineY - 3.dp.toPx()), Offset(leftLineEnd, lineY - 3.dp.toPx()), stroke)
-        drawLine(lineBlue, Offset(bezelRect.left + lineMargin, lineY + 3.dp.toPx()), Offset(leftLineEnd, lineY + 3.dp.toPx()), stroke)
+        drawLine(
+            skin.lineRed,
+            Offset(bezelRect.left + lineMargin, lineY - 3.dp.toPx()),
+            Offset(leftLineEnd, lineY - 3.dp.toPx()),
+            stroke
+        )
+        drawLine(
+            skin.lineBlue,
+            Offset(bezelRect.left + lineMargin, lineY + 3.dp.toPx()),
+            Offset(leftLineEnd, lineY + 3.dp.toPx()),
+            stroke
+        )
 
-        // 2. Draw Text (Ending exactly at the screen's right edge)
-        canvas.drawText(labelText, textRightPoint, textY, textPaint)
+        canvas.drawText(labelText, screenRight, textY, textPaint)
 
-        // 3. Draw Right Side Accent Lines (very short stub lines that extend from text right to bezel edge)
-        val rightLineStart = textRightPoint + textPadding
-        drawLine(lineRed, Offset(rightLineStart, lineY - 3.dp.toPx()), Offset(bezelRect.right - lineMargin, lineY - 3.dp.toPx()), stroke)
-        drawLine(lineBlue, Offset(rightLineStart, lineY + 3.dp.toPx()), Offset(bezelRect.right - lineMargin, lineY + 3.dp.toPx()), stroke)
+        val rightLineStart = screenRight + textPadding
+        drawLine(
+            skin.lineRed,
+            Offset(rightLineStart, lineY - 3.dp.toPx()),
+            Offset(bezelRect.right - lineMargin, lineY - 3.dp.toPx()),
+            stroke
+        )
+        drawLine(
+            skin.lineBlue,
+            Offset(rightLineStart, lineY + 3.dp.toPx()),
+            Offset(bezelRect.right - lineMargin, lineY + 3.dp.toPx()),
+            stroke
+        )
     }
 
     private fun DrawScope.drawNintendoBrandingLabel(
@@ -165,6 +178,23 @@ object GbArt {
         paint.typeface = android.graphics.Typeface.DEFAULT
         paint.textSize = 18.dp.toPx()
         canvas.drawText(tmText, startX + nintendoWidth + gbWidth, baselineY, paint)
+    }
+}
+
+private fun DrawScope.drawSpeakerGrill(w: Float, h: Float) {
+    val detailColor = Color.Black.copy(alpha = 0.2f)
+    val speakerX = w - 40.dp.toPx()
+    val speakerY = h - 80.dp.toPx()
+
+    repeat(5) { i ->
+        val x = speakerX - (i * 15.dp.toPx())
+        drawLine(
+            color = detailColor,
+            start = Offset(x, speakerY),
+            end = Offset(x - 50.dp.toPx(), speakerY - 100.dp.toPx()),
+            strokeWidth = 10.dp.toPx(),
+            cap = StrokeCap.Round
+        )
     }
 }
 
