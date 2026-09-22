@@ -126,6 +126,20 @@ data class GbSkin(
             model = GbModel.POCKET
         )
 
+        val LIGHT_SILVER = GbSkin(
+            id = "light_silver",
+            name = "Light Silver",
+            caseColor = Color(0xFFc0c0c0),
+            screenLensColor = Color(0xFFc9c9c9),
+            labelColor = Color(0xFF222222),
+            lineBlue = Color(0xFF111b91),
+            lineRed = Color(0xFF930551),
+            dPadColor = Color(0xFF222222),
+            buttonsColor = Color(0xFF222222),
+            menuColor = Color(0xFF222222),
+            model = GbModel.LIGHT
+        )
+
         val ALL_SKINS = listOf(
             GREY,
             RED,
@@ -135,6 +149,7 @@ data class GbSkin(
             BLACK,
             WHITE,
             POCKET_SILVER,
+            LIGHT_SILVER,
         )
 
         fun getById(id: String): GbSkin? = ALL_SKINS.find { it.id == id }

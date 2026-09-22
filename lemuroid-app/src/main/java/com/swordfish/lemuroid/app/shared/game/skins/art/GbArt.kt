@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.swordfish.lemuroid.app.shared.game.skins.GbModel
 import com.swordfish.lemuroid.app.shared.game.skins.GbSkin
+import androidx.core.graphics.toColorInt
 
 object GbArt {
     fun DrawScope.drawHandheld(
@@ -65,6 +66,25 @@ object GbArt {
                     drawPocketSpeakerGrill(width, height)
                 }
             }
+
+            if (skin.model == GbModel.LIGHT) {
+            drawLightBezelBranding(
+                canvas = drawContext.canvas.nativeCanvas,
+                bezelRect = rect,
+                gameScreenRect = gameScreenRect,
+                fontColor = skin.labelColor,
+                lensColor = skin.screenLensColor
+            )
+
+            drawPocketNintendoBranding(
+                canvas = drawContext.canvas.nativeCanvas,
+                bezelRect = rect
+            )
+
+            if (!isCarouselMode) {
+                drawPocketSpeakerGrill(width, height)
+            }
+        }
         }
     }
 
@@ -271,6 +291,33 @@ private fun DrawScope.drawPocketBezelBranding(
         baselineY - verticalPadding,
         paint
     )
+}
+
+private fun DrawScope.drawLightBezelBranding(
+    canvas: android.graphics.Canvas,
+    bezelRect: Rect,
+    gameScreenRect: Rect?,
+    fontColor: Color,
+    lensColor: Color,
+) {
+    val gbText = "GAME BOY "
+    val lightText = "LIGHT"
+
+    val startX = gameScreenRect?.left ?: (bezelRect.left + 16.dp.toPx())
+    val baselineY = (gameScreenRect?.bottom ?: (bezelRect.bottom - 40.dp.toPx())) + 24.dp.toPx()
+
+    val paint = android.graphics.Paint().apply {
+        isAntiAlias = true
+        typeface = android.graphics.Typeface.create("sans-serif-condensed", android.graphics.Typeface.BOLD_ITALIC)
+        textSize = 22.dp.toPx()
+    }
+
+    paint.color = fontColor.toArgb()
+    val gbWidth = paint.measureText(gbText)
+    canvas.drawText(gbText, startX, baselineY, paint)
+
+    paint.color = "#1CBCBA".toColorInt()
+    canvas.drawText(lightText, startX + gbWidth, baselineY, paint)
 }
 
 private fun DrawScope.drawPocketNintendoBranding(

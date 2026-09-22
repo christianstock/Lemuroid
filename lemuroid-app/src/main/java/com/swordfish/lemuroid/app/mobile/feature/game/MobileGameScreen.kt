@@ -539,7 +539,7 @@ private fun GameViewWithPhysicalSizingPlaceholder(
         } else null
 
         val calculationSystemId = when {
-            viewModel.game.systemId == "gb" -> if (selectedGbSkin?.model == GbModel.POCKET) SystemID.GBP else SystemID.GB
+            viewModel.game.systemId == "gb" -> if (selectedGbSkin?.model == GbModel.POCKET || selectedGbSkin?.model == GbModel.LIGHT) SystemID.GBP else SystemID.GB
             else -> SystemID.entries.find { it.dbname == viewModel.game.systemId }
         }
 
