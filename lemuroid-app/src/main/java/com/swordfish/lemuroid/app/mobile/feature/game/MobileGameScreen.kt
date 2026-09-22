@@ -260,7 +260,7 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
                         "gba" -> (currentSkin as? GbaSkin)?.caseColor
                         else -> null
                     }
-                    val buttonColor = when (viewModel.game.systemId) {
+                    val actionButtonColor = when (viewModel.game.systemId) {
                         "gb" -> (currentSkin as? GbSkin)?.buttonsColor
                         "gbc" -> (currentSkin as? GbcSkin)?.buttonsColor
                         "gba" -> (currentSkin as? GbaSkin)?.buttonsColor
@@ -270,11 +270,21 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
                         "gb" -> (currentSkin as? GbSkin)?.dPadColor
                         else -> null
                     }
+                    val menuButtonColor = when (viewModel.game.systemId) {
+                        "gb" -> (currentSkin as? GbSkin)?.menuColor
+                        else -> null
+                    }
+                    val textColor = when (viewModel.game.systemId) {
+                    "gb" -> (currentSkin as? GbSkin)?.labelColor
+                    else -> null
+                }
                     getThemeForSystem(
                         viewModel.game.systemId,
                         shellColor = shellColor,
-                        buttonColor = buttonColor,
                         dPadColor = dPadColor,
+                        actionButtonColor = actionButtonColor,
+                        menuButtonColor = menuButtonColor,
+                        textColor = textColor
                     )
                 }
 
