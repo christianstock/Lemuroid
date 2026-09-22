@@ -43,6 +43,7 @@ object ShaderChooser {
             SystemID.GBA -> ShaderConfig.LCD
             SystemID.GBC -> ShaderConfig.LCD
             SystemID.GB -> ShaderConfig.LCD
+            SystemID.GBP -> ShaderConfig.LCD
             SystemID.N64 -> ShaderConfig.CRT
             SystemID.GENESIS -> ShaderConfig.CRT
             SystemID.SEGACD -> ShaderConfig.CRT
@@ -266,6 +267,7 @@ object ShaderChooser {
             SystemID.GBA -> upscale16BitsMobile
             SystemID.GBC -> upscale8BitsMobile
             SystemID.GB -> upscale8BitsMobile
+            SystemID.GBP -> upscale8BitsMobile
             SystemID.N64 -> upscale32Bits
             SystemID.GENESIS -> upscale16Bits
             SystemID.SEGACD -> upscale16Bits

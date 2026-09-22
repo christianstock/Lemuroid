@@ -5,6 +5,7 @@ enum class SystemID(val dbname: String) {
     SNES("snes"),
     GENESIS("md"),
     GB("gb"),
+    GBP("gb-pocket"),
     GBC("gbc"),
     GBA("gba"),
     N64("n64"),

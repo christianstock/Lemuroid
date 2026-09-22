@@ -75,6 +75,7 @@ import kotlinx.coroutines.launch
 import com.swordfish.lemuroid.app.shared.game.BaseGameScreenViewModel
 import com.swordfish.lemuroid.app.shared.game.viewmodel.GameViewModelRetroGameView
 import com.swordfish.lemuroid.app.shared.game.PhysicalScreenSizeCalculator
+import com.swordfish.lemuroid.app.shared.game.skins.GbModel
 import com.swordfish.lemuroid.app.shared.game.skins.GbSkin
 import com.swordfish.lemuroid.app.shared.game.skins.GbSkinManager
 import com.swordfish.lemuroid.app.shared.game.skins.GbaSkin
@@ -531,13 +532,20 @@ private fun GameViewWithPhysicalSizingPlaceholder(
         val availableHeight = slotSize?.height?.toFloat() ?: 0f
 
         val displayMetrics = context.resources.displayMetrics
-        val systemIdEnum = remember<SystemID?>(viewModel.game.systemId) {
-            SystemID.entries.find { it.dbname == viewModel.game.systemId }
+
+        val selectedGbSkin = if (viewModel.game.systemId == "gb") {
+            val gbSkinManager = remember(context) { GbSkinManager.getInstance(context) }
+            gbSkinManager.getSelectedSkinFlow().collectAsState(initial = gbSkinManager.getSelectedSkin()).value
+        } else null
+
+        val calculationSystemId = when {
+            viewModel.game.systemId == "gb" -> if (selectedGbSkin?.model == GbModel.POCKET) SystemID.GBP else SystemID.GB
+            else -> SystemID.entries.find { it.dbname == viewModel.game.systemId }
         }
 
         val physicalDimensions = if (slotSize != null) {
-            remember<PhysicalScreenSizeCalculator.ScreenDimensions?>(availableWidth, availableHeight, systemIdEnum) {
-                systemIdEnum?.let {
+            remember(availableWidth, availableHeight, calculationSystemId) {
+                calculationSystemId?.let {
                     PhysicalScreenSizeCalculator.calculateScreenDimensions(
                         systemId = it,
                         displayMetrics = displayMetrics,

@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.boundsInParent
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.swordfish.lemuroid.app.shared.game.skins.GbModel
 import com.swordfish.lemuroid.app.shared.game.skins.GbSkin
@@ -53,11 +54,26 @@ fun PadKitScope.GbPortraitSkin(
     gameScreenPos: Rect?,
     modifier: Modifier = Modifier,
 ) {
-    val bezelRect = remember { mutableStateOf<Rect?>(null) }
     val rootOffset = remember { mutableStateOf(Offset.Zero) }
 
     val gameScreenRect = remember(gameScreenPos, rootOffset.value) {
         gameScreenPos?.translate(-rootOffset.value)
+    }
+
+    val density = LocalDensity.current
+    val topBezelPx = with(density) { 36.dp.toPx() }
+    val bottomBezelPx = with(density) { 36.dp.toPx() }
+    val sideBezelPx = with(density) { 50.dp.toPx() }
+
+    val bezelRect = remember(gameScreenRect) {
+        gameScreenRect?.let { rect ->
+            Rect(
+                left = rect.left - sideBezelPx,
+                top = rect.top - topBezelPx,
+                right = rect.right + sideBezelPx,
+                bottom = rect.bottom + bottomBezelPx
+            )
+        }
     }
 
     val deviceModifier = modifier
@@ -70,16 +86,8 @@ fun PadKitScope.GbPortraitSkin(
         }
         .drawBehind {
             GbArt.run {
-                drawHandheld(gameScreenRect, bezelRect.value, skin, false)
+                drawHandheld(gameScreenRect, bezelRect, skin, false)
             }
-        }
-
-    val gameScreenModifier = Modifier
-        .fillMaxWidth()
-        .aspectRatio(160f / 144f)
-        .padding(16.dp)
-        .onGloballyPositioned {
-            bezelRect.value = it.boundsInParent()
         }
 
     val actionBarModifier = Modifier
@@ -99,7 +107,10 @@ fun PadKitScope.GbPortraitSkin(
         )
 
         Box(
-            modifier = gameScreenModifier,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .aspectRatio(160f / 144f),
             contentAlignment = Alignment.Center
         ) {
             gameScreen()

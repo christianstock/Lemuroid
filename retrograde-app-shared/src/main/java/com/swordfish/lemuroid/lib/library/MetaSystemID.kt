@@ -126,6 +126,7 @@ enum class MetaSystemID(val titleResId: Int, val imageResId: Int, val systemIDs:
                 SystemID.MAME2003PLUS -> ARCADE
                 SystemID.ATARI2600 -> ATARI2600
                 SystemID.GB -> GB
+                SystemID.GBP -> GB
                 SystemID.GBC -> GBC
                 SystemID.GBA -> GBA
                 SystemID.GENESIS -> GENESIS
