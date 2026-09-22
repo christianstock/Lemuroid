@@ -44,13 +44,23 @@ fun PadKitScope.GBControlButton(
     id: Id.Key,
     label: String? = null,
     icon: Int? = null,
+    rotation: Float = 0.0f,
+    expansion: Float = 0.0f,
 ) {
     val theme = LocalLemuroidPadTheme.current
     ControlButton(
         modifier = modifier.padding(theme.padding),
         id = id,
-        foreground = { GbButtonForeground(pressed = it, icon = icon, label = label) },
-        background = {  }
+        foreground = {
+            GbButtonForeground(
+                pressed = it,
+                icon = icon,
+                label = label,
+                rotation = rotation,
+                expansion = expansion
+            )
+        },
+        background = { }
     )
 }
 
@@ -66,7 +76,7 @@ fun PadKitScope.GBCControlButton(
         modifier = modifier.padding(theme.padding),
         id = id,
         foreground = { GbcButtonForeground(pressed = it, icon = icon, label = label) },
-        background = {  }
+        background = { }
     )
 }
 
@@ -82,7 +92,7 @@ fun PadKitScope.GBAControlButton(
         modifier = modifier.padding(theme.padding),
         id = id,
         foreground = { GbaButtonForeground(pressed = it, icon = icon, label = label) },
-        background = {  }
+        background = { }
     )
 }
 

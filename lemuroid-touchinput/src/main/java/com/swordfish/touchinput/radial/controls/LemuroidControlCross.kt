@@ -45,6 +45,7 @@ fun PadKitScope.GbControlCross(
     modifier: Modifier = Modifier,
     id: Id.DiscreteDirection,
     allowDiagonals: Boolean = true,
+    bars: Boolean = true,
     background: @Composable () -> Unit = {
         GbDpadBackground()
     },
@@ -52,6 +53,7 @@ fun PadKitScope.GbControlCross(
         GbDpadForeground(
             allowDiagonals = allowDiagonals,
             directionState = it,
+            bars = bars
         )
     },
 ) {

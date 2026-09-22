@@ -2,7 +2,7 @@ package com.swordfish.lemuroid.app.shared.game.skins
 
 import androidx.compose.ui.graphics.Color
 
-enum class GbModel { DMG, POCKET }
+enum class GbModel { DMG, POCKET, LIGHT }
 
 /**
  * Represents a Game Boy handheld skin with case and button colors

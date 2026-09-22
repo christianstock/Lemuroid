@@ -46,8 +46,9 @@ import androidx.compose.ui.unit.sp
 import com.swordfish.lemuroid.common.compose.textUnit
 import com.swordfish.touchinput.radial.LocalLemuroidPadTheme
 
+
 @Composable
-fun DmgRoundButtonForeground(pressed: State<Boolean>, label: String) {
+fun DmgRoundButtonForeground(pressed: State<Boolean>, label: String, rotation: Float = 0.0f) {
     val theme = LocalLemuroidPadTheme.current
     val buttonActiveColor = theme.buttonFill(pressed.value)
 
@@ -61,7 +62,7 @@ fun DmgRoundButtonForeground(pressed: State<Boolean>, label: String) {
     Column(
         modifier = Modifier
             .graphicsLayer {
-                rotationZ = -30f
+                rotationZ = rotation
             },
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -199,13 +200,15 @@ fun GbButtonForeground(
     icon: Int? = null,
     iconScale: Float = 0.6f,
     labelScale: Float = 1.0f,
+    rotation: Float = 0.0f,
+    expansion: Float = 0.0f,
 ) {
     val theme = LocalLemuroidPadTheme.current
     Column(
         modifier = modifier
             .fillMaxWidth(0.7f) // Keeps the button itself shrunk down nicely
             .graphicsLayer {
-                rotationZ = -30f // Entire structure is rotated up together
+                rotationZ = rotation
             },
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -216,7 +219,7 @@ fun GbButtonForeground(
                 .aspectRatio(2.6f)
                 .drawBehind {
                     // Calculate a larger size (e.g., 15% padding outward)
-                    val expansion = 6.dp.toPx()
+                    val expansion = expansion.dp.toPx()
                     val outerWidth = size.width + (expansion * 2)
                     val outerHeight = size.height + (expansion * 2)
                     val cornerRadius = outerHeight / 2f // Pill shape radius
