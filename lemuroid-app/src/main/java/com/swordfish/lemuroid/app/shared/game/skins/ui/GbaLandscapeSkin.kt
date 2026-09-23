@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,12 +23,12 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.boundsInParent
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.dp
-import com.swordfish.lemuroid.app.shared.game.skins.GbaSkin
+import com.swordfish.lemuroid.app.shared.game.skins.GameBoyAdvanceSkin
 import com.swordfish.lemuroid.app.shared.game.skins.art.GbaArt
 
 @Composable
 fun GbaLandscapeSkin(
-    skin: GbaSkin,
+    skin: GameBoyAdvanceSkin,
     gameScreenContent: @Composable () -> Unit,
     leftPad: @Composable (Modifier) -> Unit,
     rightPad: @Composable (Modifier) -> Unit,

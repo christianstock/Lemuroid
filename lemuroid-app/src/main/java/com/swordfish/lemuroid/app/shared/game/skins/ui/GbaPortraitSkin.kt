@@ -25,7 +25,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.boundsInParent
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.dp
-import com.swordfish.lemuroid.app.shared.game.skins.GbaSkin
+import com.swordfish.lemuroid.app.shared.game.skins.GameBoyAdvanceSkin
 
 /**
  * GBA skin renderer for portrait mode featuring an expanded
@@ -33,7 +33,7 @@ import com.swordfish.lemuroid.app.shared.game.skins.GbaSkin
  */
 @Composable
 fun GbaPortraitSkin(
-    skin: GbaSkin,
+    skin: GameBoyAdvanceSkin,
     gameScreenContent: @Composable () -> Unit,
     leftPad: @Composable (Modifier) -> Unit,
     rightPad: @Composable (Modifier) -> Unit,

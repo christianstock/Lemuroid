@@ -29,16 +29,16 @@ class GbaSkinManager private constructor(private val context: Context) {
     /**
      * Get the currently selected GBA skin as a Flow
      */
-    fun getSelectedSkinFlow(): Flow<GbaSkin> {
+    fun getSelectedSkinFlow(): Flow<GameBoyAdvanceSkin> {
         return selectedSkinFlow.asStateFlow()
     }
 
     /**
      * Get the currently selected skin
      */
-    fun getSelectedSkin(): GbaSkin {
-        val skinId = sharedPrefs.getString(SELECTED_GBA_SKIN_KEY, GbaSkin.INDIGO.id)
-        return GbaSkin.getById(skinId!!) ?: GbaSkin.INDIGO
+    fun getSelectedSkin(): GameBoyAdvanceSkin {
+        val skinId = sharedPrefs.getString(SELECTED_GBA_SKIN_KEY, GameBoyAdvanceSkin.INDIGO.id)
+        return GameBoyAdvanceSkin.getById(skinId!!) ?: GameBoyAdvanceSkin.INDIGO
     }
 
     /**
@@ -46,16 +46,16 @@ class GbaSkinManager private constructor(private val context: Context) {
      */
     fun setSelectedSkin(skinId: String) {
         sharedPrefs.edit().putString(SELECTED_GBA_SKIN_KEY, skinId).apply()
-        selectedSkinFlow.value = GbaSkin.getById(skinId) ?: GbaSkin.INDIGO
+        selectedSkinFlow.value = GameBoyAdvanceSkin.getById(skinId) ?: GameBoyAdvanceSkin.INDIGO
     }
 
     /**
      * Get all available skins
      */
-    fun getAllSkins(): List<GbaSkin> = GbaSkin.ALL_SKINS
+    fun getAllSkins(): List<GameBoyAdvanceSkin> = GameBoyAdvanceSkin.ALL_SKINS
 
-    private fun getDefaultSkin(): GbaSkin {
-        val skinId = sharedPrefs.getString(SELECTED_GBA_SKIN_KEY, GbaSkin.INDIGO.id)
-        return GbaSkin.getById(skinId!!) ?: GbaSkin.INDIGO
+    private fun getDefaultSkin(): GameBoyAdvanceSkin {
+        val skinId = sharedPrefs.getString(SELECTED_GBA_SKIN_KEY, GameBoyAdvanceSkin.INDIGO.id)
+        return GameBoyAdvanceSkin.getById(skinId!!) ?: GameBoyAdvanceSkin.INDIGO
     }
 }

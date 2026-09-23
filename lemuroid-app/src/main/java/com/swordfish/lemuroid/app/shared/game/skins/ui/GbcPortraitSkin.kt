@@ -22,12 +22,12 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.boundsInParent
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.dp
-import com.swordfish.lemuroid.app.shared.game.skins.GbcSkin
+import com.swordfish.lemuroid.app.shared.game.skins.GameBoyColorSkin
 import com.swordfish.lemuroid.app.shared.game.skins.art.GbcArt
 
 @Composable
 fun GbcPortraitSkin(
-    skin: GbcSkin,
+    skin: GameBoyColorSkin,
     gameScreenContent: @Composable () -> Unit,
     leftPad: @Composable (Modifier) -> Unit,
     rightPad: @Composable (Modifier) -> Unit,

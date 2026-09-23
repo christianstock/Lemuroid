@@ -51,9 +51,25 @@ object PhysicalScreenSizeCalculator {
         maxAvailableHeightPx: Float,
     ): ScreenDimensions? {
         val dimensions = HANDHELD_DIMENSIONS[systemId] ?: return null
+        return calculateScreenDimensions(
+            widthMm = dimensions.widthMm,
+            heightMm = dimensions.heightMm,
+            displayMetrics = displayMetrics,
+            maxAvailableWidthPx = maxAvailableWidthPx,
+            maxAvailableHeightPx = maxAvailableHeightPx,
+        )
+    }
 
-        // Use xdpi/ydpi for more accurate physical measurements if available
-        // Fall back to densityDpi if values are suspicious (e.g. 0 or extremely high/low)
+    /**
+     * Calculates the physical screen size in pixels from specified physical millimeter dimensions.
+     */
+    fun calculateScreenDimensions(
+        widthMm: Float,
+        heightMm: Float,
+        displayMetrics: DisplayMetrics,
+        maxAvailableWidthPx: Float,
+        maxAvailableHeightPx: Float,
+    ): ScreenDimensions? {
         var xdpi = displayMetrics.xdpi
         var ydpi = displayMetrics.ydpi
         if (xdpi < 50f || xdpi > 1000f) {
@@ -63,12 +79,9 @@ object PhysicalScreenSizeCalculator {
             ydpi = displayMetrics.densityDpi.toFloat()
         }
 
-        // Convert physical mm to pixels using device DPI
-        // Formula: Pixels = (mm / 25.4) * DPI
-        val widthPx = (dimensions.widthMm / 25.4f) * xdpi
-        val heightPx = (dimensions.heightMm / 25.4f) * ydpi
+        val widthPx = (widthMm / 25.4f) * xdpi
+        val heightPx = (heightMm / 25.4f) * ydpi
 
-        // If dimensions don't fit within available space, fall back to default full-screen rendering
         val fitsWidth = widthPx <= maxAvailableWidthPx
         val fitsHeight = heightPx <= maxAvailableHeightPx
 

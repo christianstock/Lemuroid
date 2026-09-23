@@ -13,7 +13,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Rect
@@ -25,7 +24,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.boundsInParent
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.dp
-import com.swordfish.lemuroid.app.shared.game.skins.GbSkin
+import com.swordfish.lemuroid.app.shared.game.skins.GameBoySkin
 
 /**
  * GB skin renderer for landscape mode featuring widened grips, a narrow top menu,
@@ -33,7 +32,7 @@ import com.swordfish.lemuroid.app.shared.game.skins.GbSkin
  */
 @Composable
 fun GbLandscapeSkin(
-    skin: GbSkin,
+    skin: GameBoySkin,
     gameScreenContent: @Composable () -> Unit,
     leftPad: @Composable (Modifier) -> Unit,
     rightPad: @Composable (Modifier) -> Unit,

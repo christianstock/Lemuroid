@@ -31,12 +31,15 @@ import androidx.compose.material.icons.filled.OpenInFull
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import android.app.Activity
+import android.content.ContextWrapper
+import android.content.pm.ActivityInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -53,6 +56,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import android.view.KeyEvent
+import com.swordfish.lemuroid.app.shared.game.skins.SkinOrientation
 import com.swordfish.lemuroid.app.shared.game.ui.InteractiveTopBar
 import gg.padkit.inputevents.InputEvent
 import androidx.compose.ui.layout.boundsInRoot
@@ -75,12 +79,11 @@ import kotlinx.coroutines.launch
 import com.swordfish.lemuroid.app.shared.game.BaseGameScreenViewModel
 import com.swordfish.lemuroid.app.shared.game.viewmodel.GameViewModelRetroGameView
 import com.swordfish.lemuroid.app.shared.game.PhysicalScreenSizeCalculator
-import com.swordfish.lemuroid.app.shared.game.skins.GbModel
-import com.swordfish.lemuroid.app.shared.game.skins.GbSkin
+import com.swordfish.lemuroid.app.shared.game.skins.GameBoySkin
 import com.swordfish.lemuroid.app.shared.game.skins.GbSkinManager
-import com.swordfish.lemuroid.app.shared.game.skins.GbaSkin
+import com.swordfish.lemuroid.app.shared.game.skins.GameBoyAdvanceSkin
 import com.swordfish.lemuroid.app.shared.game.skins.GbaSkinManager
-import com.swordfish.lemuroid.app.shared.game.skins.GbcSkin
+import com.swordfish.lemuroid.app.shared.game.skins.GameBoyColorSkin
 import com.swordfish.lemuroid.app.shared.game.skins.GbcSkinManager
 import com.swordfish.lemuroid.app.shared.game.skins.ui.GbaLandscapeSkin
 import com.swordfish.lemuroid.app.shared.game.skins.ui.GbcPortraitSkin
@@ -229,21 +232,21 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
 
                 // Collect state for each system independently
                 val gbSkinState = if (gbSkinManagerRef != null) {
-                    gbSkinManagerRef.getSelectedSkinFlow().collectAsState(GbSkin.GREY)
+                    gbSkinManagerRef.getSelectedSkinFlow().collectAsState(GameBoySkin.GREY)
                 } else {
-                    remember { mutableStateOf(GbSkin.GREY) }
+                    remember { mutableStateOf(GameBoySkin.GREY) }
                 }
 
                 val gbcSkinState = if (gbcSkinManagerRef != null) {
-                    gbcSkinManagerRef.getSelectedSkinFlow().collectAsState(GbcSkin.BERRY)
+                    gbcSkinManagerRef.getSelectedSkinFlow().collectAsState(GameBoyColorSkin.BERRY)
                 } else {
-                    remember { mutableStateOf(GbcSkin.BERRY) }
+                    remember { mutableStateOf(GameBoyColorSkin.BERRY) }
                 }
 
                 val gbaSkinState = if (gbaSkinManagerRef != null) {
-                    gbaSkinManagerRef.getSelectedSkinFlow().collectAsState(GbaSkin.INDIGO)
+                    gbaSkinManagerRef.getSelectedSkinFlow().collectAsState(GameBoyAdvanceSkin.INDIGO)
                 } else {
-                    remember { mutableStateOf(GbaSkin.INDIGO) }
+                    remember { mutableStateOf(GameBoyAdvanceSkin.INDIGO) }
                 }
 
                 // Get current skin based on system
@@ -254,29 +257,56 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
                     else -> null
                 }
 
+                // Determine orientation based on skin / system settings
+                val targetOrientation: SkinOrientation = when (viewModel.game.systemId) {
+                    "gb" -> (currentSkin as? GameBoySkin)?.preferredOrientation ?: SkinOrientation.PORTRAIT
+                    "gbc" -> (currentSkin as? GameBoyColorSkin)?.preferredOrientation ?: SkinOrientation.PORTRAIT
+                    "gba" -> (currentSkin as? GameBoyAdvanceSkin)?.preferredOrientation ?: SkinOrientation.LANDSCAPE
+                    "psp" -> SkinOrientation.LANDSCAPE
+                    "nds", "3ds" -> SkinOrientation.PORTRAIT
+                    else -> SkinOrientation.AUTO
+                }
+
+                DisposableEffect(targetOrientation) {
+                    val activity = context.findActivity()
+                    val originalOrientation = activity?.requestedOrientation
+
+                    activity?.requestedOrientation = when (targetOrientation) {
+                        SkinOrientation.PORTRAIT -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+                        SkinOrientation.LANDSCAPE -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                        SkinOrientation.AUTO -> ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                    }
+
+                    onDispose {
+                        if (activity != null && originalOrientation != null) {
+                            activity.requestedOrientation = originalOrientation
+                        }
+                    }
+                }
+
                 val theme = remember(viewModel.game.systemId, currentSkin) {
                     val shellColor = when (viewModel.game.systemId) {
-                        "gb" -> (currentSkin as? GbSkin)?.caseColor
-                        "gbc" -> (currentSkin as? GbcSkin)?.caseColor
-                        "gba" -> (currentSkin as? GbaSkin)?.caseColor
+                        "gb" -> (currentSkin as? GameBoySkin)?.caseColor
+                        "gbc" -> (currentSkin as? GameBoyColorSkin)?.caseColor
+                        "gba" -> (currentSkin as? GameBoyAdvanceSkin)?.caseColor
                         else -> null
                     }
                     val actionButtonColor = when (viewModel.game.systemId) {
-                        "gb" -> (currentSkin as? GbSkin)?.buttonsColor
-                        "gbc" -> (currentSkin as? GbcSkin)?.buttonsColor
-                        "gba" -> (currentSkin as? GbaSkin)?.buttonsColor
+                        "gb" -> (currentSkin as? GameBoySkin)?.actionButtonColor
+                        "gbc" -> (currentSkin as? GameBoyColorSkin)?.buttonColor
+                        "gba" -> (currentSkin as? GameBoyAdvanceSkin)?.buttonColor
                         else -> null
                     }
                     val dPadColor = when (viewModel.game.systemId) {
-                        "gb" -> (currentSkin as? GbSkin)?.dPadColor
+                        "gb" -> (currentSkin as? GameBoySkin)?.dPadColor
                         else -> null
                     }
                     val menuButtonColor = when (viewModel.game.systemId) {
-                        "gb" -> (currentSkin as? GbSkin)?.menuColor
+                        "gb" -> (currentSkin as? GameBoySkin)?.menuButtonColor
                         else -> null
                     }
                     val textColor = when (viewModel.game.systemId) {
-                    "gb" -> (currentSkin as? GbSkin)?.labelColor
+                    "gb" -> (currentSkin as? GameBoySkin)?.labelColor
                     else -> null
                 }
                     getThemeForSystem(
@@ -355,7 +385,7 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
                     // Render the appropriate skin based on system ID
                     when (viewModel.game.systemId) {
                         "gbc" -> {
-                            val gbcSkin = currentSkin as? GbcSkin ?: GbcSkin.BERRY
+                            val gbcSkin = currentSkin as? GameBoyColorSkin ?: GameBoyColorSkin.BERRY
                             GbcPortraitSkin(
                                 skin = gbcSkin,
                                 gameScreenContent = {
@@ -377,7 +407,7 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
                             )
                         }
                         "gb" -> {
-                            val gbSkin = currentSkin as? GbSkin ?: GbSkin.GREY
+                            val gbSkin = currentSkin as? GameBoySkin ?: GameBoySkin.GREY
                             GbPortraitSkin(
                                 skin = gbSkin,
                                 gameScreen = {
@@ -395,7 +425,7 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
                             )
                         }
                         "gba" -> {
-                            val gbaSkin = currentSkin as? GbaSkin ?: GbaSkin.INDIGO
+                            val gbaSkin = currentSkin as? GameBoyAdvanceSkin ?: GameBoyAdvanceSkin.INDIGO
                             GbaLandscapeSkin(
                                 skin = gbaSkin,
                                 gameScreenContent = {
@@ -538,20 +568,42 @@ private fun GameViewWithPhysicalSizingPlaceholder(
             gbSkinManager.getSelectedSkinFlow().collectAsState(initial = gbSkinManager.getSelectedSkin()).value
         } else null
 
-        val calculationSystemId = when {
-            viewModel.game.systemId == "gb" -> if (selectedGbSkin?.model == GbModel.POCKET || selectedGbSkin?.model == GbModel.LIGHT) SystemID.GBP else SystemID.GB
-            else -> SystemID.entries.find { it.dbname == viewModel.game.systemId }
-        }
+        val selectedGbcSkin = if (viewModel.game.systemId == "gbc") {
+            val gbcSkinManager = remember(context) { GbcSkinManager.getInstance(context) }
+            gbcSkinManager.getSelectedSkinFlow().collectAsState(initial = gbcSkinManager.getSelectedSkin()).value
+        } else null
+
+        val selectedGbaSkin = if (viewModel.game.systemId == "gba") {
+            val gbaSkinManager = remember(context) { GbaSkinManager.getInstance(context) }
+            gbaSkinManager.getSelectedSkinFlow().collectAsState(initial = gbaSkinManager.getSelectedSkin()).value
+        } else null
 
         val physicalDimensions = if (slotSize != null) {
-            remember(availableWidth, availableHeight, calculationSystemId) {
-                calculationSystemId?.let {
+            remember(availableWidth, availableHeight, selectedGbSkin, selectedGbcSkin, selectedGbaSkin) {
+                val dims = when {
+                    selectedGbSkin != null -> selectedGbSkin.model.widthMm to selectedGbSkin.model.heightMm
+                    selectedGbcSkin != null -> selectedGbcSkin.model.widthMm to selectedGbcSkin.model.heightMm
+                    selectedGbaSkin != null -> selectedGbaSkin.model.widthMm to selectedGbaSkin.model.heightMm
+                    else -> null
+                }
+
+                if (dims != null) {
                     PhysicalScreenSizeCalculator.calculateScreenDimensions(
-                        systemId = it,
+                        widthMm = dims.first,
+                        heightMm = dims.second,
                         displayMetrics = displayMetrics,
                         maxAvailableWidthPx = availableWidth,
                         maxAvailableHeightPx = availableHeight,
                     )
+                } else {
+                    SystemID.entries.find { it.dbname == viewModel.game.systemId }?.let { sysId ->
+                        PhysicalScreenSizeCalculator.calculateScreenDimensions(
+                            systemId = sysId,
+                            displayMetrics = displayMetrics,
+                            maxAvailableWidthPx = availableWidth,
+                            maxAvailableHeightPx = availableHeight,
+                        )
+                    }
                 }
             }
         } else null
@@ -588,6 +640,15 @@ private fun PadContainer(modifier: Modifier = Modifier) {
         shadowColor = theme.level0Shadow,
         shadowWidth = theme.level0ShadowWidth,
     )
+}
+
+private fun android.content.Context.findActivity(): Activity? {
+    var ctx = this
+    while (ctx is ContextWrapper) {
+        if (ctx is Activity) return ctx
+        ctx = ctx.baseContext
+    }
+    return null
 }
 
 @Composable

@@ -2,56 +2,62 @@ package com.swordfish.lemuroid.app.shared.game.skins
 
 import androidx.compose.ui.graphics.Color
 
-/**
- * Represents a Game Boy Advance handheld skin with case and button colors
- */
-data class GbaSkin(
+enum class GameBoyAdvanceModel(
+    val displayName: String,
+    val widthMm: Float,
+    val heightMm: Float,
+    val preferredOrientation: SkinOrientation = SkinOrientation.LANDSCAPE,
+) {
+    AGB_001("Advance", 61.2f, 40.8f),
+    AGS_001("Advance SP", 61.2f, 40.8f, SkinOrientation.PORTRAIT),
+    AGS_101("Advance SP Light", 61.2f, 40.8f, SkinOrientation.PORTRAIT),
+    OXY_001("Micro", 61.2f, 40.8f),
+}
+
+data class GameBoyAdvanceSkin(
     val id: String,
     val name: String,
+    val model: GameBoyAdvanceModel = GameBoyAdvanceModel.AGB_001,
     val caseColor: Color,
-    val buttonsColor: Color,
+    val buttonColor: Color = Color(0xFF333333),
 ) {
+    val preferredOrientation: SkinOrientation get() = model.preferredOrientation
     companion object {
-        val INDIGO = GbaSkin(
+        val INDIGO = GameBoyAdvanceSkin(
             id = "gba_indigo",
             name = "Indigo",
             caseColor = Color(0xFF602E8A),
-            buttonsColor = Color(0xFF333333),
         )
 
-        val ARCTIC = GbaSkin(
+        val ARCTIC = GameBoyAdvanceSkin(
             id = "gba_arctic",
             name = "Arctic",
             caseColor = Color(0xFFE8E8E8),
-            buttonsColor = Color(0xFF333333),
         )
 
-        val BLACK = GbaSkin(
+        val BLACK = GameBoyAdvanceSkin(
             id = "gba_black",
             name = "Black",
             caseColor = Color(0xFF1C1C1C),
-            buttonsColor = Color(0xFF555555),
+            buttonColor = Color(0xFF555555),
         )
 
-        val ORANGE = GbaSkin(
+        val ORANGE = GameBoyAdvanceSkin(
             id = "gba_orange",
             name = "Orange",
             caseColor = Color(0xFFE66E17),
-            buttonsColor = Color(0xFF333333),
         )
 
-        val FUCHSIA = GbaSkin(
+        val FUCHSIA = GameBoyAdvanceSkin(
             id = "gba_fuchsia",
             name = "Fuchsia",
             caseColor = Color(0xFFC81F55),
-            buttonsColor = Color(0xFF333333),
         )
 
-        val GLACIER = GbaSkin(
+        val GLACIER = GameBoyAdvanceSkin(
             id = "gba_glacier",
             name = "Glacier",
             caseColor = Color(0xFF90A4AE),
-            buttonsColor = Color(0xFF333333),
         )
 
         val ALL_SKINS = listOf(
@@ -63,6 +69,6 @@ data class GbaSkin(
             GLACIER,
         )
 
-        fun getById(id: String): GbaSkin? = ALL_SKINS.find { it.id == id }
+        fun getById(id: String): GameBoyAdvanceSkin? = ALL_SKINS.find { it.id == id }
     }
 }

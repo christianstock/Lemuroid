@@ -23,7 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.unit.dp
-import com.swordfish.lemuroid.app.shared.game.skins.GbcSkin
+import com.swordfish.lemuroid.app.shared.game.skins.GameBoyColorSkin
 
 /**
  * GBC skin renderer for landscape mode with widened grips, narrow top menu,
@@ -31,7 +31,7 @@ import com.swordfish.lemuroid.app.shared.game.skins.GbcSkin
  */
 @Composable
 fun GbcLandscapeSkin(
-    skin: GbcSkin,
+    skin: GameBoyColorSkin,
     gameScreenContent: @Composable () -> Unit,
     leftPad: @Composable (Modifier) -> Unit,
     rightPad: @Composable (Modifier) -> Unit,

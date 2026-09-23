@@ -25,13 +25,12 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.boundsInParent
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
-import com.swordfish.lemuroid.app.shared.game.skins.GbModel
-import com.swordfish.lemuroid.app.shared.game.skins.GbSkin
+import com.swordfish.lemuroid.app.shared.game.skins.GameBoyModel
+import com.swordfish.lemuroid.app.shared.game.skins.GameBoySkin
 import com.swordfish.lemuroid.app.shared.game.skins.art.GbArt
 import com.swordfish.touchinput.radial.controls.GbControlFaceButtons
 import com.swordfish.touchinput.radial.controls.GBControlButton
@@ -47,7 +46,7 @@ import androidx.compose.ui.graphics.Path
 
 @Composable
 fun PadKitScope.GbPortraitSkin(
-    skin: GbSkin,
+    skin: GameBoySkin,
     gameScreen: @Composable () -> Unit,
     actionBar: @Composable () -> Unit,
     touchControllerSettings: TouchControllerSettingsManager.Settings,
@@ -133,7 +132,7 @@ fun PadKitScope.GbPortraitSkin(
                     .align(Alignment.TopStart)
                     .size(160.dp),
                 id = Id.DiscreteDirection(ComposeTouchLayouts.MOTION_SOURCE_DPAD),
-                bars = skin.model == GbModel.DMG,
+                bars = skin.model == GameBoyModel.DMG_01,
                 background = {
                     // Center-aligned inner Box to control physical background/canvas size
                     Box(
@@ -150,7 +149,7 @@ fun PadKitScope.GbPortraitSkin(
                                 // --- 0. Background Circle & Alpha Reversion Triangles ---
                                 // Draw full background circle
                                 val circleRadius = size.minDimension / 1.6f
-                                if (skin.model == GbModel.DMG) {
+                                if (skin.model == GameBoyModel.DMG_01) {
                                     drawCircle(
                                         color = Color.Black.copy(alpha = 0.05f),
                                         radius = circleRadius,
@@ -252,7 +251,7 @@ fun PadKitScope.GbPortraitSkin(
                     Id.Key(KeyEvent.KEYCODE_BUTTON_B),
                 ),
                 background = {
-                    if (skin.model == GbModel.DMG) {
+                    if (skin.model == GameBoyModel.DMG_01) {
                         // Shared oval background behind both A and B buttons
                         Box(
                             modifier = Modifier
@@ -274,14 +273,14 @@ fun PadKitScope.GbPortraitSkin(
                         DmgRoundButtonForeground(
                             pressed = it,
                             label = "A",
-                            rotation = if (skin.model == GbModel.DMG) -30f else 0f,
+                            rotation = if (skin.model == GameBoyModel.DMG_01) -30f else 0f,
                         )
                     },
                     Id.Key(KeyEvent.KEYCODE_BUTTON_B) to {
                         DmgRoundButtonForeground(
                             pressed = it,
                             label = "B",
-                            rotation = if (skin.model == GbModel.DMG) -30f else 0f,
+                            rotation = if (skin.model == GameBoyModel.DMG_01) -30f else 0f,
                         )
                     },
                 ),
@@ -304,14 +303,14 @@ fun PadKitScope.GbPortraitSkin(
                 Box(
                     modifier = Modifier
                         .size(width = 90.dp, height = 60.dp)
-                        .offset(y = if (skin.model == GbModel.DMG) 0.dp else 50.dp), // Adjust these bounds to your liking!
+                        .offset(y = if (skin.model == GameBoyModel.DMG_01) 0.dp else 50.dp), // Adjust these bounds to your liking!
                     contentAlignment = Alignment.TopCenter,
                 ) {
                     GBControlButton(
                         id = Id.Key(KeyEvent.KEYCODE_BUTTON_SELECT),
                         label = "SELECT",
-                        rotation = if (skin.model == GbModel.DMG) -30f else 0f,
-                        expansion = if (skin.model == GbModel.DMG) 6.0f else 0.0f,
+                        rotation = if (skin.model == GameBoyModel.DMG_01) -30f else 0f,
+                        expansion = if (skin.model == GameBoyModel.DMG_01) 6.0f else 0.0f,
                     )
                 }
 
@@ -319,14 +318,14 @@ fun PadKitScope.GbPortraitSkin(
                 Box(
                     modifier = Modifier
                         .size(width = 90.dp, height = 60.dp)
-                        .offset(y = if (skin.model == GbModel.DMG) 0.dp else 50.dp), // Keeps them completely uniform
+                        .offset(y = if (skin.model == GameBoyModel.DMG_01) 0.dp else 50.dp), // Keeps them completely uniform
                     contentAlignment = Alignment.TopCenter,
                 ) {
                     GBControlButton(
                         id = Id.Key(KeyEvent.KEYCODE_BUTTON_START),
                         label = "START",
-                        rotation = if (skin.model == GbModel.DMG) -30f else 0f,
-                        expansion = if (skin.model == GbModel.DMG) 6.0f else 0.0f,
+                        rotation = if (skin.model == GameBoyModel.DMG_01) -30f else 0f,
+                        expansion = if (skin.model == GameBoyModel.DMG_01) 6.0f else 0.0f,
                     )
                 }
             }

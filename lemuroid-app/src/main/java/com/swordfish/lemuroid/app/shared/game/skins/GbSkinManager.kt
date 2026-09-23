@@ -31,16 +31,16 @@ class GbSkinManager private constructor(private val context: Context) {
     /**
      * Get the currently selected GB skin as a Flow
      */
-    fun getSelectedSkinFlow(): Flow<GbSkin> {
+    fun getSelectedSkinFlow(): Flow<GameBoySkin> {
         return selectedSkinFlow.asStateFlow()
     }
 
     /**
      * Get the currently selected skin
      */
-    fun getSelectedSkin(): GbSkin {
-        val skinId = sharedPrefs.getString(SELECTED_GB_SKIN_KEY, GbSkin.GREY.id)
-        return GbSkin.getById(skinId!!) ?: GbSkin.GREY
+    fun getSelectedSkin(): GameBoySkin {
+        val skinId = sharedPrefs.getString(SELECTED_GB_SKIN_KEY, GameBoySkin.GREY.id)
+        return GameBoySkin.getById(skinId!!) ?: GameBoySkin.GREY
     }
 
     /**
@@ -48,22 +48,22 @@ class GbSkinManager private constructor(private val context: Context) {
      */
     fun setSelectedSkin(skinId: String) {
         sharedPrefs.edit().putString(SELECTED_GB_SKIN_KEY, skinId).apply()
-        val skin = GbSkin.getById(skinId) ?: GbSkin.GREY
+        val skin = GameBoySkin.getById(skinId) ?: GameBoySkin.GREY
         selectedSkinFlow.value = skin
 
         updateColorizationForModel(skin.model)
     }
 
-    private fun updateColorizationForModel(model: GbModel) {
+    private fun updateColorizationForModel(model: GameBoyModel) {
         val appPrefs = SharedPreferencesHelper.getSharedPreferences(context)
         val mgbaColorsKey = CoreVariablesManager.computeSharedPreferenceKey("mgba_gb_colors", "gb")
         val gambattePaletteKey = CoreVariablesManager.computeSharedPreferenceKey("gambatte_gb_internal_palette", "gb")
         val gambatteColorizationKey = CoreVariablesManager.computeSharedPreferenceKey("gambatte_gb_colorization", "gb")
 
         val (mgbaColor, gambattePalette) = when (model) {
-            GbModel.DMG -> "DMG Green" to "GB - DMG"
-            GbModel.POCKET -> "GB Pocket" to "GB - Pocket"
-            GbModel.LIGHT -> "GB Light" to "GB - Light"
+            GameBoyModel.DMG_01 -> "DMG Green" to "GB - DMG"
+            GameBoyModel.MGB_01 -> "GB Pocket" to "GB - Pocket"
+            GameBoyModel.MGB_101 -> "GB Light" to "GB - Light"
         }
 
         appPrefs.edit()
@@ -76,10 +76,10 @@ class GbSkinManager private constructor(private val context: Context) {
     /**
      * Get all available skins
      */
-    fun getAllSkins(): List<GbSkin> = GbSkin.ALL_SKINS
+    fun getAllSkins(): List<GameBoySkin> = GameBoySkin.ALL_SKINS
 
-    private fun getDefaultSkin(): GbSkin {
-        val skinId = sharedPrefs.getString(SELECTED_GB_SKIN_KEY, GbSkin.GREY.id)
-        return GbSkin.getById(skinId!!) ?: GbSkin.GREY
+    private fun getDefaultSkin(): GameBoySkin {
+        val skinId = sharedPrefs.getString(SELECTED_GB_SKIN_KEY, GameBoySkin.GREY.id)
+        return GameBoySkin.getById(skinId!!) ?: GameBoySkin.GREY
     }
 }

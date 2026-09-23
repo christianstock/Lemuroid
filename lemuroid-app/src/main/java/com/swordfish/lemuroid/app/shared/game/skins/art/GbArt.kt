@@ -14,15 +14,15 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.swordfish.lemuroid.app.shared.game.skins.GbModel
-import com.swordfish.lemuroid.app.shared.game.skins.GbSkin
+import com.swordfish.lemuroid.app.shared.game.skins.GameBoyModel
+import com.swordfish.lemuroid.app.shared.game.skins.GameBoySkin
 import androidx.core.graphics.toColorInt
 
 object GbArt {
     fun DrawScope.drawHandheld(
         gameScreenRect: Rect?,
         bezelRect: Rect?,
-        skin: GbSkin,
+        skin: GameBoySkin,
         isCarouselMode: Boolean
     ) {
         val width = size.width
@@ -33,7 +33,7 @@ object GbArt {
         bezelRect?.let { rect ->
             drawScreenLens(rect, gameScreenRect, skin.screenLensColor, width, height, isCarouselMode)
 
-            if (skin.model == GbModel.DMG) {
+            if (skin.model == GameBoyModel.DMG_01) {
                 drawTopBezelBranding(drawContext.canvas.nativeCanvas, rect, gameScreenRect, skin)
 
                 drawNintendoBrandingLabel(
@@ -48,7 +48,7 @@ object GbArt {
                 }
             }
 
-            if (skin.model == GbModel.POCKET) {
+            if (skin.model == GameBoyModel.MGB_01) {
                 drawPocketBezelBranding(
                     canvas = drawContext.canvas.nativeCanvas,
                     bezelRect = rect,
@@ -67,7 +67,7 @@ object GbArt {
                 }
             }
 
-            if (skin.model == GbModel.LIGHT) {
+            if (skin.model == GameBoyModel.MGB_101) {
             drawLightBezelBranding(
                 canvas = drawContext.canvas.nativeCanvas,
                 bezelRect = rect,
@@ -141,7 +141,7 @@ object GbArt {
         canvas: android.graphics.Canvas,
         bezelRect: Rect,
         gameScreenRect: Rect?,
-        skin: GbSkin
+        skin: GameBoySkin
     ) {
         val fontColor = Color.White.copy(alpha = 0.6f)
         val textPaint = android.graphics.Paint().apply {
@@ -165,13 +165,13 @@ object GbArt {
         val lineMargin = 8.dp.toPx()
 
         drawLine(
-            skin.lineRed,
+            Color(0xFF930551),
             Offset(bezelRect.left + lineMargin, lineY - 3.dp.toPx()),
             Offset(leftLineEnd, lineY - 3.dp.toPx()),
             stroke
         )
         drawLine(
-            skin.lineBlue,
+            Color(0xFF111b91),
             Offset(bezelRect.left + lineMargin, lineY + 3.dp.toPx()),
             Offset(leftLineEnd, lineY + 3.dp.toPx()),
             stroke
@@ -181,13 +181,13 @@ object GbArt {
 
         val rightLineStart = screenRight + textPadding
         drawLine(
-            skin.lineRed,
+            Color(0xFF930551),
             Offset(rightLineStart, lineY - 3.dp.toPx()),
             Offset(bezelRect.right - lineMargin, lineY - 3.dp.toPx()),
             stroke
         )
         drawLine(
-            skin.lineBlue,
+            Color(0xFF111b91),
             Offset(rightLineStart, lineY + 3.dp.toPx()),
             Offset(bezelRect.right - lineMargin, lineY + 3.dp.toPx()),
             stroke

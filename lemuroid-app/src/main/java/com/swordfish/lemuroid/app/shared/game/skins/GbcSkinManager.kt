@@ -31,16 +31,16 @@ class GbcSkinManager private constructor(private val context: Context) {
     /**
      * Get the currently selected GBC skin as a Flow
      */
-    fun getSelectedSkinFlow(): Flow<GbcSkin> {
+    fun getSelectedSkinFlow(): Flow<GameBoyColorSkin> {
         return selectedSkinFlow.asStateFlow()
     }
 
     /**
      * Get the currently selected skin
      */
-    fun getSelectedSkin(): GbcSkin {
-        val skinId = sharedPrefs.getString(SELECTED_GBC_SKIN_KEY, GbcSkin.BERRY.id)
-        return GbcSkin.getById(skinId!!) ?: GbcSkin.BERRY
+    fun getSelectedSkin(): GameBoyColorSkin {
+        val skinId = sharedPrefs.getString(SELECTED_GBC_SKIN_KEY, GameBoyColorSkin.BERRY.id)
+        return GameBoyColorSkin.getById(skinId!!) ?: GameBoyColorSkin.BERRY
     }
 
     /**
@@ -48,22 +48,17 @@ class GbcSkinManager private constructor(private val context: Context) {
      */
     fun setSelectedSkin(skinId: String) {
         sharedPrefs.edit().putString(SELECTED_GBC_SKIN_KEY, skinId).apply()
-        selectedSkinFlow.value = GbcSkin.getById(skinId) ?: GbcSkin.BERRY
+        selectedSkinFlow.value = GameBoyColorSkin.getById(skinId) ?: GameBoyColorSkin.BERRY
     }
 
     /**
      * Get all available skins
      */
-    fun getAllSkins(): List<GbcSkin> = GbcSkin.ALL_SKINS
+    fun getAllSkins(): List<GameBoyColorSkin> = GameBoyColorSkin.ALL_SKINS
 
-    /**
-     * Get all available GBC skins (excluding Lemuroid default for filtering if needed)
-     */
-    fun getGbcColorSkins(): List<GbcSkin> = GbcSkin.ALL_SKINS.filter { !it.isDefault }
-
-    private fun getDefaultSkin(): GbcSkin {
-        val skinId = sharedPrefs.getString(SELECTED_GBC_SKIN_KEY, GbcSkin.BERRY.id)
-        return GbcSkin.getById(skinId!!) ?: GbcSkin.BERRY
+    private fun getDefaultSkin(): GameBoyColorSkin {
+        val skinId = sharedPrefs.getString(SELECTED_GBC_SKIN_KEY, GameBoyColorSkin.BERRY.id)
+        return GameBoyColorSkin.getById(skinId!!) ?: GameBoyColorSkin.BERRY
     }
 }
 
