@@ -1,6 +1,5 @@
 package com.swordfish.lemuroid.app.mobile.feature.game
 
-import GbPortraitSkin
 import android.graphics.RectF
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -85,6 +84,7 @@ import com.swordfish.lemuroid.app.shared.game.skins.GameBoyAdvanceSkin
 import com.swordfish.lemuroid.app.shared.game.skins.GbaSkinManager
 import com.swordfish.lemuroid.app.shared.game.skins.GameBoyColorSkin
 import com.swordfish.lemuroid.app.shared.game.skins.GbcSkinManager
+import com.swordfish.lemuroid.app.shared.game.skins.ui.GameBoyPortraitSkin
 import com.swordfish.lemuroid.app.shared.game.skins.ui.GbaLandscapeSkin
 import com.swordfish.lemuroid.app.shared.game.skins.ui.GbcPortraitSkin
 import com.swordfish.lemuroid.app.shared.game.skins.ui.PspLandscapeSkin
@@ -408,7 +408,7 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
                         }
                         "gb" -> {
                             val gbSkin = currentSkin as? GameBoySkin ?: GameBoySkin.GREY
-                            GbPortraitSkin(
+                            GameBoyPortraitSkin(
                                 skin = gbSkin,
                                 gameScreen = {
                                     Box(modifier = Modifier.fillMaxSize()) {

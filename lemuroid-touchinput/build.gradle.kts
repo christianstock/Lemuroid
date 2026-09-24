@@ -31,8 +31,8 @@ dependencies {
 
     implementation(platform(deps.libs.androidx.compose.composeBom))
     implementation("androidx.benchmark:benchmark-traceprocessor:1.4.1")
-    implementation("androidx.compose.foundation:foundation-layout:1.11.3")
-    implementation("androidx.compose.foundation:foundation:1.11.3")
+    implementation(deps.libs.androidx.compose.foundationLayout)
+    implementation(deps.libs.androidx.compose.foundation)
     implementation(deps.libs.androidx.compose.geometry)
     implementation(deps.libs.androidx.compose.runtime)
     implementation(deps.libs.androidx.compose.material3)

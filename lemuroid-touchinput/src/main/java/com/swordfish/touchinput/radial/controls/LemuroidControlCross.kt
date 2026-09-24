@@ -6,8 +6,6 @@ import androidx.compose.runtime.State
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import com.swordfish.touchinput.radial.LocalLemuroidPadTheme
-import com.swordfish.touchinput.radial.ui.GbDpadBackground
-import com.swordfish.touchinput.radial.ui.GbDpadForeground
 import com.swordfish.touchinput.radial.ui.GbaCrossForeground
 import com.swordfish.touchinput.radial.ui.GbcCrossForeground
 import com.swordfish.touchinput.radial.ui.LemuroidCrossForeground
@@ -46,16 +44,8 @@ fun PadKitScope.GbControlCross(
     id: Id.DiscreteDirection,
     allowDiagonals: Boolean = true,
     bars: Boolean = true,
-    background: @Composable () -> Unit = {
-        GbDpadBackground()
-    },
-    foreground: @Composable (State<Offset>) -> Unit = {
-        GbDpadForeground(
-            allowDiagonals = allowDiagonals,
-            directionState = it,
-            bars = bars
-        )
-    },
+    background: @Composable () -> Unit = { },
+    foreground: @Composable (State<Offset>) -> Unit = { },
 ) {
     val theme = LocalLemuroidPadTheme.current
     ControlCross(

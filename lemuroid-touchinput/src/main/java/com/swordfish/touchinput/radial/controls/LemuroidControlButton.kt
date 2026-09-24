@@ -9,7 +9,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.swordfish.touchinput.radial.LocalLemuroidPadTheme
-import com.swordfish.touchinput.radial.ui.GbButtonForeground
 import com.swordfish.touchinput.radial.ui.GbaButtonForeground
 import com.swordfish.touchinput.radial.ui.GbaSideButtonForeground
 import com.swordfish.touchinput.radial.ui.GbaSideControlBackground
@@ -20,6 +19,7 @@ import gg.padkit.PadKitScope
 import gg.padkit.controls.ControlButton
 import gg.padkit.ids.Id
 import gg.padkit.layouts.radial.secondarydials.LayoutRadialSecondaryDialsScope
+import androidx.compose.runtime.State
 
 context(PadKitScope, LayoutRadialSecondaryDialsScope)
 @Composable
@@ -44,23 +44,15 @@ fun PadKitScope.GBControlButton(
     id: Id.Key,
     label: String? = null,
     icon: Int? = null,
-    rotation: Float = 0.0f,
-    expansion: Float = 0.0f,
+    background: (@Composable (State<Boolean>) -> Unit) = { },
+    foreground: (@Composable (State<Boolean>) -> Unit) = { },
 ) {
     val theme = LocalLemuroidPadTheme.current
     ControlButton(
         modifier = modifier.padding(theme.padding),
         id = id,
-        foreground = {
-            GbButtonForeground(
-                pressed = it,
-                icon = icon,
-                label = label,
-                rotation = rotation,
-                expansion = expansion
-            )
-        },
-        background = { }
+        background = background,
+        foreground = foreground,
     )
 }
 

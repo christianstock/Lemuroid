@@ -25,19 +25,6 @@ fun LemuroidControlBackground(modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun GbDpadBackground(modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .drawBehind {
-                drawCircle(
-                    color = Color.Black.copy(alpha = 0.5f)
-                )
-            }
-    )
-}
-
-@Composable
 fun GbaSideControlBackground(modifier: Modifier = Modifier) {
     val theme = LocalLemuroidPadTheme.current
 

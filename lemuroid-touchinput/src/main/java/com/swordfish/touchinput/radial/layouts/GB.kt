@@ -24,7 +24,6 @@ import androidx.compose.ui.unit.sp
 import com.swordfish.touchinput.radial.LocalLemuroidPadTheme
 import com.swordfish.touchinput.radial.controls.GbControlCross
 import com.swordfish.touchinput.radial.controls.GbControlFaceButtons
-import com.swordfish.touchinput.radial.ui.DmgRoundButtonForeground
 import com.swordfish.touchinput.radial.layouts.shared.ComposeTouchLayouts
 import com.swordfish.touchinput.radial.layouts.shared.SecondaryButtonMenuPlaceholder
 import com.swordfish.touchinput.radial.layouts.shared.SecondaryButtonSelectGB
@@ -61,7 +60,7 @@ fun PadKitScope.GBRight(
     modifier: Modifier = Modifier,
     settings: TouchControllerSettingsManager.Settings,
 ) {
-    BaseLayoutRight(
+    /*BaseLayoutRight(
         settings = settings,
         modifier = modifier,
         primaryDial = {
@@ -83,5 +82,5 @@ fun PadKitScope.GBRight(
         secondaryDials = {
             SecondaryButtonStartGB(position = 30)
         },
-    )
+    )*/
 }

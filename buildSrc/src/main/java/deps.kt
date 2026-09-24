@@ -90,6 +90,8 @@ object deps {
             }
             object compose {
                 const val composeBom = "androidx.compose:compose-bom:${versions.composeBom}"
+                const val foundation = "androidx.compose.foundation:foundation"
+                const val foundationLayout = "androidx.compose.foundation:foundation-layout"
                 const val material3 = "androidx.compose.material3:material3"
                 const val extendedIcons = "androidx.compose.material:material-icons-extended"
                 const val tooling = "androidx.compose.ui:ui-tooling"
