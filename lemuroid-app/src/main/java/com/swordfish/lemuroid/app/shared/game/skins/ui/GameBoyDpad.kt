@@ -29,13 +29,12 @@ fun PadKitScope.GameBoyDpad(
     skin: GameBoySkin,
     modifier: Modifier = Modifier,
 ) {
-    val theme = LocalLemuroidPadTheme.current
     val isDmg01 = skin.model == GameBoyModel.DMG_01
 
     GbControlCross(
         modifier = modifier
             .size(160.dp)
-            .padding(theme.padding),
+            .padding(4.dp),
         id = Id.DiscreteDirection(ComposeTouchLayouts.MOTION_SOURCE_DPAD),
         allowDiagonals = true,
         background = {
@@ -60,6 +59,7 @@ fun PadKitScope.GameBoyDpad(
             GameBoyDpadForeground(
                 isDmg01 = isDmg01,
                 directionState = directionState,
+                skin = skin,
             )
         }
     )
@@ -70,8 +70,8 @@ private fun GameBoyDpadForeground(
     isDmg01: Boolean,
     directionState: State<Offset>,
     modifier: Modifier = Modifier,
+    skin: GameBoySkin,
 ) {
-    val theme = LocalLemuroidPadTheme.current
     val touchOffset = directionState.value
     val isPressed = touchOffset != Offset.Zero
 
@@ -80,7 +80,7 @@ private fun GameBoyDpadForeground(
     val isLeftPressed = touchOffset.x < -0.1f
     val isRightPressed = touchOffset.x > 0.1f
 
-    val dpadColor = theme.dpadFill(isPressed)
+    val dpadColor = skin.dPadColor
 
     Box(
         modifier = modifier.fillMaxSize(),

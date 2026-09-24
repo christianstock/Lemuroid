@@ -3,7 +3,6 @@ package com.swordfish.lemuroid.app.mobile.feature.home
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
@@ -11,37 +10,26 @@ import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.RoundRect
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
@@ -51,16 +39,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
-import com.swordfish.lemuroid.app.mobile.shared.compose.ui.LemuroidGameImage
 import com.swordfish.lemuroid.app.shared.game.skins.GbSkinManager
 import com.swordfish.lemuroid.app.shared.game.skins.GbaSkinManager
 import com.swordfish.lemuroid.app.shared.game.skins.GbcSkinManager
-import com.swordfish.lemuroid.app.shared.game.skins.art.GbArt
+import com.swordfish.lemuroid.app.shared.game.skins.art.GameBoyArt
 import com.swordfish.lemuroid.app.shared.game.skins.art.GbaArt
 import com.swordfish.lemuroid.app.shared.game.skins.art.GbcArt
 import com.swordfish.lemuroid.app.shared.game.skins.art.PspArt
 import com.swordfish.lemuroid.lib.library.db.entity.Game
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
@@ -330,7 +316,7 @@ private fun SystemForegroundView(
         val bezelRect = Rect(bezelX, bezelY, bezelX + bezelW, bezelY + bezelH)
 
         when (systemIdNorm) {
-            "gb" -> GbArt.run { drawHandheld( bezelRect,bezelRect, GbSkinManager.getInstance(context).getSelectedSkin(),true) }
+            "gb" -> GameBoyArt.run { drawHandheld( bezelRect,bezelRect, GbSkinManager.getInstance(context).getSelectedSkin(),true, 0.0f) }
             "gbc" -> GbcArt.run { drawHandheld(caseColor, bezelRect, true) }
             "gba" -> GbaArt.run { drawHandheld(caseColor, bezelRect, true) }
             "psp" -> PspArt.run { drawHandheld(caseColor, bezelRect, true) }

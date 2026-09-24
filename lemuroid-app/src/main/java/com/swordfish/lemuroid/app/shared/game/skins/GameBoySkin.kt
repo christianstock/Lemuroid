@@ -10,7 +10,7 @@ enum class GameBoyModel(
 ) {
     DMG_01("Classic", 45.5f, 40.95f),
     MGB_01("Pocket", 47.5f, 42.75f),
-    MGB_101("Light", 47.5f, 42.75f),
+    MGB_101("Light", 47.0f, 42.3f),
 }
 
 data class GameBoySkin(
@@ -23,6 +23,7 @@ data class GameBoySkin(
     val actionButtonColor: Color = Color(0xFF222222),
     val menuButtonColor: Color = Color(0xFF222222),
     val labelColor: Color = Color(0xFF222222),
+    val brandingColor: Color = Color(0xFF222222),
 ) {
     val preferredOrientation: SkinOrientation get() = model.preferredOrientation
 
@@ -35,30 +36,31 @@ data class GameBoySkin(
             actionButtonColor = Color(0xFF930551),
             menuButtonColor = Color(0xFF555555),
             labelColor = Color(0xFF111b91),
+            brandingColor = Color(0xFF111b91),
         )
 
         val RED = GameBoySkin(
             id = "gb_red",
             name = "Radiant Red",
-            caseColor = Color(0xFFD72424),
+            caseColor = Color(0xFFb5363f),
         )
 
         val YELLOW = GameBoySkin(
             id = "gb_yellow",
             name = "Vibrant Yellow",
-            caseColor = Color(0xFFE9D514),
+            caseColor = Color(0xFFf7b702),
         )
 
         val GREEN = GameBoySkin(
             id = "gb_green",
             name = "Gorgeous Green",
-            caseColor = Color(0xFF2A852F),
+            caseColor = Color(0xFF26b48a),
         )
 
         val BLUE = GameBoySkin(
             id = "gb_blue",
             name = "Cool Blue",
-            caseColor = Color(0xFF7492B9),
+            caseColor = Color(0xFF3049e2),
         )
 
         val BLACK = GameBoySkin(
@@ -70,6 +72,7 @@ data class GameBoySkin(
             actionButtonColor = Color(0xFF656574),
             menuButtonColor = Color(0xFF656574),
             labelColor = Color(0xFF930551),
+            brandingColor = Color(0xFF111b91),
         )
 
         val WHITE = GameBoySkin(
@@ -86,11 +89,75 @@ data class GameBoySkin(
             screenLensColor = Color(0xFFc9c9c9),
         )
 
+
+        val POCKET_RED = GameBoySkin(
+            id = "pocket_red",
+            name = "Red",
+            model = GameBoyModel.MGB_01,
+            caseColor = Color(0xFFb5363f),
+            brandingColor = Color(0xFFaaaaaa),
+        )
+
+        val POCKET_YELLOW = GameBoySkin(
+            id = "pocket_yellow",
+            name = "Yellow",
+            model = GameBoyModel.MGB_01,
+            caseColor = Color(0xFFf7b702),
+            brandingColor = Color(0xFFaaaaaa),
+        )
+
+        val POCKET_GREEN = GameBoySkin(
+            id = "pocket_green",
+            name = "Green",
+            model = GameBoyModel.MGB_01,
+            caseColor = Color(0xFF26b48a),
+            brandingColor = Color(0xFFaaaaaa),
+        )
+
+        val POCKET_BLUE = GameBoySkin(
+            id = "pocket_blue",
+            name = "Blue",
+            model = GameBoyModel.MGB_01,
+            caseColor = Color(0xFF3049e2),
+            brandingColor = Color(0xFFaaaaaa),
+        )
+
+        val POCKET_BLACK = GameBoySkin(
+            id = "pocket_black",
+            name = "Black",
+            model = GameBoyModel.MGB_01,
+            caseColor = Color(0xFF1C1C1C),
+            dPadColor = Color(0xFF656574),
+            actionButtonColor = Color(0xFF656574),
+            menuButtonColor = Color(0xFF656574),
+            labelColor = Color(0xFF930551),
+            brandingColor = Color(0xFFaaaaaa),
+        )
+
+        val POCKET_PINK = GameBoySkin(
+            id = "pocket_pink",
+            name = "Pink",
+            model = GameBoyModel.MGB_01,
+            caseColor = Color(0xFFe4939a),
+            brandingColor = Color(0xFFaaaaaa),
+        )
+
         val LIGHT_SILVER = GameBoySkin(
             id = "light_silver",
             name = "Light Silver",
             model = GameBoyModel.MGB_101,
-            caseColor = Color(0xFFc0c0c0),
+            caseColor = Color(0xFFd0d0d0),
+            labelColor = Color.Black.copy(alpha = 0.2f),
+            brandingColor = Color(0xFFaaaaaa),
+        )
+
+        val LIGHT_GOLD = GameBoySkin(
+            id = "light_gold",
+            name = "Light Gold",
+            model = GameBoyModel.MGB_101,
+            caseColor = Color(0xFFc7c3b7),
+            labelColor = Color.Black.copy(alpha = 0.2f),
+            brandingColor = Color(0xFFaaaaaa),
         )
 
         val ALL_SKINS = listOf(
@@ -102,7 +169,14 @@ data class GameBoySkin(
             BLACK,
             WHITE,
             POCKET_SILVER,
+            POCKET_RED,
+            POCKET_YELLOW,
+            POCKET_GREEN,
+            POCKET_BLUE,
+            POCKET_BLACK,
+            POCKET_PINK,
             LIGHT_SILVER,
+            LIGHT_GOLD
         )
 
         fun getById(id: String): GameBoySkin? = ALL_SKINS.find { it.id == id }

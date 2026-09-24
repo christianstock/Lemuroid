@@ -1,5 +1,10 @@
 package com.swordfish.lemuroid.app.shared.game.skins.ui
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.BatteryManager
 import android.view.KeyEvent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -16,9 +21,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -29,11 +38,12 @@ import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.swordfish.lemuroid.app.shared.game.skins.GameBoyModel
 import com.swordfish.lemuroid.app.shared.game.skins.GameBoySkin
-import com.swordfish.lemuroid.app.shared.game.skins.art.GbArt
+import com.swordfish.lemuroid.app.shared.game.skins.art.GameBoyArt
 import com.swordfish.touchinput.radial.controls.GbControlFaceButtons
 import com.swordfish.touchinput.radial.settings.TouchControllerSettingsManager
 import gg.padkit.PadKitScope
@@ -71,6 +81,7 @@ fun PadKitScope.GameBoyPortraitSkin(
         }
     }
 
+    val batteryLevel = rememberBatteryLevel()
     val deviceModifier = modifier
         .fillMaxSize()
         .onGloballyPositioned {
@@ -80,8 +91,8 @@ fun PadKitScope.GameBoyPortraitSkin(
             compositingStrategy = CompositingStrategy.Offscreen
         }
         .drawBehind {
-            GbArt.run {
-                drawHandheld(gameScreenRect, bezelRect, skin, false)
+            GameBoyArt.run {
+                drawHandheld(gameScreenRect, bezelRect, skin, false, batteryLevel = batteryLevel)
             }
         }
 
@@ -109,7 +120,7 @@ fun PadKitScope.GameBoyPortraitSkin(
         Spacer(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(60.dp)
+                .height(100.dp)
         )
 
         Box(
@@ -251,4 +262,30 @@ private fun GameBoyActionBar(
     ) {
         content()
     }
+}
+
+@Composable
+fun rememberBatteryLevel(): Float {
+    val context = LocalContext.current
+    var batteryLevel by remember { mutableFloatStateOf(1f) }
+
+    DisposableEffect(context) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                val level = intent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
+                val scale = intent?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
+                if (level >= 0 && scale > 0) {
+                    batteryLevel = level / scale.toFloat()
+                }
+            }
+        }
+        val filter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+        context.registerReceiver(receiver, filter)
+
+        onDispose {
+            context.unregisterReceiver(receiver)
+        }
+    }
+
+    return batteryLevel
 }

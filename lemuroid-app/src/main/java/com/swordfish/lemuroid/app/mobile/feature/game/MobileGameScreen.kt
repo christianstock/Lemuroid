@@ -419,7 +419,7 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
                                 actionBar = {
                                     interactiveBarContent(Modifier.fillMaxWidth().height(56.dp))
                                 },
-                                touchControllerSettings = touchControllerSettings!!,
+                                touchControllerSettings = touchControllerSettings,
                                 gameScreenPos = viewportPosition.value,
                                 modifier = Modifier.fillMaxSize()
                             )
