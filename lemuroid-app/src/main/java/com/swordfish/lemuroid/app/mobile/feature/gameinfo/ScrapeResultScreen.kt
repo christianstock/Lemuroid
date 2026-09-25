@@ -26,15 +26,27 @@ fun ScrapeResultScreen(
     game: Game,
     metadata: GameMetadata,
     onDismiss: () -> Unit,
-    onAccept: (title: String, releaseDate: String?, publisher: String?, developer: String?, region: String?, summary: String?, coverUrl: String?) -> Unit
+    onAccept: (title: String, releaseDate: String?, publisher: String?, developer: String?, region: String?, coverUrl: String?) -> Unit
 ) {
     var title by remember { mutableStateOf(metadata.name ?: game.title) }
     var releaseDate by remember { mutableStateOf(metadata.releaseDate ?: game.releaseDate ?: "") }
     var publisher by remember { mutableStateOf(metadata.publisher ?: game.publisher ?: "") }
     var developer by remember { mutableStateOf(metadata.developer ?: game.developer ?: "") }
     var region by remember { mutableStateOf(metadata.country ?: game.country ?: "") }
-    var summary by remember { mutableStateOf(metadata.summary ?: game.summary ?: "") }
     var selectedCoverUrl by remember { mutableStateOf(metadata.thumbnail ?: game.coverFrontUrl) }
+
+    // Parse metadata options from debugInfo
+    val releaseDateOptions = remember { parseMetadataOptions(metadata.debugInfo, "dates") }
+    val coverArtOptions = remember { parseMetadataOptions(metadata.debugInfo, "arts") }
+    val developerOptions = remember { parseMetadataOptions(metadata.debugInfo, "devs") }
+    val publisherOptions = remember { parseMetadataOptions(metadata.debugInfo, "pubs") }
+    
+    LaunchedEffect(Unit) {
+        android.util.Log.d("ScrapeResult", "debugInfo: ${metadata.debugInfo}")
+        android.util.Log.d("ScrapeResult", "releaseDateOptions parsed: $releaseDateOptions")
+        android.util.Log.d("ScrapeResult", "coverArtOptions parsed: $coverArtOptions")
+        android.util.Log.d("ScrapeResult", "game.coverFrontUrl: ${game.coverFrontUrl}")
+    }
 
     Scaffold(
         topBar = {
@@ -54,7 +66,6 @@ fun ScrapeResultScreen(
                                 publisher.ifBlank { null },
                                 developer.ifBlank { null },
                                 region.ifBlank { null },
-                                summary.ifBlank { null },
                                 selectedCoverUrl
                             )
                         }
@@ -83,7 +94,7 @@ fun ScrapeResultScreen(
             }
 
             // --- COVER ART COMPARISON ---
-            if (metadata.thumbnail != null || game.coverFrontUrl != null) {
+            if (metadata.thumbnail != null || game.coverFrontUrl != null || coverArtOptions.isNotEmpty()) {
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -127,34 +138,38 @@ fun ScrapeResultScreen(
                                     }
                                 }
 
-                                metadata.thumbnail?.let { scrapedArt ->
-                                    Box(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .aspectRatio(1f)
-                                            .clip(MaterialTheme.shapes.medium)
-                                            .background(
-                                                if (selectedCoverUrl == scrapedArt) MaterialTheme.colorScheme.primaryContainer
-                                                else MaterialTheme.colorScheme.surface
-                                            )
-                                            .clickable { selectedCoverUrl = scrapedArt }
-                                            .padding(4.dp)
-                                    ) {
-                                        AsyncImage(
-                                            model = scrapedArt,
-                                            contentDescription = "Scraped Cover",
-                                            modifier = Modifier.fillMaxSize(),
-                                            contentScale = ContentScale.Fit
-                                        )
-                                        Text(
-                                            "Scraped",
-                                            style = MaterialTheme.typography.labelSmall,
+                                // Show all unique scraped art options
+                                coverArtOptions.forEach { scrapedArt ->
+                                    android.util.Log.d("ScrapeResult", "Rendering scraped art: $scrapedArt")
+                                    if (scrapedArt.isNotBlank()) {
+                                        Box(
                                             modifier = Modifier
-                                                .align(Alignment.BottomCenter)
-                                                .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.6f))
-                                                .padding(horizontal = 4.dp),
-                                            color = androidx.compose.ui.graphics.Color.White
-                                        )
+                                                .weight(1f)
+                                                .aspectRatio(1f)
+                                                .clip(MaterialTheme.shapes.medium)
+                                                .background(
+                                                    if (selectedCoverUrl == scrapedArt) MaterialTheme.colorScheme.primaryContainer
+                                                    else MaterialTheme.colorScheme.surface
+                                                )
+                                                .clickable { selectedCoverUrl = scrapedArt }
+                                                .padding(4.dp)
+                                        ) {
+                                            AsyncImage(
+                                                model = scrapedArt,
+                                                contentDescription = "Scraped Cover",
+                                                modifier = Modifier.fillMaxSize(),
+                                                contentScale = ContentScale.Fit
+                                            )
+                                            Text(
+                                                "Scraped",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                modifier = Modifier
+                                                    .align(Alignment.BottomCenter)
+                                                    .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.6f))
+                                                    .padding(horizontal = 4.dp),
+                                                color = androidx.compose.ui.graphics.Color.White
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -180,6 +195,7 @@ fun ScrapeResultScreen(
                     label = "Release Date",
                     existingValue = game.releaseDate,
                     scrapedValue = metadata.releaseDate,
+                    scrapedOptions = releaseDateOptions,
                     currentValue = releaseDate,
                     onValueChange = { releaseDate = it }
                 )
@@ -218,17 +234,6 @@ fun ScrapeResultScreen(
                 )
             }
 
-            // --- SUMMARY / VERSION ---
-            item {
-                ScrapeFieldEditor(
-                    label = "Version / Summary",
-                    existingValue = game.summary,
-                    scrapedValue = metadata.summary,
-                    currentValue = summary,
-                    onValueChange = { summary = it }
-                )
-            }
-
             // --- BOTTOM ACTIONS ---
             item {
                 Spacer(modifier = Modifier.height(16.dp))
@@ -252,7 +257,6 @@ fun ScrapeResultScreen(
                                 publisher.ifBlank { null },
                                 developer.ifBlank { null },
                                 region.ifBlank { null },
-                                summary.ifBlank { null },
                                 selectedCoverUrl
                             )
                         },
@@ -274,7 +278,8 @@ private fun ScrapeFieldEditor(
     existingValue: String?,
     scrapedValue: String?,
     currentValue: String,
-    onValueChange: (String) -> Unit
+    onValueChange: (String) -> Unit,
+    scrapedOptions: List<String> = emptyList()
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -284,11 +289,11 @@ private fun ScrapeFieldEditor(
 
         val existing = existingValue?.takeIf { it.isNotBlank() }
         val scraped = scrapedValue?.takeIf { it.isNotBlank() }
+        val allScrapedOptions = (listOfNotNull(scraped) + scrapedOptions).distinct()
 
-        if (existing != null || scraped != null) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
+        if (existing != null || allScrapedOptions.isNotEmpty()) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 if (existing != null) {
                     FilterChip(
@@ -297,11 +302,11 @@ private fun ScrapeFieldEditor(
                         label = { Text("Existing: $existing") }
                     )
                 }
-                if (scraped != null && scraped != existing) {
+                allScrapedOptions.forEach { option ->
                     FilterChip(
-                        selected = currentValue == scraped,
-                        onClick = { onValueChange(scraped) },
-                        label = { Text("Scraped: $scraped") }
+                        selected = currentValue == option,
+                        onClick = { onValueChange(option) },
+                        label = { Text("Scraped: $option") }
                     )
                 }
             }
@@ -314,6 +319,15 @@ private fun ScrapeFieldEditor(
             singleLine = true
         )
     }
+}
+
+private fun parseMetadataOptions(debugInfo: String?, key: String): List<String> {
+    if (debugInfo == null || !debugInfo.startsWith("OPTIONS|")) return emptyList()
+    // Match "key:" followed by anything that's not a single pipe (but allows ||)
+    val pattern = Regex("$key:([^|]*(?:\\|\\|[^|]*)*)")
+    val match = pattern.find(debugInfo) ?: return emptyList()
+    val values = match.groupValues[1].split("||").filter { it.isNotEmpty() }
+    return values
 }
 
 private fun String?.isNull_or_Empty(): Boolean = this.isNullOrEmpty()

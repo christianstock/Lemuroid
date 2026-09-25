@@ -68,11 +68,11 @@ class GameInfoViewModel(
         viewModelScope.launch {
             val updatedGame = currentGame.copy(
                 title = title,
-                releaseDate = releaseDate,
-                publisher = publisher,
-                developer = developer,
-                country = region,
-                summary = version
+                releaseDate = releaseDate?.ifBlank { null },
+                publisher = publisher?.ifBlank { null },
+                developer = developer?.ifBlank { null },
+                country = region?.ifBlank { null },
+                summary = version?.ifBlank { null }
             )
             retrogradeDb.gameDao().update(updatedGame)
             _game.value = updatedGame
@@ -83,15 +83,16 @@ class GameInfoViewModel(
         val currentGame = _game.value ?: return
         viewModelScope.launch {
             _isRescanning.value = true
-            
+
             val metadata = withContext(Dispatchers.IO) {
                 fetchMetadata(currentGame)
             }
-            
+
             if (metadata != null) {
-                _pendingMetadata.value = metadata
+                // Ensure debugInfo OPTIONS only contains unique, non-blank valid images (max 2)
+                _pendingMetadata.value = sanitizeMetadataOptions(metadata, currentGame.coverFrontUrl)
             }
-            
+
             _isRescanning.value = false
         }
     }
@@ -106,19 +107,20 @@ class GameInfoViewModel(
         publisher: String?,
         developer: String?,
         region: String?,
-        summary: String?,
         coverUrl: String?
     ) {
         val currentGame = _game.value ?: return
         viewModelScope.launch {
+            val validCoverUrl = coverUrl?.takeIf { isValidImageUri(it) }
+                ?: currentGame.coverFrontUrl?.takeIf { isValidImageUri(it) }
+
             val updatedGame = currentGame.copy(
                 title = title,
-                releaseDate = releaseDate,
-                publisher = publisher,
-                developer = developer,
-                country = region,
-                summary = summary,
-                coverFrontUrl = coverUrl ?: currentGame.coverFrontUrl
+                releaseDate = releaseDate?.ifBlank { null },
+                publisher = publisher?.ifBlank { null },
+                developer = developer?.ifBlank { null },
+                country = region?.ifBlank { null },
+                coverFrontUrl = validCoverUrl
             )
             retrogradeDb.gameDao().update(updatedGame)
             _game.value = updatedGame
@@ -130,18 +132,20 @@ class GameInfoViewModel(
         try {
             val uri = Uri.parse(currentGame.fileUri)
             val document = DocumentFile.fromSingleUri(appContext, uri)
-            if (document == null || !document.exists()) return null
-            
+            if (document == null || !document.exists()) {
+                return null
+            }
+
             val baseFile = BaseStorageFile(
                 name = currentGame.fileName,
                 size = document.length(),
                 uri = uri,
                 path = null
             )
-            
+
             val provider = storageProviderRegistry.getProvider(currentGame)
             var storageFile = provider.getStorageFile(baseFile)
-            
+
             if (storageFile != null) {
                 if (storageFile.systemID == null) {
                     val reconstructedSystem = SystemID.entries.find { it.dbname == currentGame.systemId }
@@ -161,43 +165,49 @@ class GameInfoViewModel(
         return null
     }
 
-    private suspend fun applyMetadata(metadata: GameMetadata) {
-        val currentGame = _game.value ?: return
-        
-        val newArt = metadata.thumbnail
-        val currentArt = currentGame.coverFrontUrl
-        
-        var verifiedArt = currentArt
-        if (newArt != null) {
-            val client = OkHttpClient()
-            val request = Request.Builder().url(newArt).head().build()
-            val response = runCatching { client.newCall(request).execute() }.getOrNull()
-            if (response?.isSuccessful == true) {
-                verifiedArt = newArt
-                withContext(Dispatchers.Main) {
-                    @Suppress("OPT_IN_USAGE")
-                    appContext.imageLoader.diskCache?.remove(newArt)
-                    appContext.imageLoader.memoryCache?.remove(coil.memory.MemoryCache.Key(newArt))
-                }
-            }
+    /**
+     * Sanitizes the metadata debugInfo OPTIONS block before handing it to the UI dialog,
+     * guaranteeing at most 2 unique, loadable image URLs/URIs (Existing + LibretroDB).
+     */
+    private fun sanitizeMetadataOptions(metadata: GameMetadata, currentCoverUrl: String?): GameMetadata {
+        val validCurrent = currentCoverUrl?.takeIf { isValidImageUri(it) }
+        val validNew = metadata.thumbnail?.takeIf { isValidImageUri(it) }
+
+        // Strictly combine at most 2 distinct valid images
+        val uniqueArts = listOfNotNull(validCurrent, validNew).distinct()
+
+        val debugInfo = metadata.debugInfo
+        if (debugInfo == null || !debugInfo.startsWith("OPTIONS|")) {
+            val optionsStr = "OPTIONS|arts:${uniqueArts.joinToString(",")}"
+            return metadata.copy(debugInfo = optionsStr)
         }
-        
-        val cleanedTitle = metadata.name?.cleanGameTitle() ?: currentGame.title
-        val extractedRegion = currentGame.fileName.extractRomRegion() ?: metadata.country
-        val extractedVersion = currentGame.fileName.extractRomVersion() ?: metadata.summary
-        
-        val updatedGame = currentGame.copy(
-            title = cleanedTitle,
-            coverFrontUrl = verifiedArt,
-            developer = metadata.developer,
-            publisher = metadata.publisher,
-            releaseDate = metadata.releaseDate,
-            summary = extractedVersion,
-            country = extractedRegion
+
+        // Re-pack arts inside the debugInfo string safely
+        val parts = debugInfo.split("|").toMutableList()
+        val updatedParts = parts.map { part ->
+            if (part.startsWith("arts:")) {
+                "arts:${uniqueArts.joinToString(",")}"
+            } else {
+                part
+            }
+        }.toMutableList()
+
+        if (parts.none { it.startsWith("arts:") } && uniqueArts.isNotEmpty()) {
+            updatedParts.add("arts:${uniqueArts.joinToString(",")}")
+        }
+
+        return metadata.copy(
+            thumbnail = uniqueArts.firstOrNull(),
+            debugInfo = updatedParts.joinToString("|")
         )
-        
-        retrogradeDb.gameDao().update(updatedGame)
-        _game.value = updatedGame
+    }
+
+    private fun isValidImageUri(path: String?): Boolean {
+        if (path.isNullOrBlank()) return false
+        return path.startsWith("http://", ignoreCase = true) ||
+                path.startsWith("https://", ignoreCase = true) ||
+                path.startsWith("file://", ignoreCase = true) ||
+                path.startsWith("content://", ignoreCase = true)
     }
 
     fun saveLocalThumbnail(uri: Uri, deleteSource: Boolean) {
@@ -207,10 +217,9 @@ class GameInfoViewModel(
                 val inputStream = appContext.contentResolver.openInputStream(uri) ?: return@launch
                 val bitmap = BitmapFactory.decodeStream(inputStream)
                 inputStream.close()
-                
+
                 if (bitmap == null) return@launch
-                
-                // Scale to max 512px
+
                 val maxDim = 512
                 val ratio = bitmap.width.toFloat() / bitmap.height.toFloat()
                 val (targetW, targetH) = if (bitmap.width > bitmap.height) {
@@ -218,28 +227,28 @@ class GameInfoViewModel(
                 } else {
                     (maxDim * ratio).toInt() to maxDim
                 }
-                
+
                 val scaledBitmap = Bitmap.createScaledBitmap(bitmap, targetW, targetH, true)
-                
+
                 val coversDir = File(appContext.getExternalFilesDir(null), "covers").apply { mkdirs() }
                 val coverFile = File(coversDir, "cover_${currentGame.id}.png")
-                
+
                 FileOutputStream(coverFile).use { out ->
                     scaledBitmap.compress(Bitmap.CompressFormat.PNG, 90, out)
                 }
-                
+
                 val coverUri = Uri.fromFile(coverFile).toString()
-                
+
                 withContext(Dispatchers.Main) {
                     val updatedGame = currentGame.copy(coverFrontUrl = coverUri)
                     retrogradeDb.gameDao().update(updatedGame)
                     _game.value = updatedGame
-                    
+
                     if (deleteSource) {
                         try {
                             appContext.contentResolver.delete(uri, null, null)
                         } catch (e: Exception) {
-                            // Might not have permission to delete from some locations
+                            // Ignore permission issue
                         }
                     }
                 }

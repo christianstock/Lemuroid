@@ -212,8 +212,9 @@ abstract class LemuroidApplicationModule {
             db: RetrogradeDatabase,
             storageProviderRegistry: Lazy<StorageProviderRegistry>,
             gameMetadataProvider: Lazy<GameMetadataProvider>,
+            skraperMetadataProvider: Lazy<SkraperMetadataProvider>,
             biosManager: BiosManager,
-        ) = LemuroidLibrary(db, storageProviderRegistry, gameMetadataProvider, biosManager)
+        ) = LemuroidLibrary(db, storageProviderRegistry, gameMetadataProvider, skraperMetadataProvider, biosManager)
 
         @Provides
         @PerApp

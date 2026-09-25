@@ -22,21 +22,58 @@ class LibretroDBMetadataProvider(private val ovgdbManager: LibretroDBManager) :
     override suspend fun retrieveMetadata(storageFile: StorageFile, onLog: (String) -> Unit): GameMetadata? {
         val db = ovgdbManager.dbInstance
 
-        var metadata = runCatching {
-            findByCRC(storageFile, db)
-                ?: findBySerial(storageFile, db)
-                ?: findByFilename(db, storageFile)
-        }.getOrNull()
+        var metadata: GameMetadata? = null
+        
+        // Try CRC first
+        if (storageFile.crc != null && storageFile.crc != "0") {
+            onLog("LibretroDB: Searching by CRC32 (${storageFile.crc})...")
+            metadata = findByCRC(storageFile, db)
+            if (metadata != null) {
+                onLog("LibretroDB: ✓ Found by CRC32: ${metadata.name}")
+            }
+        }
+        
+        // Try Serial if CRC didn't work
+        if (metadata == null && storageFile.serial != null) {
+            onLog("LibretroDB: Searching by Serial (${storageFile.serial})...")
+            metadata = findBySerial(storageFile, db)
+            if (metadata != null) {
+                onLog("LibretroDB: ✓ Found by Serial: ${metadata.name}")
+            }
+        }
+        
+        // Try Filename as fallback
+        if (metadata == null) {
+            onLog("LibretroDB: Searching by Filename (${storageFile.name})...")
+            metadata = findByFilename(db, storageFile)
+            if (metadata != null) {
+                onLog("LibretroDB: ✓ Found by Filename: ${metadata.name}")
+            } else {
+                onLog("LibretroDB: ✗ No match found")
+            }
+        }
         
         if (metadata != null) {
             val coverUrl = computeHighFidelityArtUrl(metadata, storageFile)
             val region = storageFile.name.extractRomRegion() ?: metadata.country
             val version = storageFile.name.extractRomVersion() ?: metadata.summary
             
+            onLog("LibretroDB: Region=${region ?: "N/A"}, Version=${version ?: "N/A"}")
+            
+            // Store options in debugInfo
+            val optionsInfo = buildString {
+                append("OPTIONS|")
+                if (!metadata.thumbnail.isNullOrEmpty()) append("arts:${metadata.thumbnail}|")
+                if (!metadata.releaseDate.isNullOrEmpty()) append("dates:${metadata.releaseDate}|")
+                if (!metadata.developer.isNullOrEmpty()) append("devs:${metadata.developer}|")
+                if (!metadata.publisher.isNullOrEmpty()) append("pubs:${metadata.publisher}")
+            }
+            
             metadata = metadata.copy(
                 thumbnail = coverUrl,
                 country = region,
-                summary = version
+                summary = version,
+                debugInfo = optionsInfo
             )
         }
         

@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RestartAlt
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -69,14 +70,13 @@ fun GameInfoScreen(
             game = game,
             metadata = pendingMetadata,
             onDismiss = { viewModel.clearPendingMetadata() },
-            onAccept = { title, releaseDate, publisher, developer, region, summary, coverUrl ->
+            onAccept = { title, releaseDate, publisher, developer, region, coverUrl ->
                 viewModel.applyCustomScrapedMetadata(
                     title = title,
                     releaseDate = releaseDate,
                     publisher = publisher,
                     developer = developer,
                     region = region,
-                    summary = summary,
                     coverUrl = coverUrl
                 )
             }
@@ -132,12 +132,10 @@ fun GameInfoScreen(
 
                 item {
                     val region = game.country ?: ""
-                    val version = game.summary ?: ""
-                    val infoText = listOfNotNull(region.takeIf { it.isNotEmpty() }, version.takeIf { it.isNotEmpty() }).joinToString(" | ")
                     
-                    if (infoText.isNotEmpty()) {
+                    if (region.isNotEmpty()) {
                         Text(
-                            text = infoText,
+                            text = region,
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.Bold,
@@ -167,36 +165,43 @@ fun GameInfoScreen(
                 }
 
                 item {
-                    Row(
+                    Column(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Button(
-                            onClick = { showEditScreen = true },
-                            modifier = Modifier.weight(1f)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Icon(Icons.Default.Edit, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Edit")
+                            Button(
+                                onClick = { showEditScreen = true },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.Default.Edit, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Edit")
+                            }
+                            OutlinedButton(
+                                onClick = { viewModel.rescan() },
+                                enabled = !isRescanning,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                if (isRescanning) {
+                                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                                } else {
+                                    Icon(Icons.Default.Refresh, contentDescription = null)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Rescan")
+                                }
+                            }
                         }
                         OutlinedButton(
                             onClick = { onCheats(game) },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.fillMaxWidth()
                         ) {
+                            Icon(Icons.Default.Star, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text("Cheats")
-                        }
-                        OutlinedButton(
-                            onClick = { viewModel.rescan() },
-                            enabled = !isRescanning,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            if (isRescanning) {
-                                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                            } else {
-                                Icon(Icons.Default.Refresh, contentDescription = null)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Rescan")
-                            }
                         }
                     }
                 }

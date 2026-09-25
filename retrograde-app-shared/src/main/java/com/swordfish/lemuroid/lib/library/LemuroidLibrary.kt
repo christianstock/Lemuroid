@@ -26,6 +26,7 @@ import com.swordfish.lemuroid.lib.library.db.entity.DataFile
 import com.swordfish.lemuroid.lib.library.db.entity.Game
 import com.swordfish.lemuroid.lib.library.metadata.GameMetadata
 import com.swordfish.lemuroid.lib.library.metadata.GameMetadataProvider
+import com.swordfish.lemuroid.lib.library.metadata.SkraperMetadataProvider
 import com.swordfish.lemuroid.lib.storage.BaseStorageFile
 import com.swordfish.lemuroid.lib.storage.GroupedStorageFiles
 import com.swordfish.lemuroid.lib.storage.RomFiles
@@ -47,12 +48,15 @@ class LemuroidLibrary(
     private val retrogradedb: RetrogradeDatabase,
     private val storageProviderRegistry: Lazy<StorageProviderRegistry>,
     private val gameMetadataProvider: Lazy<GameMetadataProvider>,
+    private val skraperMetadataProvider: Lazy<SkraperMetadataProvider>,
     private val biosManager: BiosManager,
 ) {
     suspend fun indexLibrary() {
         val startedAtMs = System.currentTimeMillis()
 
         try {
+            // Clear Skraper cache to ensure fresh XML/DAT file scanning on rescan
+            skraperMetadataProvider.get().clearCache()
             indexProviders(startedAtMs)
         } catch (e: Throwable) {
             // Ignored

@@ -1,5 +1,6 @@
 package com.swordfish.lemuroid.lib.library.metadata
 
+import android.util.Log
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserFactory
 import java.io.InputStream
@@ -42,11 +43,12 @@ class SkraperXmlParser {
         var currentNotes: String? = null
         var currentManual: String? = null
         var currentGenre: String? = null
+        var currentReleaseDate: String? = null
 
         while (eventType != XmlPullParser.END_DOCUMENT) {
             if (eventType == XmlPullParser.START_TAG) {
-                when (parser.name) {
-                    "Game" -> {
+                when (parser.name.lowercase()) {
+                    "game" -> {
                         currentTitle = null
                         currentAppPath = null
                         currentDev = null
@@ -54,16 +56,20 @@ class SkraperXmlParser {
                         currentNotes = null
                         currentManual = null
                         currentGenre = null
+                        currentReleaseDate = null
                     }
-                    "Title" -> currentTitle = parser.nextText().trim()
-                    "ApplicationPath" -> currentAppPath = parser.nextText().trim()
-                    "Developer" -> currentDev = parser.nextText().trim()
-                    "Publisher" -> currentPub = parser.nextText().trim()
-                    "Notes" -> currentNotes = parser.nextText().trim()
-                    "ManualPath" -> currentManual = parser.nextText().trim()
-                    "Genre" -> currentGenre = parser.nextText().trim()
+                    "title" -> currentTitle = parser.nextText().trim()
+                    "applicationpath" -> currentAppPath = parser.nextText().trim()
+                    "developer" -> currentDev = parser.nextText().trim()
+                    "publisher" -> currentPub = parser.nextText().trim()
+                    "notes" -> currentNotes = parser.nextText().trim()
+                    "manualpath" -> currentManual = parser.nextText().trim()
+                    "genre" -> currentGenre = parser.nextText().trim()
+                    "releasedate" -> {
+                        currentReleaseDate = parser.nextText().trim()
+                    }
                 }
-            } else if (eventType == XmlPullParser.END_TAG && parser.name == "Game") {
+            } else if (eventType == XmlPullParser.END_TAG && parser.name.lowercase() == "game") {
                 if (!currentTitle.isNullOrEmpty() || !currentAppPath.isNullOrEmpty()) {
                     val romName = currentAppPath?.substringAfterLast('\\')?.substringAfterLast('/')
                     entries.add(
@@ -73,6 +79,7 @@ class SkraperXmlParser {
                             developer = currentDev?.ifBlank { null },
                             publisher = currentPub?.ifBlank { null },
                             description = currentNotes?.ifBlank { null },
+                            releaseDate = formatReleaseDate(currentReleaseDate),
                             manualPath = currentManual?.ifBlank { null },
                             genre = currentGenre?.ifBlank { null }
                         )
@@ -101,7 +108,7 @@ class SkraperXmlParser {
 
         while (eventType != XmlPullParser.END_DOCUMENT) {
             if (eventType == XmlPullParser.START_TAG) {
-                when (parser.name) {
+                when (parser.name.lowercase()) {
                     "game" -> {
                         currentTitle = null
                         currentPath = null
@@ -118,13 +125,16 @@ class SkraperXmlParser {
                     "desc" -> currentDesc = parser.nextText().trim()
                     "developer" -> currentDev = parser.nextText().trim()
                     "publisher" -> currentPub = parser.nextText().trim()
-                    "releasedate" -> currentRelease = parser.nextText().trim()
+                    "releasedate", "date" -> {
+                        currentRelease = parser.nextText().trim()
+                    }
                     "image", "box" -> currentImage = currentImage ?: parser.nextText().trim()
                     "manual" -> currentManual = parser.nextText().trim()
                     "genre" -> currentGenre = parser.nextText().trim()
                 }
-            } else if (eventType == XmlPullParser.END_TAG && parser.name == "game") {
+            } else if (eventType == XmlPullParser.END_TAG && parser.name.lowercase() == "game") {
                 val romName = currentPath?.substringAfterLast('/')
+                Log.d("SkraperXmlParser", "EmulationStation: Game '${currentTitle}' found image: $currentImage")
                 entries.add(
                     SkraperGameEntry(
                         title = currentTitle ?: romName ?: "Unknown",
@@ -132,7 +142,7 @@ class SkraperXmlParser {
                         developer = currentDev?.ifBlank { null },
                         publisher = currentPub?.ifBlank { null },
                         description = currentDesc?.ifBlank { null },
-                        releaseDate = currentRelease?.take(8)?.ifBlank { null },
+                        releaseDate = formatReleaseDate(currentRelease),
                         coverFrontPath = currentImage?.ifBlank { null },
                         manualPath = currentManual?.ifBlank { null },
                         genre = currentGenre?.ifBlank { null }
@@ -157,7 +167,7 @@ class SkraperXmlParser {
 
         while (eventType != XmlPullParser.END_DOCUMENT) {
             if (eventType == XmlPullParser.START_TAG) {
-                when (parser.name) {
+                when (parser.name.lowercase()) {
                     "game" -> {
                         currentGameName = parser.getAttributeValue(null, "name")
                         currentDesc = null
@@ -172,7 +182,7 @@ class SkraperXmlParser {
                         currentRomName = parser.getAttributeValue(null, "name")
                     }
                 }
-            } else if (eventType == XmlPullParser.END_TAG && parser.name == "game") {
+            } else if (eventType == XmlPullParser.END_TAG && parser.name.lowercase() == "game") {
                 entries.add(
                     SkraperGameEntry(
                         title = currentGameName ?: "Unknown",
@@ -180,12 +190,41 @@ class SkraperXmlParser {
                         developer = currentManufacturer?.ifBlank { null },
                         publisher = currentManufacturer?.ifBlank { null },
                         description = currentDesc?.ifBlank { null },
-                        releaseDate = currentYear?.ifBlank { null }
+                        releaseDate = formatReleaseDate(currentYear)
                     )
                 )
             }
             eventType = parser.next()
         }
         return entries
+    }
+
+    /**
+     * Converts raw date strings into standard ISO "YYYY-MM-DD" or "YYYY".
+     * Handles "19930202T000000", "1993-02-02", "1993", etc.
+     */
+    private fun formatReleaseDate(rawDate: String?): String? {
+        if (rawDate.isNullOrEmpty()) return null
+        val clean = rawDate.trim()
+
+        // Case 1: Skraper / EmulationStation format: "19930202T000000"
+        if (clean.length >= 8 && clean.take(8).all { it.isDigit() }) {
+            val year = clean.substring(0, 4)
+            val month = clean.substring(4, 6)
+            val day = clean.substring(6, 8)
+            return "$year-$month-$day" // "1993-02-02"
+        }
+
+        // Case 2: Already standard ISO date "1993-02-02..."
+        if (clean.length >= 10 && clean[4] == '-' && clean[7] == '-') {
+            return clean.take(10)
+        }
+
+        // Case 3: Just the year "1993"
+        if (clean.length >= 4 && clean.take(4).all { it.isDigit() }) {
+            return clean.take(4)
+        }
+
+        return clean
     }
 }
