@@ -89,32 +89,41 @@ class GameInfoViewModel(
             }
             
             if (metadata != null) {
-                // If we already have some data (besides title which is mandatory), show warning
-                val hasExistingData = currentGame.developer != null || 
-                                    currentGame.publisher != null || 
-                                    currentGame.releaseDate != null ||
-                                    currentGame.country != null ||
-                                    currentGame.summary != null
-                
-                if (hasExistingData) {
-                    _pendingMetadata.value = metadata
-                } else {
-                    applyMetadata(metadata)
-                }
+                _pendingMetadata.value = metadata
             }
             
             _isRescanning.value = false
         }
     }
 
-    fun confirmOverwrite(overwrite: Boolean) {
-        val metadata = _pendingMetadata.value ?: return
-        if (overwrite) {
-            viewModelScope.launch {
-                applyMetadata(metadata)
-            }
-        }
+    fun clearPendingMetadata() {
         _pendingMetadata.value = null
+    }
+
+    fun applyCustomScrapedMetadata(
+        title: String,
+        releaseDate: String?,
+        publisher: String?,
+        developer: String?,
+        region: String?,
+        summary: String?,
+        coverUrl: String?
+    ) {
+        val currentGame = _game.value ?: return
+        viewModelScope.launch {
+            val updatedGame = currentGame.copy(
+                title = title,
+                releaseDate = releaseDate,
+                publisher = publisher,
+                developer = developer,
+                country = region,
+                summary = summary,
+                coverFrontUrl = coverUrl ?: currentGame.coverFrontUrl
+            )
+            retrogradeDb.gameDao().update(updatedGame)
+            _game.value = updatedGame
+            _pendingMetadata.value = null
+        }
     }
 
     private suspend fun fetchMetadata(currentGame: Game): GameMetadata? {

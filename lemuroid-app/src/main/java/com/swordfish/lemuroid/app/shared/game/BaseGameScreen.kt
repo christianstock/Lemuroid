@@ -36,6 +36,7 @@ fun BaseGameScreen(
             gameState is GameViewModelRetroGameView.GameState.Ready
 
     val cheatMenuVisible = viewModel.cheatMenuVisible.collectAsState().value
+    val deletedCheats = viewModel.deletedCheats.collectAsState().value
     val coroutineScope = rememberCoroutineScope()
 
     if (isGameReady) {
@@ -56,13 +57,46 @@ fun BaseGameScreen(
                     CheatMenuScreen(
                         modifier = Modifier.fillMaxSize(0.8f),
                         cheatsFlow = viewModel.getCheats(),
+                        searchQueryFlow = viewModel.searchQuery,
+                        selectedSourcesFlow = viewModel.selectedSources,
+                        isRescanningFlow = viewModel.isRescanning,
+                        deletedCheatsFlow = viewModel.deletedCheats,
                         onCheatToggle = { cheat, enabled ->
                             coroutineScope.launch {
                                 viewModel.toggleCheat(cheat, enabled)
                             }
                         },
+                        onDeleteCheat = { cheat ->
+                            viewModel.deleteCheat(cheat)
+                            viewModel.trackDeletedCheat(cheat)
+                        },
+                        onUndoDeleteCheat = { cheatId ->
+                            val cheat = deletedCheats[cheatId]
+                            if (cheat != null) {
+                                viewModel.undoDeleteCheat(cheat)
+                                viewModel.clearDeletedCheat(cheatId)
+                            }
+                        },
+                        onUpdateCheatOrder = { cheatId, newOrder ->
+                            viewModel.updateCheatDisplayOrder(cheatId, newOrder)
+                        },
                         onImportCheats = { uri ->
                             viewModel.importCheats(uri)
+                        },
+                        onSetSearchQuery = { query ->
+                            viewModel.setSearchQuery(query)
+                        },
+                        onToggleSourceFilter = { source ->
+                            viewModel.toggleSourceFilter(source)
+                        },
+                        onClearSourceFilter = {
+                            viewModel.clearSourceFilter()
+                        },
+                        onRescanCheats = {
+                            viewModel.rescandCheatsForCurrentGame()
+                        },
+                        onDisableAllCheats = {
+                            viewModel.disableAllCheats()
                         },
                         onClose = {
                             viewModel.closeCheatMenu()

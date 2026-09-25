@@ -55,6 +55,7 @@ import com.swordfish.lemuroid.app.mobile.shared.compose.ui.AppTheme
 import com.swordfish.lemuroid.app.shared.GameMenuContract
 import com.swordfish.lemuroid.app.shared.cheats.CheatManager
 import com.swordfish.lemuroid.app.shared.coreoptions.LemuroidCoreOption
+import com.swordfish.lemuroid.app.shared.coreoptions.CoreOptionsWrapper
 import com.swordfish.lemuroid.app.shared.input.InputDeviceManager
 import com.swordfish.lemuroid.common.kotlin.serializable
 import com.swordfish.lemuroid.lib.android.RetrogradeComponentActivity
@@ -108,12 +109,12 @@ class GameMenuActivity : RetrogradeComponentActivity() {
         val gameMenuRequest =
             GameMenuRequest(
                 coreOptions =
-                    intent.serializable<Array<LemuroidCoreOption>>(GameMenuContract.EXTRA_CORE_OPTIONS)
-                        ?.toList()
+                    intent.serializable<com.swordfish.lemuroid.app.shared.coreoptions.CoreOptionsWrapper>(GameMenuContract.EXTRA_CORE_OPTIONS)
+                        ?.options
                         ?: throw InvalidParameterException("Missing EXTRA_CORE_OPTIONS"),
                 advancedCoreOptions =
-                    intent.serializable<Array<LemuroidCoreOption>>(GameMenuContract.EXTRA_ADVANCED_CORE_OPTIONS)
-                        ?.toList()
+                    intent.serializable<com.swordfish.lemuroid.app.shared.coreoptions.CoreOptionsWrapper>(GameMenuContract.EXTRA_ADVANCED_CORE_OPTIONS)
+                        ?.options
                         ?: throw InvalidParameterException("Missing EXTRA_ADVANCED_CORE_OPTIONS"),
                 game =
                     intent.serializable<Game>(GameMenuContract.EXTRA_GAME)
@@ -258,12 +259,45 @@ class GameMenuActivity : RetrogradeComponentActivity() {
                             CheatMenuScreen(
                                 modifier = Modifier.fillMaxSize(),
                                 cheatsFlow = viewModel.cheats,
+                                searchQueryFlow = viewModel.searchQuery,
+                                selectedSourcesFlow = viewModel.selectedSources,
+                                isRescanningFlow = viewModel.isRescanning,
+                                deletedCheatsFlow = viewModel.deletedCheats,
                                 onCheatToggle = { cheat, enabled ->
                                     viewModel.toggleCheat(cheat, enabled)
                                     cheatsChanged = true
                                 },
+                                onDeleteCheat = { cheat ->
+                                    viewModel.deleteCheat(cheat)
+                                    cheatsChanged = true
+                                },
+                                onUndoDeleteCheat = { cheatId ->
+                                    viewModel.undoDeleteCheat(cheatId)
+                                    cheatsChanged = true
+                                },
+                                onUpdateCheatOrder = { cheatId, newOrder ->
+                                    viewModel.updateCheatDisplayOrder(cheatId, newOrder)
+                                    cheatsChanged = true
+                                },
                                 onImportCheats = { uri ->
                                     viewModel.importCheats(uri)
+                                    cheatsChanged = true
+                                },
+                                onSetSearchQuery = { query ->
+                                    viewModel.setSearchQuery(query)
+                                },
+                                onToggleSourceFilter = { source ->
+                                    viewModel.toggleSourceFilter(source)
+                                },
+                                onClearSourceFilter = {
+                                    viewModel.clearSourceFilter()
+                                },
+                                onRescanCheats = {
+                                    viewModel.rescandCheatsForCurrentGame()
+                                    cheatsChanged = true
+                                },
+                                onDisableAllCheats = {
+                                    viewModel.disableAllCheats()
                                     cheatsChanged = true
                                 },
                                 onClose = {

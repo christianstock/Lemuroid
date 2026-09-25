@@ -57,7 +57,9 @@ import com.swordfish.lemuroid.lib.library.LemuroidLibrary
 import com.swordfish.lemuroid.lib.library.db.RetrogradeDatabase
 import com.swordfish.lemuroid.lib.library.db.dao.GameSearchDao
 import com.swordfish.lemuroid.lib.library.db.dao.Migrations
+import com.swordfish.lemuroid.lib.library.metadata.CompositeMetadataProvider
 import com.swordfish.lemuroid.lib.library.metadata.GameMetadataProvider
+import com.swordfish.lemuroid.lib.library.metadata.SkraperMetadataProvider
 import com.swordfish.lemuroid.lib.migration.DesmumeMigrationHandler
 import com.swordfish.lemuroid.lib.preferences.SharedPreferencesHelper
 import com.swordfish.lemuroid.lib.saves.SavesCoherencyEngine
@@ -160,15 +162,25 @@ abstract class LemuroidApplicationModule {
         fun retrogradeDb(app: LemuroidApplication) =
             Room.databaseBuilder(app, RetrogradeDatabase::class.java, RetrogradeDatabase.DB_NAME)
                 .addCallback(GameSearchDao.CALLBACK)
-                .addMigrations(GameSearchDao.MIGRATION, Migrations.VERSION_8_9, Migrations.VERSION_9_10, Migrations.VERSION_11_12)
+                .addMigrations(GameSearchDao.MIGRATION, Migrations.VERSION_8_9, Migrations.VERSION_9_10, Migrations.VERSION_11_12, Migrations.VERSION_12_13)
                 .fallbackToDestructiveMigration()
                 .build()
 
         @Provides
         @PerApp
         @JvmStatic
-        fun gameMetadataProvider(libretroDBManager: LibretroDBManager): GameMetadataProvider =
-            LibretroDBMetadataProvider(libretroDBManager)
+        fun skraperMetadataProvider(context: Context): SkraperMetadataProvider =
+            SkraperMetadataProvider(context)
+
+        @Provides
+        @PerApp
+        @JvmStatic
+        fun gameMetadataProvider(
+            context: Context,
+            libretroDBManager: LibretroDBManager,
+            skraperMetadataProvider: SkraperMetadataProvider
+        ): GameMetadataProvider =
+            CompositeMetadataProvider(skraperMetadataProvider, LibretroDBMetadataProvider(libretroDBManager))
 
         @Provides
         @PerApp

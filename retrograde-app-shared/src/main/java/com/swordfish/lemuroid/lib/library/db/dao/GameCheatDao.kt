@@ -9,10 +9,10 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface GameCheatDao {
-    @Query("SELECT * FROM game_cheats WHERE gameId = :gameId")
+    @Query("SELECT * FROM game_cheats WHERE gameId = :gameId ORDER BY displayOrder ASC, id ASC")
     suspend fun getCheatsForGame(gameId: Int): List<GameCheatEntity>
 
-    @Query("SELECT * FROM game_cheats WHERE gameId = :gameId")
+    @Query("SELECT * FROM game_cheats WHERE gameId = :gameId ORDER BY displayOrder ASC, id ASC")
     fun getCheatsForGameFlow(gameId: Int): Flow<List<GameCheatEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -24,6 +24,9 @@ interface GameCheatDao {
         cheatIndex: Int,
     )
 
+    @Query("DELETE FROM game_cheats WHERE id = :cheatId")
+    suspend fun deleteCheatById(cheatId: Int)
+
     @Query("DELETE FROM game_cheats WHERE gameId = :gameId")
     suspend fun clearCheatsForGame(gameId: Int)
 
@@ -32,4 +35,7 @@ interface GameCheatDao {
 
     @Query("DELETE FROM game_cheats")
     suspend fun clearAllCheats()
+
+    @Query("UPDATE game_cheats SET displayOrder = :displayOrder WHERE id = :cheatId")
+    suspend fun updateCheatDisplayOrder(cheatId: Int, displayOrder: Int)
 }

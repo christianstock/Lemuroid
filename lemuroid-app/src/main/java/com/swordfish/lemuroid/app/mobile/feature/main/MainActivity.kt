@@ -32,6 +32,8 @@ import com.swordfish.lemuroid.app.mobile.feature.games.GamesScreen
 import com.swordfish.lemuroid.app.mobile.feature.games.GamesViewModel
 import com.swordfish.lemuroid.app.mobile.feature.gameinfo.GameInfoScreen
 import com.swordfish.lemuroid.app.mobile.feature.gameinfo.GameInfoViewModel
+import com.swordfish.lemuroid.app.mobile.feature.gamemenu.GameMenuActivity
+import com.swordfish.lemuroid.app.mobile.feature.gamemenu.GameMenuRoute
 import com.swordfish.lemuroid.app.mobile.feature.home.HomeScreen
 import com.swordfish.lemuroid.app.mobile.feature.home.HomeViewModel
 import com.swordfish.lemuroid.lib.library.metadata.GameMetadataProvider
@@ -55,6 +57,8 @@ import com.swordfish.lemuroid.app.mobile.feature.systems.MetaSystemsScreen
 import com.swordfish.lemuroid.app.mobile.feature.systems.MetaSystemsViewModel
 import com.swordfish.lemuroid.app.mobile.shared.compose.ui.AppTheme
 import com.swordfish.lemuroid.app.shared.GameInteractor
+import com.swordfish.lemuroid.app.shared.GameMenuContract
+import com.swordfish.lemuroid.app.shared.coreoptions.CoreOptionsWrapper
 import com.swordfish.lemuroid.app.shared.cheats.CheatDownloader
 import com.swordfish.lemuroid.app.shared.cheats.CheatManager
 import com.swordfish.lemuroid.app.shared.game.BaseGameActivity
@@ -70,6 +74,7 @@ import com.swordfish.lemuroid.lib.bios.BiosManager
 import com.swordfish.lemuroid.lib.core.CoresSelection
 import com.swordfish.lemuroid.lib.injection.PerActivity
 import com.swordfish.lemuroid.lib.library.MetaSystemID
+import com.swordfish.lemuroid.lib.library.GameSystem
 import com.swordfish.lemuroid.lib.library.SystemID
 import com.swordfish.lemuroid.lib.library.db.RetrogradeDatabase
 import com.swordfish.lemuroid.lib.library.db.entity.Game
@@ -383,6 +388,17 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
                             onRestart = { game ->
                                 gameInteractor.onResetCheats(game)
                                 gameInteractor.onGameRestart(game)
+                            },
+                            onCheats = { game ->
+                                val intent = Intent(applicationContext, GameMenuActivity::class.java)
+                                intent.putExtra("INITIAL_ROUTE", GameMenuRoute.CHEATS.route)
+                                intent.putExtra("IS_DIRECT_ACCESS", false)
+                                intent.putExtra(GameMenuContract.EXTRA_GAME, game)
+                                intent.putExtra(GameMenuContract.EXTRA_CORE_OPTIONS, CoreOptionsWrapper(emptyList()))
+                                intent.putExtra(GameMenuContract.EXTRA_ADVANCED_CORE_OPTIONS, CoreOptionsWrapper(emptyList()))
+                                val gameSystem = GameSystem.findById(game.systemId)
+                                intent.putExtra(GameMenuContract.EXTRA_SYSTEM_CORE_CONFIG, gameSystem.systemCoreConfigs.first())
+                                startActivity(intent)
                             },
                             modifier = Modifier.padding(padding),
                             onBack = { navController.popBackStack() }

@@ -58,6 +58,10 @@ class CheatManager(
         }
     }
 
+    suspend fun insertCheat(cheat: GameCheatEntity) = withContext(Dispatchers.IO) {
+        gameCheatDao.insertCheat(cheat)
+    }
+
     suspend fun importCheats(context: Context, gameId: Int, zipUri: Uri) = withContext(Dispatchers.IO) {
         // Clear existing cheats for this game before manual import to avoid duplicates/stale data
         gameCheatDao.clearCheatsForGame(gameId)
@@ -66,6 +70,7 @@ class CheatManager(
             ZipInputStream(inputStream).use { zipInputStream ->
                 var entry = zipInputStream.nextEntry
                 var globalCheatIndex = 0
+                var displayOrder = 0
                 while (entry != null) {
                     if (entry.name.endsWith(".cht", ignoreCase = true)) {
                         val cheats = CheatParser.parse(zipInputStream)
@@ -83,7 +88,8 @@ class CheatManager(
                                     description = cheat.description,
                                     code = cheat.code,
                                     enabled = cheat.enabled,
-                                    source = source
+                                    source = source,
+                                    displayOrder = displayOrder++
                                 )
                             )
                         }
@@ -200,10 +206,10 @@ class CheatManager(
                                                    description = cheat.description,
                                                    code = cheat.code,
                                                    enabled = false,
-                                                   source = source
+                                                   source = source,
+                                                   displayOrder = totalCheats++
                                                )
                                            )
-                                           totalCheats++
                                            systemCheatCount++
                                        } catch (e: Exception) {
                                            Timber.e(e, "Error inserting cheat for game ${game.id}")
@@ -292,5 +298,97 @@ class CheatManager(
             name.contains("x-terminator") -> "GameShark"
             else -> null
         }
+    }
+
+    suspend fun rescandGameForCheats(gameId: Int): Int = withContext(Dispatchers.IO) {
+        val game = retrogradeDatabase.gameDao().selectById(gameId) ?: return@withContext 0
+        val system = GameSystem.findById(game.systemId)
+        val cheatsDir = directoriesManager.getCheatsDirectory()
+
+        if (!cheatsDir.exists()) {
+            return@withContext 0
+        }
+
+        // Clear existing cheats for this game
+        gameCheatDao.clearCheatsForGame(gameId)
+
+        val systemDirs = listOf(
+            File(cheatsDir, system.libretroFullName),
+            File(cheatsDir, system.libretroFullName.replace(" - ", " ")),
+            File(cheatsDir, system.id.dbname.uppercase()),
+            File(cheatsDir, system.id.dbname),
+            File(cheatsDir, "PPSSPP"),
+            File(cheatsDir, "PSP"),
+            File(cheatsDir, "Playstation Portable"),
+            File(cheatsDir, "PlayStation Portable"),
+        ).distinct().filter { it.exists() }
+
+        var totalCheats = 0
+        val matchingFiles = mutableListOf<File>()
+        systemDirs.forEach { dir ->
+            matchingFiles.addAll(findMatchingCheatFiles(game, dir))
+        }
+
+        val distinctMatchingFiles = matchingFiles.distinctBy { it.absolutePath }
+
+        if (distinctMatchingFiles.isNotEmpty()) {
+            var globalCheatIndex = 0
+            distinctMatchingFiles.forEach { chtFile ->
+                runCatching {
+                    chtFile.inputStream().use { inputStream ->
+                        val fileContent = inputStream.bufferedReader().readText()
+                        val hasCwCheatLines = fileContent.lines().any { line ->
+                            line.trimStart().matches(Regex("^_[SGC].*"))
+                        }
+                        val hasLibRetroKey = fileContent.contains("cheats")
+                        val isCwCheatFormat = hasCwCheatLines && !hasLibRetroKey
+
+                        val cheats = if (isCwCheatFormat) {
+                            fileContent.byteInputStream().use { CwCheatParser.parse(it) }
+                        } else {
+                            fileContent.byteInputStream().use { CheatParser.parse(it) }
+                        }
+
+                        val fileNameTypeTag = getCheatTypeTag(chtFile.nameWithoutExtension)
+                        cheats.forEach { cheat ->
+                            val source = (fileNameTypeTag ?: cheat.type ?: "Others").trim()
+                            try {
+                                gameCheatDao.insertCheat(
+                                    GameCheatEntity(
+                                        gameId = gameId,
+                                        zipUri = chtFile.absolutePath,
+                                        entryName = chtFile.name,
+                                        cheatIndex = globalCheatIndex++,
+                                        description = cheat.description,
+                                        code = cheat.code,
+                                        enabled = false,
+                                        source = source,
+                                        displayOrder = totalCheats++
+                                    )
+                                )
+                            } catch (e: Exception) {
+                                Timber.e(e, "Error inserting cheat for game ${game.id}")
+                            }
+                        }
+                    }
+                }.onFailure {
+                    // Silent fail
+                }
+            }
+        }
+
+        totalCheats
+    }
+
+    suspend fun deleteCheat(cheatId: Int) = withContext(Dispatchers.IO) {
+        gameCheatDao.deleteCheatById(cheatId)
+    }
+
+    suspend fun updateCheatDisplayOrder(cheatId: Int, newOrder: Int) = withContext(Dispatchers.IO) {
+        gameCheatDao.updateCheatDisplayOrder(cheatId, newOrder)
+    }
+
+    suspend fun disableAllCheats(gameId: Int) = withContext(Dispatchers.IO) {
+        gameCheatDao.disableAllCheatsForGame(gameId)
     }
 }

@@ -15,7 +15,6 @@ import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RestartAlt
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,16 +24,19 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.swordfish.lemuroid.app.mobile.shared.compose.ui.LemuroidGameImage
 import com.swordfish.lemuroid.common.kotlin.cleanGameTitle
 import com.swordfish.lemuroid.lib.library.db.entity.Game
+import java.text.DateFormat
+import java.util.Calendar
+import java.util.Locale
 
 @Composable
 fun GameInfoScreen(
     viewModel: GameInfoViewModel,
     onPlay: (Game) -> Unit,
     onRestart: (Game) -> Unit,
+    onCheats: (Game) -> Unit = {},
     modifier: Modifier = Modifier,
     onBack: () -> Unit = {}
 ) {
@@ -62,26 +64,24 @@ fun GameInfoScreen(
                 viewModel.saveLocalThumbnail(uri, deleteSource)
             }
         )
+    } else if (pendingMetadata != null) {
+        ScrapeResultScreen(
+            game = game,
+            metadata = pendingMetadata,
+            onDismiss = { viewModel.clearPendingMetadata() },
+            onAccept = { title, releaseDate, publisher, developer, region, summary, coverUrl ->
+                viewModel.applyCustomScrapedMetadata(
+                    title = title,
+                    releaseDate = releaseDate,
+                    publisher = publisher,
+                    developer = developer,
+                    region = region,
+                    summary = summary,
+                    coverUrl = coverUrl
+                )
+            }
+        )
     } else {
-        if (pendingMetadata != null) {
-            AlertDialog(
-                onDismissRequest = { viewModel.confirmOverwrite(false) },
-                icon = { Icon(Icons.Default.Warning, contentDescription = null) },
-                title = { Text("Overwrite Data?") },
-                text = { Text("Matching metadata found. Do you want to overwrite your existing game details with server data?") },
-                confirmButton = {
-                    Button(onClick = { viewModel.confirmOverwrite(true) }) {
-                        Text("Overwrite")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { viewModel.confirmOverwrite(false) }) {
-                        Text("Keep Current")
-                    }
-                }
-            )
-        }
-
         Box(modifier = modifier.fillMaxSize()) {
             LazyColumn(
                 modifier = Modifier
@@ -147,10 +147,14 @@ fun GameInfoScreen(
                 }
 
                 item {
-                    val year = game.releaseDate?.take(4) ?: ""
+                    val formattedDate = formatLocalizedDate(game.releaseDate)
                     val publisher = game.publisher ?: ""
                     val developer = game.developer ?: ""
-                    val metaText = listOfNotNull(year.takeIf { it.isNotEmpty() }, publisher.takeIf { it.isNotEmpty() }, developer.takeIf { it.isNotEmpty() }).joinToString(" | ")
+                    val metaText = listOfNotNull(
+                        formattedDate.takeIf { it.isNotEmpty() },
+                        publisher.takeIf { it.isNotEmpty() },
+                        developer.takeIf { it.isNotEmpty() }
+                    ).joinToString(" | ")
                     
                     if (metaText.isNotEmpty()) {
                         Text(
@@ -174,6 +178,12 @@ fun GameInfoScreen(
                             Icon(Icons.Default.Edit, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Edit")
+                        }
+                        OutlinedButton(
+                            onClick = { onCheats(game) },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Cheats")
                         }
                         OutlinedButton(
                             onClick = { viewModel.rescan() },
@@ -239,6 +249,24 @@ fun GameInfoScreen(
             }
         }
     }
+}
+
+private fun formatLocalizedDate(dateString: String?): String {
+    if (dateString.isNullOrBlank()) return ""
+    return runCatching {
+        val cleanDate = dateString.replace("-", "").trim()
+        if (cleanDate.length >= 8) {
+            val year = cleanDate.substring(0, 4).toInt()
+            val month = cleanDate.substring(4, 6).toInt() - 1
+            val day = cleanDate.substring(6, 8).toInt()
+            val cal = Calendar.getInstance().apply {
+                set(year, month, day)
+            }
+            DateFormat.getDateInstance(DateFormat.MEDIUM, Locale.getDefault()).format(cal.time)
+        } else {
+            dateString
+        }
+    }.getOrDefault(dateString)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

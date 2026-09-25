@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.fragment.app.Fragment
 import com.swordfish.lemuroid.app.shared.GameMenuContract
 import com.swordfish.lemuroid.app.shared.coreoptions.LemuroidCoreOption
+import com.swordfish.lemuroid.app.shared.coreoptions.CoreOptionsWrapper
 import com.swordfish.lemuroid.app.shared.input.InputDeviceManager
 import com.swordfish.lemuroid.app.tv.shared.TVBaseSettingsActivity
 import com.swordfish.lemuroid.lib.library.SystemCoreConfig
@@ -37,15 +38,19 @@ class TVGameMenuActivity : TVBaseSettingsActivity() {
                     ?: throw InvalidParameterException("Missing EXTRA_SYSTEM_CORE_CONFIG")
 
             val options =
-                intent.extras?.getSerializable(
+                (intent.extras?.getSerializable(
                     GameMenuContract.EXTRA_CORE_OPTIONS,
-                ) as Array<LemuroidCoreOption>?
+                ) as com.swordfish.lemuroid.app.shared.coreoptions.CoreOptionsWrapper?)
+                    ?.options
+                    ?.toTypedArray()
                     ?: throw InvalidParameterException("Missing EXTRA_CORE_OPTIONS")
 
             val advancedOptions =
-                intent.extras?.getSerializable(
+                (intent.extras?.getSerializable(
                     GameMenuContract.EXTRA_ADVANCED_CORE_OPTIONS,
-                ) as Array<LemuroidCoreOption>?
+                ) as com.swordfish.lemuroid.app.shared.coreoptions.CoreOptionsWrapper?)
+                    ?.options
+                    ?.toTypedArray()
                     ?: throw InvalidParameterException("Missing EXTRA_ADVANCED_CORE_OPTIONS")
 
             val numDisks =

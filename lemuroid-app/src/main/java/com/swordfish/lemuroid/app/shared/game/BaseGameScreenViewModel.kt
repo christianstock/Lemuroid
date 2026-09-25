@@ -51,6 +51,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -164,6 +165,14 @@ class BaseGameScreenViewModel(
 
     val loadingState = MutableStateFlow(false)
     val cheatMenuVisible = MutableStateFlow(false)
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+    private val _selectedSources = MutableStateFlow(setOf<String>())
+    val selectedSources: StateFlow<Set<String>> = _selectedSources.asStateFlow()
+    private val _isRescanning = MutableStateFlow(false)
+    val isRescanning: StateFlow<Boolean> = _isRescanning.asStateFlow()
+    private val _deletedCheats = MutableStateFlow<Map<Int, GameCheatEntity>>(emptyMap())
+    val deletedCheats: StateFlow<Map<Int, GameCheatEntity>> = _deletedCheats.asStateFlow()
     private val rewindAvailable = MutableStateFlow(false)
     private val rewindProgress = MutableStateFlow(0f)
     private val isPlaying = MutableStateFlow(true)
@@ -398,6 +407,67 @@ class BaseGameScreenViewModel(
 
     fun getCheats(): Flow<List<GameCheatEntity>> {
         return retroGameView.getCheats()
+    }
+
+    fun deleteCheat(cheat: GameCheatEntity) {
+        viewModelScope.launch {
+            cheatManager.deleteCheat(cheat.id)
+        }
+    }
+
+    fun undoDeleteCheat(cheat: GameCheatEntity) {
+        viewModelScope.launch {
+            cheatManager.insertCheat(cheat)
+        }
+    }
+
+    fun updateCheatDisplayOrder(cheatId: Int, newOrder: Int) {
+        viewModelScope.launch {
+            cheatManager.updateCheatDisplayOrder(cheatId, newOrder)
+        }
+    }
+
+    fun rescandCheatsForCurrentGame() {
+        viewModelScope.launch {
+            _isRescanning.value = true
+            try {
+                cheatManager.rescandGameForCheats(game.id)
+            } finally {
+                _isRescanning.value = false
+            }
+        }
+    }
+
+    fun disableAllCheats() {
+        viewModelScope.launch {
+            cheatManager.disableAllCheats(game.id)
+        }
+    }
+
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
+    }
+
+    fun toggleSourceFilter(source: String) {
+        val current = _selectedSources.value.toMutableSet()
+        if (current.contains(source)) {
+            current.remove(source)
+        } else {
+            current.add(source)
+        }
+        _selectedSources.value = current
+    }
+
+    fun clearSourceFilter() {
+        _selectedSources.value = emptySet()
+    }
+
+    fun trackDeletedCheat(cheat: GameCheatEntity) {
+        _deletedCheats.value = _deletedCheats.value + (cheat.id to cheat)
+    }
+
+    fun clearDeletedCheat(cheatId: Int) {
+        _deletedCheats.value = _deletedCheats.value - cheatId
     }
 
     // Rewind System Methods

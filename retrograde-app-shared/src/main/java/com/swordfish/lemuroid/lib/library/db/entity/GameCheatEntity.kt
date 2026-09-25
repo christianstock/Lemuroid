@@ -21,4 +21,5 @@ data class GameCheatEntity(
     val code: String,
     val enabled: Boolean,
     val source: String? = null,
+    val displayOrder: Int = 0,
 )

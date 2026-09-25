@@ -20,6 +20,7 @@ import com.swordfish.lemuroid.app.shared.GameMenuContract
 import com.swordfish.lemuroid.app.shared.ImmersiveActivity
 import com.swordfish.lemuroid.app.shared.cheats.CheatManager
 import com.swordfish.lemuroid.app.shared.coreoptions.CoreOption
+import com.swordfish.lemuroid.app.shared.coreoptions.CoreOptionsWrapper
 import com.swordfish.lemuroid.app.shared.coreoptions.LemuroidCoreOption
 import com.swordfish.lemuroid.app.shared.game.viewmodel.GameViewModelSideEffects
 import com.swordfish.lemuroid.app.shared.input.InputDeviceManager
@@ -207,8 +208,8 @@ abstract class BaseGameActivity : ImmersiveActivity() {
 
         val intent =
             Intent(this, getDialogClass()).apply {
-                this.putExtra(GameMenuContract.EXTRA_CORE_OPTIONS, options.toTypedArray())
-                this.putExtra(GameMenuContract.EXTRA_ADVANCED_CORE_OPTIONS, advancedOptions.toTypedArray())
+                this.putExtra(GameMenuContract.EXTRA_CORE_OPTIONS, CoreOptionsWrapper(options))
+                this.putExtra(GameMenuContract.EXTRA_ADVANCED_CORE_OPTIONS, CoreOptionsWrapper(advancedOptions))
                 this.putExtra(
                     GameMenuContract.EXTRA_CURRENT_DISK,
                     baseGameScreenViewModel.retroGameView.retroGameView?.getCurrentDisk() ?: 0,

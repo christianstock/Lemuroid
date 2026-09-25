@@ -333,6 +333,58 @@ class LemuroidLibrary(
         return provider.getProvider(game).getGameRomFiles(game, dataFiles, allowVirtualFiles)
     }
 
+    suspend fun scrapeAllMetadata() {
+        val metadataProvider = gameMetadataProvider.get()
+        val allGames = retrogradedb.gameDao().selectAll()
+        val providerRegistry = storageProviderRegistry.get()
+
+        val updatedGames = mutableListOf<Game>()
+
+        for (game in allGames) {
+            runCatching {
+                val provider = providerRegistry.getProvider(game)
+                val uri = android.net.Uri.parse(game.fileUri)
+                val baseFile = BaseStorageFile(
+                    name = game.fileName,
+                    size = 0L,
+                    uri = uri,
+                    path = null
+                )
+                val storageFile = provider.getStorageFile(baseFile)
+                if (storageFile != null) {
+                    val metadata = metadataProvider.retrieveMetadata(storageFile)
+                    if (metadata != null) {
+                        // Non-overwriting rule: Only populate missing/null/blank fields!
+                        val newTitle = if (game.title.isNotBlank()) game.title else (metadata.name ?: game.title)
+                        val newDev = game.developer ?: metadata.developer
+                        val newPub = game.publisher ?: metadata.publisher
+                        val newDate = game.releaseDate ?: metadata.releaseDate
+                        val newCountry = game.country ?: metadata.country
+                        val newSummary = game.summary ?: metadata.summary
+                        val newCover = game.coverFrontUrl ?: metadata.thumbnail
+
+                        val updatedGame = game.copy(
+                            title = newTitle,
+                            developer = newDev,
+                            publisher = newPub,
+                            releaseDate = newDate,
+                            country = newCountry,
+                            summary = newSummary,
+                            coverFrontUrl = newCover
+                        )
+                        if (updatedGame != game) {
+                            updatedGames.add(updatedGame)
+                        }
+                    }
+                }
+            }
+        }
+
+        if (updatedGames.isNotEmpty()) {
+            retrogradedb.gameDao().update(updatedGames)
+        }
+    }
+
     private sealed class ScanEntry {
         data class GameFile(val file: GroupedStorageFiles, val game: Game) : ScanEntry()
 
