@@ -8,6 +8,7 @@ data class GameMetadata(
     val publisher: String?,
     val thumbnail: String?,
     val thumbnailBack: String?,
+    val cartridgeImage: String?,
     val releaseDate: String?,
     val summary: String?,
     val country: String?,

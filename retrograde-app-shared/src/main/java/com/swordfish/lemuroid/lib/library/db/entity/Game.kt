@@ -48,6 +48,7 @@ data class Game(
     val publisher: String?,
     val coverFrontUrl: String?,
     val coverBackUrl: String?,
+    val cartridgeUrl: String?,
     val releaseDate: String?,
     val summary: String?,
     val country: String?,

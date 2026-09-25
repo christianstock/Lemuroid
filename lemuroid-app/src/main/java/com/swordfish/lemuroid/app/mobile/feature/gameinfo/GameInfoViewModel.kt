@@ -107,12 +107,18 @@ class GameInfoViewModel(
         publisher: String?,
         developer: String?,
         region: String?,
-        coverUrl: String?
+        coverFrontUrl: String?,
+        coverBackUrl: String?,
+        cartridgeUrl: String?
     ) {
         val currentGame = _game.value ?: return
         viewModelScope.launch {
-            val validCoverUrl = coverUrl?.takeIf { isValidImageUri(it) }
+            val validFrontUrl = coverFrontUrl?.takeIf { isValidImageUri(it) }
                 ?: currentGame.coverFrontUrl?.takeIf { isValidImageUri(it) }
+            val validBackUrl = coverBackUrl?.takeIf { isValidImageUri(it) }
+                ?: currentGame.coverBackUrl?.takeIf { isValidImageUri(it) }
+            val validCartridgeUrl = cartridgeUrl?.takeIf { isValidImageUri(it) }
+                ?: currentGame.cartridgeUrl?.takeIf { isValidImageUri(it) }
 
             val updatedGame = currentGame.copy(
                 title = title,
@@ -120,7 +126,9 @@ class GameInfoViewModel(
                 publisher = publisher?.ifBlank { null },
                 developer = developer?.ifBlank { null },
                 country = region?.ifBlank { null },
-                coverFrontUrl = validCoverUrl
+                coverFrontUrl = validFrontUrl,
+                coverBackUrl = validBackUrl,
+                cartridgeUrl = validCartridgeUrl
             )
             retrogradeDb.gameDao().update(updatedGame)
             _game.value = updatedGame

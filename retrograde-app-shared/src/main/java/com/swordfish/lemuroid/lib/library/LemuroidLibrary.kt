@@ -311,6 +311,7 @@ class LemuroidLibrary(
             publisher = gameMetadata.publisher,
             coverFrontUrl = gameMetadata.thumbnail,
             coverBackUrl = gameMetadata.thumbnailBack,
+            cartridgeUrl = gameMetadata.cartridgeImage,
             releaseDate = gameMetadata.releaseDate,
             summary = gameMetadata.summary,
             country = gameMetadata.country,

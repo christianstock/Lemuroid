@@ -26,26 +26,31 @@ fun ScrapeResultScreen(
     game: Game,
     metadata: GameMetadata,
     onDismiss: () -> Unit,
-    onAccept: (title: String, releaseDate: String?, publisher: String?, developer: String?, region: String?, coverUrl: String?) -> Unit
+    onAccept: (title: String, releaseDate: String?, publisher: String?, developer: String?, region: String?, coverFrontUrl: String?, coverBackUrl: String?, cartridgeUrl: String?) -> Unit
 ) {
     var title by remember { mutableStateOf(metadata.name ?: game.title) }
     var releaseDate by remember { mutableStateOf(metadata.releaseDate ?: game.releaseDate ?: "") }
     var publisher by remember { mutableStateOf(metadata.publisher ?: game.publisher ?: "") }
     var developer by remember { mutableStateOf(metadata.developer ?: game.developer ?: "") }
     var region by remember { mutableStateOf(metadata.country ?: game.country ?: "") }
-    var selectedCoverUrl by remember { mutableStateOf(metadata.thumbnail ?: game.coverFrontUrl) }
+    var selectedCoverFrontUrl by remember { mutableStateOf(metadata.thumbnail ?: game.coverFrontUrl) }
+    var selectedCoverBackUrl by remember { mutableStateOf(metadata.thumbnailBack ?: game.coverBackUrl) }
+    var selectedCartridgeUrl by remember { mutableStateOf(metadata.cartridgeImage ?: game.cartridgeUrl) }
 
     // Parse metadata options from debugInfo
     val releaseDateOptions = remember { parseMetadataOptions(metadata.debugInfo, "dates") }
     val coverArtOptions = remember { parseMetadataOptions(metadata.debugInfo, "arts") }
+    val coverBackOptions = remember { parseMetadataOptions(metadata.debugInfo, "backs") }
+    val cartridgeOptions = remember { parseMetadataOptions(metadata.debugInfo, "carts") }
     val developerOptions = remember { parseMetadataOptions(metadata.debugInfo, "devs") }
     val publisherOptions = remember { parseMetadataOptions(metadata.debugInfo, "pubs") }
     
     LaunchedEffect(Unit) {
         android.util.Log.d("ScrapeResult", "debugInfo: ${metadata.debugInfo}")
-        android.util.Log.d("ScrapeResult", "releaseDateOptions parsed: $releaseDateOptions")
         android.util.Log.d("ScrapeResult", "coverArtOptions parsed: $coverArtOptions")
-        android.util.Log.d("ScrapeResult", "game.coverFrontUrl: ${game.coverFrontUrl}")
+        android.util.Log.d("ScrapeResult", "coverBackOptions parsed: $coverBackOptions")
+        android.util.Log.d("ScrapeResult", "cartridgeOptions parsed: $cartridgeOptions")
+        android.util.Log.d("ScrapeResult", "releaseDateOptions parsed: $releaseDateOptions")
     }
 
     Scaffold(
@@ -66,7 +71,9 @@ fun ScrapeResultScreen(
                                 publisher.ifBlank { null },
                                 developer.ifBlank { null },
                                 region.ifBlank { null },
-                                selectedCoverUrl
+                                selectedCoverFrontUrl,
+                                selectedCoverBackUrl,
+                                selectedCartridgeUrl
                             )
                         }
                     ) {
@@ -93,88 +100,42 @@ fun ScrapeResultScreen(
                 )
             }
 
-            // --- COVER ART COMPARISON ---
+            // --- FRONT COVER ART ---
             if (metadata.thumbnail != null || game.coverFrontUrl != null || coverArtOptions.isNotEmpty()) {
                 item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                    ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            Text("Box Art", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                game.coverFrontUrl?.let { existingArt ->
-                                    Box(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .aspectRatio(1f)
-                                            .clip(MaterialTheme.shapes.medium)
-                                            .background(
-                                                if (selectedCoverUrl == existingArt) MaterialTheme.colorScheme.primaryContainer
-                                                else MaterialTheme.colorScheme.surface
-                                            )
-                                            .clickable { selectedCoverUrl = existingArt }
-                                            .padding(4.dp)
-                                    ) {
-                                        AsyncImage(
-                                            model = existingArt,
-                                            contentDescription = "Existing Cover",
-                                            modifier = Modifier.fillMaxSize(),
-                                            contentScale = ContentScale.Fit
-                                        )
-                                        Text(
-                                            "Existing",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            modifier = Modifier
-                                                .align(Alignment.BottomCenter)
-                                                .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.6f))
-                                                .padding(horizontal = 4.dp),
-                                            color = androidx.compose.ui.graphics.Color.White
-                                        )
-                                    }
-                                }
+                    ImageGalleryCard(
+                        title = "Front Cover",
+                        existingImage = game.coverFrontUrl,
+                        selectedImage = selectedCoverFrontUrl,
+                        onImageSelected = { selectedCoverFrontUrl = it },
+                        options = coverArtOptions
+                    )
+                }
+            }
 
-                                // Show all unique scraped art options
-                                coverArtOptions.forEach { scrapedArt ->
-                                    android.util.Log.d("ScrapeResult", "Rendering scraped art: $scrapedArt")
-                                    if (scrapedArt.isNotBlank()) {
-                                        Box(
-                                            modifier = Modifier
-                                                .weight(1f)
-                                                .aspectRatio(1f)
-                                                .clip(MaterialTheme.shapes.medium)
-                                                .background(
-                                                    if (selectedCoverUrl == scrapedArt) MaterialTheme.colorScheme.primaryContainer
-                                                    else MaterialTheme.colorScheme.surface
-                                                )
-                                                .clickable { selectedCoverUrl = scrapedArt }
-                                                .padding(4.dp)
-                                        ) {
-                                            AsyncImage(
-                                                model = scrapedArt,
-                                                contentDescription = "Scraped Cover",
-                                                modifier = Modifier.fillMaxSize(),
-                                                contentScale = ContentScale.Fit
-                                            )
-                                            Text(
-                                                "Scraped",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                modifier = Modifier
-                                                    .align(Alignment.BottomCenter)
-                                                    .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.6f))
-                                                    .padding(horizontal = 4.dp),
-                                                color = androidx.compose.ui.graphics.Color.White
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+            // --- BACK COVER ART ---
+            if (metadata.thumbnailBack != null || game.coverBackUrl != null || coverBackOptions.isNotEmpty()) {
+                item {
+                    ImageGalleryCard(
+                        title = "Back Cover",
+                        existingImage = game.coverBackUrl,
+                        selectedImage = selectedCoverBackUrl,
+                        onImageSelected = { selectedCoverBackUrl = it },
+                        options = coverBackOptions
+                    )
+                }
+            }
+
+            // --- CARTRIDGE ART ---
+            if (metadata.cartridgeImage != null || game.cartridgeUrl != null || cartridgeOptions.isNotEmpty()) {
+                item {
+                    ImageGalleryCard(
+                        title = "Cartridge",
+                        existingImage = game.cartridgeUrl,
+                        selectedImage = selectedCartridgeUrl,
+                        onImageSelected = { selectedCartridgeUrl = it },
+                        options = cartridgeOptions
+                    )
                 }
             }
 
@@ -257,7 +218,9 @@ fun ScrapeResultScreen(
                                 publisher.ifBlank { null },
                                 developer.ifBlank { null },
                                 region.ifBlank { null },
-                                selectedCoverUrl
+                                selectedCoverFrontUrl,
+                                selectedCoverBackUrl,
+                                selectedCartridgeUrl
                             )
                         },
                         modifier = Modifier.weight(1f).height(50.dp)
@@ -265,6 +228,93 @@ fun ScrapeResultScreen(
                         Icon(Icons.Default.Check, contentDescription = null)
                         Spacer(modifier = Modifier.width(4.dp))
                         Text("Accept")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ImageGalleryCard(
+    title: String,
+    existingImage: String?,
+    selectedImage: String?,
+    onImageSelected: (String?) -> Unit,
+    options: List<String>
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                existingImage?.let { img ->
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .aspectRatio(1f)
+                            .clip(MaterialTheme.shapes.medium)
+                            .background(
+                                if (selectedImage == img) MaterialTheme.colorScheme.primaryContainer
+                                else MaterialTheme.colorScheme.surface
+                            )
+                            .clickable { onImageSelected(img) }
+                            .padding(4.dp)
+                    ) {
+                        AsyncImage(
+                            model = img,
+                            contentDescription = "Existing $title",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Fit
+                        )
+                        Text(
+                            "Existing",
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.6f))
+                                .padding(horizontal = 4.dp),
+                            color = androidx.compose.ui.graphics.Color.White
+                        )
+                    }
+                }
+
+                options.forEach { scrapedImage ->
+                    if (scrapedImage.isNotBlank()) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .aspectRatio(1f)
+                                .clip(MaterialTheme.shapes.medium)
+                                .background(
+                                    if (selectedImage == scrapedImage) MaterialTheme.colorScheme.primaryContainer
+                                    else MaterialTheme.colorScheme.surface
+                                )
+                                .clickable { onImageSelected(scrapedImage) }
+                                .padding(4.dp)
+                        ) {
+                            AsyncImage(
+                                model = scrapedImage,
+                                contentDescription = "Scraped $title",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Fit
+                            )
+                            Text(
+                                "Scraped",
+                                style = MaterialTheme.typography.labelSmall,
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.6f))
+                                    .padding(horizontal = 4.dp),
+                                color = androidx.compose.ui.graphics.Color.White
+                            )
+                        }
                     }
                 }
             }

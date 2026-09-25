@@ -31,7 +31,7 @@ import com.swordfish.lemuroid.lib.library.db.entity.GameCheatEntity
 
 @Database(
     entities = [Game::class, DataFile::class, GameCheatEntity::class],
-    version = 13,
+    version = 14,
     exportSchema = true,
 )
 abstract class RetrogradeDatabase : RoomDatabase() {

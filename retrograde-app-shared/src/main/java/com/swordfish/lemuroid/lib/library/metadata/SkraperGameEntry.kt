@@ -8,6 +8,8 @@ data class SkraperGameEntry(
     val description: String? = null,
     val releaseDate: String? = null,
     val coverFrontPath: String? = null,
+    val coverBackPath: String? = null,
+    val cartridgeImagePath: String? = null,
     val manualPath: String? = null,
     val genre: String? = null
 )

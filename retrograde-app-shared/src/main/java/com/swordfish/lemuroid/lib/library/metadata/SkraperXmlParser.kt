@@ -44,6 +44,9 @@ class SkraperXmlParser {
         var currentManual: String? = null
         var currentGenre: String? = null
         var currentReleaseDate: String? = null
+        var currentCoverFront: String? = null
+        var currentCoverBack: String? = null
+        var currentCartridge: String? = null
 
         while (eventType != XmlPullParser.END_DOCUMENT) {
             if (eventType == XmlPullParser.START_TAG) {
@@ -57,6 +60,9 @@ class SkraperXmlParser {
                         currentManual = null
                         currentGenre = null
                         currentReleaseDate = null
+                        currentCoverFront = null
+                        currentCoverBack = null
+                        currentCartridge = null
                     }
                     "title" -> currentTitle = parser.nextText().trim()
                     "applicationpath" -> currentAppPath = parser.nextText().trim()
@@ -65,9 +71,10 @@ class SkraperXmlParser {
                     "notes" -> currentNotes = parser.nextText().trim()
                     "manualpath" -> currentManual = parser.nextText().trim()
                     "genre" -> currentGenre = parser.nextText().trim()
-                    "releasedate" -> {
-                        currentReleaseDate = parser.nextText().trim()
-                    }
+                    "releasedate" -> currentReleaseDate = parser.nextText().trim()
+                    "boxfront" -> currentCoverFront = parser.nextText().trim()
+                    "boxback" -> currentCoverBack = parser.nextText().trim()
+                    "cartridge" -> currentCartridge = parser.nextText().trim()
                 }
             } else if (eventType == XmlPullParser.END_TAG && parser.name.lowercase() == "game") {
                 if (!currentTitle.isNullOrEmpty() || !currentAppPath.isNullOrEmpty()) {
@@ -80,6 +87,9 @@ class SkraperXmlParser {
                             publisher = currentPub?.ifBlank { null },
                             description = currentNotes?.ifBlank { null },
                             releaseDate = formatReleaseDate(currentReleaseDate),
+                            coverFrontPath = currentCoverFront?.ifBlank { null },
+                            coverBackPath = currentCoverBack?.ifBlank { null },
+                            cartridgeImagePath = currentCartridge?.ifBlank { null },
                             manualPath = currentManual?.ifBlank { null },
                             genre = currentGenre?.ifBlank { null }
                         )
@@ -103,6 +113,8 @@ class SkraperXmlParser {
         var currentPub: String? = null
         var currentRelease: String? = null
         var currentImage: String? = null
+        var currentImageBack: String? = null
+        var currentImageCartridge: String? = null
         var currentManual: String? = null
         var currentGenre: String? = null
 
@@ -117,6 +129,8 @@ class SkraperXmlParser {
                         currentPub = null
                         currentRelease = null
                         currentImage = null
+                        currentImageBack = null
+                        currentImageCartridge = null
                         currentManual = null
                         currentGenre = null
                     }
@@ -125,16 +139,16 @@ class SkraperXmlParser {
                     "desc" -> currentDesc = parser.nextText().trim()
                     "developer" -> currentDev = parser.nextText().trim()
                     "publisher" -> currentPub = parser.nextText().trim()
-                    "releasedate", "date" -> {
-                        currentRelease = parser.nextText().trim()
-                    }
+                    "releasedate", "date" -> currentRelease = parser.nextText().trim()
                     "image", "box" -> currentImage = currentImage ?: parser.nextText().trim()
+                    "imageback", "boxback" -> currentImageBack = currentImageBack ?: parser.nextText().trim()
+                    "imagecartridge", "cartridge" -> currentImageCartridge = currentImageCartridge ?: parser.nextText().trim()
                     "manual" -> currentManual = parser.nextText().trim()
                     "genre" -> currentGenre = parser.nextText().trim()
                 }
             } else if (eventType == XmlPullParser.END_TAG && parser.name.lowercase() == "game") {
                 val romName = currentPath?.substringAfterLast('/')
-                Log.d("SkraperXmlParser", "EmulationStation: Game '${currentTitle}' found image: $currentImage")
+                Log.d("SkraperXmlParser", "EmulationStation: Game '${currentTitle}' found images - front: $currentImage, back: $currentImageBack, cartridge: $currentImageCartridge")
                 entries.add(
                     SkraperGameEntry(
                         title = currentTitle ?: romName ?: "Unknown",
@@ -144,6 +158,8 @@ class SkraperXmlParser {
                         description = currentDesc?.ifBlank { null },
                         releaseDate = formatReleaseDate(currentRelease),
                         coverFrontPath = currentImage?.ifBlank { null },
+                        coverBackPath = currentImageBack?.ifBlank { null },
+                        cartridgeImagePath = currentImageCartridge?.ifBlank { null },
                         manualPath = currentManual?.ifBlank { null },
                         genre = currentGenre?.ifBlank { null }
                     )

@@ -70,14 +70,16 @@ fun GameInfoScreen(
             game = game,
             metadata = pendingMetadata,
             onDismiss = { viewModel.clearPendingMetadata() },
-            onAccept = { title, releaseDate, publisher, developer, region, coverUrl ->
+            onAccept = { title, releaseDate, publisher, developer, region, coverFrontUrl, coverBackUrl, cartridgeUrl ->
                 viewModel.applyCustomScrapedMetadata(
                     title = title,
                     releaseDate = releaseDate,
                     publisher = publisher,
                     developer = developer,
                     region = region,
-                    coverUrl = coverUrl
+                    coverFrontUrl = coverFrontUrl,
+                    coverBackUrl = coverBackUrl,
+                    cartridgeUrl = cartridgeUrl
                 )
             }
         )
