@@ -7,6 +7,7 @@ import android.graphics.Rect
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import android.os.ParcelFileDescriptor
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -79,19 +80,35 @@ class PdfManualProcessor(private val context: Context) {
         aspectRatioThreshold: Float = 1.5f,
         quality: Int = 80
     ): List<ManualPageInfo> = withContext(Dispatchers.IO) {
+        Log.d("PdfManualProcessor", "processPdf START: gameId=$gameId, pdfFile=${pdfFile.absolutePath}, exists=${pdfFile.exists()}, size=${pdfFile.length()}")
+        
         val existing = getExistingPages(gameId)
-        if (existing.isNotEmpty()) return@withContext existing
+        if (existing.isNotEmpty()) {
+            Log.d("PdfManualProcessor", "processPdf: Using existing cached pages, count=${existing.size}")
+            return@withContext existing
+        }
 
-        val fileDescriptor = ParcelFileDescriptor.open(pdfFile, ParcelFileDescriptor.MODE_READ_ONLY)
-            ?: return@withContext emptyList()
+        if (!pdfFile.exists()) {
+            Log.e("PdfManualProcessor", "processPdf: PDF file does not exist: ${pdfFile.absolutePath}")
+            return@withContext emptyList()
+        }
 
-        return@withContext renderPdfFileDescriptor(
+        val fileDescriptor = try {
+            ParcelFileDescriptor.open(pdfFile, ParcelFileDescriptor.MODE_READ_ONLY)
+        } catch (e: Exception) {
+            Log.e("PdfManualProcessor", "processPdf: Error opening ParcelFileDescriptor", e)
+            null
+        } ?: return@withContext emptyList()
+
+        val result = renderPdfFileDescriptor(
             fileDescriptor = fileDescriptor,
             gameId = gameId,
             targetHeight = targetHeight,
             aspectRatioThreshold = aspectRatioThreshold,
             quality = quality
         )
+        Log.d("PdfManualProcessor", "processPdf END: gameId=$gameId, pages loaded=${result.size}")
+        return@withContext result
     }
 
     private fun renderPdfFileDescriptor(
@@ -104,19 +121,24 @@ class PdfManualProcessor(private val context: Context) {
         val outputDir = File(context.filesDir, "manuals/$gameId").apply {
             if (!exists()) mkdirs()
         }
+        Log.d("PdfManualProcessor", "renderPdfFileDescriptor: outputDir=${outputDir.absolutePath}, created=${outputDir.exists()}")
 
         val pdfRenderer = try {
             PdfRenderer(fileDescriptor)
         } catch (e: Exception) {
+            Log.e("PdfManualProcessor", "renderPdfFileDescriptor: Error creating PdfRenderer", e)
             fileDescriptor.close()
             return emptyList()
         }
+
+        Log.d("PdfManualProcessor", "renderPdfFileDescriptor: PDF opened, pageCount=${pdfRenderer.pageCount}")
 
         val pagesInfo = mutableListOf<ManualPageInfo>()
         var pageIndexCounter = 0
 
         try {
             for (i in 0 until pdfRenderer.pageCount) {
+                Log.d("PdfManualProcessor", "renderPdfFileDescriptor: Processing page $i of ${pdfRenderer.pageCount}")
                 val page = pdfRenderer.openPage(i)
 
                 val originalWidth = page.width
@@ -125,6 +147,7 @@ class PdfManualProcessor(private val context: Context) {
 
                 if (aspectRatio > aspectRatioThreshold) {
                     // --- DOUBLE-PAGE SPREAD DETECTED: SPLIT IN HALF ---
+                    Log.d("PdfManualProcessor", "renderPdfFileDescriptor: Page $i is double-spread (aspect=${String.format("%.2f", aspectRatio)}), splitting")
                     val singlePageTargetWidth = ((targetHeight * (aspectRatio / 2f))).toInt()
                     val renderWidth = singlePageTargetWidth * 2
 
@@ -138,14 +161,14 @@ class PdfManualProcessor(private val context: Context) {
 
                     // Left Page (Page N)
                     val leftBitmap = cropBitmap(fullBitmap, 0, 0, singlePageTargetWidth, targetHeight)
-                    val leftFile = File(outputDir, "page_${pageIndexCounter.padStart(3)}.webp")
+                    val leftFile = File(outputDir, "page_${pageIndexCounter.toString().padStart(3, '0')}.webp")
                     saveCompressedBitmap(leftBitmap, leftFile, quality)
                     pagesInfo.add(ManualPageInfo(pageIndexCounter++, leftFile.absolutePath, singlePageTargetWidth, targetHeight))
                     leftBitmap.recycle()
 
                     // Right Page (Page N+1)
                     val rightBitmap = cropBitmap(fullBitmap, singlePageTargetWidth, 0, singlePageTargetWidth, targetHeight)
-                    val rightFile = File(outputDir, "page_${pageIndexCounter.padStart(3)}.webp")
+                    val rightFile = File(outputDir, "page_${pageIndexCounter.toString().padStart(3, '0')}.webp")
                     saveCompressedBitmap(rightBitmap, rightFile, quality)
                     pagesInfo.add(ManualPageInfo(pageIndexCounter++, rightFile.absolutePath, singlePageTargetWidth, targetHeight))
                     rightBitmap.recycle()
@@ -163,7 +186,7 @@ class PdfManualProcessor(private val context: Context) {
 
                     page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
 
-                    val pageFile = File(outputDir, "page_${pageIndexCounter.padStart(3)}.webp")
+                    val pageFile = File(outputDir, "page_${pageIndexCounter.toString().padStart(3, '0')}.webp")
                     saveCompressedBitmap(bitmap, pageFile, quality)
                     pagesInfo.add(ManualPageInfo(pageIndexCounter++, pageFile.absolutePath, targetWidth, targetHeight))
                     bitmap.recycle()

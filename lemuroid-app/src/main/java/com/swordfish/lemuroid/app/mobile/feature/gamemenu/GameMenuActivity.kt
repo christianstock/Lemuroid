@@ -51,6 +51,8 @@ import com.swordfish.lemuroid.app.shared.game.skins.ui.GbSkinSelectionScreen
 import com.swordfish.lemuroid.app.shared.game.skins.ui.GbaSkinSelectionScreen
 import com.swordfish.lemuroid.app.shared.game.skins.ui.GbcSkinSelectionScreen
 import com.swordfish.lemuroid.app.shared.cheats.ui.CheatMenuScreen
+import com.swordfish.lemuroid.app.shared.manuals.PdfManualProcessor
+import com.swordfish.lemuroid.app.shared.manuals.ui.GameManualViewerOverlay
 import com.swordfish.lemuroid.app.mobile.shared.compose.ui.AppTheme
 import com.swordfish.lemuroid.app.shared.GameMenuContract
 import com.swordfish.lemuroid.app.shared.cheats.CheatManager
@@ -351,8 +353,56 @@ class GameMenuActivity : RetrogradeComponentActivity() {
                             }
                         }
                         composable(GameMenuRoute.MANUAL) {
-                            Box(modifier = Modifier.fillMaxSize()) {
-                                Text("Manual Viewer")
+                            val game = gameMenuRequest.game
+                            android.util.Log.d("ManualViewer", "MANUAL composable: game.manualUrl=${game.manualUrl}")
+                            
+                            if (game.manualUrl != null) {
+                                val processor = remember { PdfManualProcessor(applicationContext) }
+                                val manualPages = remember { androidx.compose.runtime.mutableStateOf(emptyList<com.swordfish.lemuroid.app.shared.manuals.ManualPageInfo>()) }
+                                val isLoading = remember { androidx.compose.runtime.mutableStateOf(true) }
+
+                                androidx.compose.runtime.LaunchedEffect(game.manualUrl) {
+                                    try {
+                                        android.util.Log.d("ManualViewer", "LaunchedEffect START: manualUrl=${game.manualUrl}")
+                                        val pdfFile = java.io.File(game.manualUrl!!)
+                                        android.util.Log.d("ManualViewer", "LaunchedEffect: pdfFile.path=${pdfFile.absolutePath}, exists=${pdfFile.exists()}, size=${pdfFile.length()}")
+                                        
+                                        if (pdfFile.exists()) {
+                                            android.util.Log.d("ManualViewer", "LaunchedEffect: Starting PDF processing...")
+                                            val pages = processor.processPdf(pdfFile, "game_${game.id}")
+                                            android.util.Log.d("ManualViewer", "LaunchedEffect: processPdf returned ${pages.size} pages")
+                                            manualPages.value = pages
+                                        } else {
+                                            android.util.Log.e("ManualViewer", "PDF file not found: ${game.manualUrl}")
+                                        }
+                                    } catch (e: Exception) {
+                                        android.util.Log.e("ManualViewer", "Error loading manual: ${e.message}", e)
+                                    } finally {
+                                        isLoading.value = false
+                                    }
+                                }
+
+                                if (isLoading.value) {
+                                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
+                                        androidx.compose.material3.CircularProgressIndicator()
+                                    }
+                                } else if (manualPages.value.isNotEmpty()) {
+                                    android.util.Log.d("ManualViewer", "Rendering GameManualViewerOverlay with ${manualPages.value.size} pages")
+                                    GameManualViewerOverlay(
+                                        pages = manualPages.value,
+                                        isVisible = true,
+                                        onDismiss = { navController.popBackStack() }
+                                    )
+                                } else {
+                                    android.util.Log.d("ManualViewer", "No manual pages loaded")
+                                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
+                                        androidx.compose.material3.Text("No manual pages could be loaded")
+                                    }
+                                }
+                            } else {
+                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
+                                    androidx.compose.material3.Text("No manual available")
+                                }
                             }
                         }
                     }

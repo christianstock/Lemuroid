@@ -66,7 +66,7 @@ enum class GameMenuRoute(
 
     companion object {
         fun findByRoute(route: String): GameMenuRoute {
-            return values().first { it.route == route }
+            return values().firstOrNull { it.route == route } ?: HOME
         }
     }
 }
