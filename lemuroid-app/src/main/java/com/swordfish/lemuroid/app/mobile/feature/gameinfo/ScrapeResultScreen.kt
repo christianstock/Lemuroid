@@ -165,12 +165,31 @@ fun ScrapeResultScreen(
                             val scrapedManual = metadata.manualUrl != null || manualOptions.isNotEmpty()
                             
                             if (existingManual || scrapedManual) {
-                                Text(
-                                    "✓ Detected",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    fontWeight = FontWeight.Bold
-                                )
+                                val manualUrl = selectedManualUrl ?: metadata.manualUrl ?: game.manualUrl
+                                android.util.Log.d("ScrapeResult", "Counting PDF pages for: $manualUrl")
+                                val pageCount = try {
+                                    countPdfPages(manualUrl)
+                                } catch (e: Exception) {
+                                    android.util.Log.e("ScrapeResult", "Error counting pages: ${e.message}")
+                                    0
+                                }
+                                android.util.Log.d("ScrapeResult", "Page count: $pageCount")
+                                
+                                if (pageCount > 0) {
+                                    Text(
+                                        "✓ $pageCount pages",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                } else {
+                                    Text(
+                                        "✓ Detected",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             } else {
                                 Text(
                                     "No manual found",
@@ -440,3 +459,47 @@ private fun isValidImageUri(uri: String?): Boolean {
 }
 
 private fun String?.isNull_or_Empty(): Boolean = this.isNullOrEmpty()
+
+private fun countPdfPages(uri: String?): Int {
+    if (uri == null || uri.isBlank()) return 0
+    
+    return try {
+        when {
+            uri.startsWith("file://") -> {
+                val filePath = uri.removePrefix("file://")
+                val file = java.io.File(filePath)
+                if (!file.exists()) return 0
+                countPdfPagesFromFile(file)
+            }
+            uri.startsWith("content://") -> {
+                // For content URIs, we can't easily count pages without context
+                // Return 0 to show "Detected" instead
+                0
+            }
+            uri.startsWith("/") -> {
+                // Direct file path
+                val file = java.io.File(uri)
+                if (!file.exists()) return 0
+                countPdfPagesFromFile(file)
+            }
+            else -> 0
+        }
+    } catch (e: Exception) {
+        android.util.Log.e("ScrapeResult", "Error counting PDF pages: ${e.message}")
+        0
+    }
+}
+
+private fun countPdfPagesFromFile(file: java.io.File): Int {
+    return try {
+        val fileDescriptor = android.os.ParcelFileDescriptor.open(file, android.os.ParcelFileDescriptor.MODE_READ_ONLY)
+        val pdfRenderer = android.graphics.pdf.PdfRenderer(fileDescriptor)
+        val pageCount = pdfRenderer.pageCount
+        pdfRenderer.close()
+        fileDescriptor.close()
+        pageCount
+    } catch (e: Exception) {
+        android.util.Log.e("ScrapeResult", "Error reading PDF file: ${e.message}")
+        0
+    }
+}

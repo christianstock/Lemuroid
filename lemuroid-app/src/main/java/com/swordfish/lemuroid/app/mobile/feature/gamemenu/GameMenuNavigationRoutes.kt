@@ -54,8 +54,12 @@ enum class GameMenuRoute(
         titleId = R.string.game_menu_skins,
         parent = HOME,
     ),
+    MANUAL(
+        route = "manual",
+        titleId = R.string.game_menu_title,
+        parent = HOME,
+    ),
     ;
-
     fun canGoBack(): Boolean {
         return parent != null
     }

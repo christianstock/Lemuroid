@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.PlayArrow
@@ -38,6 +39,7 @@ fun GameInfoScreen(
     onPlay: (Game) -> Unit,
     onRestart: (Game) -> Unit,
     onCheats: (Game) -> Unit = {},
+    onManual: (Game) -> Unit = {},
     modifier: Modifier = Modifier,
     onBack: () -> Unit = {}
 ) {
@@ -190,13 +192,28 @@ fun GameInfoScreen(
                                 }
                             }
                         }
-                        OutlinedButton(
-                            onClick = { onCheats(game) },
-                            modifier = Modifier.fillMaxWidth()
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Icon(Icons.Default.Star, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Cheats")
+                            OutlinedButton(
+                                onClick = { onCheats(game) },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.Default.Star, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Cheats")
+                            }
+                            if (game.manualUrl != null) {
+                                OutlinedButton(
+                                    onClick = { onManual(game) },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(Icons.Default.Description, contentDescription = null)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Manual")
+                                }
+                            }
                         }
                     }
                 }

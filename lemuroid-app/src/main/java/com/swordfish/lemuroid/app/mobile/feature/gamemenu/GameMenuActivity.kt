@@ -350,6 +350,11 @@ class GameMenuActivity : RetrogradeComponentActivity() {
                                 }
                             }
                         }
+                        composable(GameMenuRoute.MANUAL) {
+                            Box(modifier = Modifier.fillMaxSize()) {
+                                Text("Manual Viewer")
+                            }
+                        }
                     }
                 }
             }

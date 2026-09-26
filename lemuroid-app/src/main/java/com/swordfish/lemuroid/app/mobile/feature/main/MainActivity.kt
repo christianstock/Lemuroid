@@ -400,6 +400,19 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
                                 intent.putExtra(GameMenuContract.EXTRA_SYSTEM_CORE_CONFIG, gameSystem.systemCoreConfigs.first())
                                 startActivity(intent)
                             },
+                            onManual = { game ->
+                                if (game.manualUrl != null) {
+                                    val intent = Intent(applicationContext, GameMenuActivity::class.java)
+                                    intent.putExtra("INITIAL_ROUTE", "manual")
+                                    intent.putExtra("IS_DIRECT_ACCESS", false)
+                                    intent.putExtra(GameMenuContract.EXTRA_GAME, game)
+                                    intent.putExtra(GameMenuContract.EXTRA_CORE_OPTIONS, CoreOptionsWrapper(emptyList()))
+                                    intent.putExtra(GameMenuContract.EXTRA_ADVANCED_CORE_OPTIONS, CoreOptionsWrapper(emptyList()))
+                                    val gameSystem = GameSystem.findById(game.systemId)
+                                    intent.putExtra(GameMenuContract.EXTRA_SYSTEM_CORE_CONFIG, gameSystem.systemCoreConfigs.first())
+                                    startActivity(intent)
+                                }
+                            },
                             modifier = Modifier.padding(padding),
                             onBack = { navController.popBackStack() }
                         )
