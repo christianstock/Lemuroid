@@ -177,8 +177,8 @@ class GameMenuActivity : RetrogradeComponentActivity() {
                             AnimatedContent(targetState = currentRoute.canGoBack() && !isDirectAccess, label = "Back") { canGoBack ->
                                 if (canGoBack) {
                                     IconButton(onClick = { 
-                                        android.util.Log.d("GameMenuActivity", "Back button pressed, route=$currentRoute, popping backstack")
-                                        navController.popBackStack()
+                                        android.util.Log.d("GameMenuActivity", "Back button pressed, route=$currentRoute")
+                                        onBackPressed()
                                     }) {
                                         Icon(
                                             Icons.AutoMirrored.Filled.ArrowBack,
@@ -357,7 +357,6 @@ class GameMenuActivity : RetrogradeComponentActivity() {
                         }
                         composable(GameMenuRoute.MANUAL) {
                             val game = gameMenuRequest.game
-                            android.util.Log.d("ManualViewer", "MANUAL composable: game.manualUrl=${game.manualUrl}")
                             
                             if (game.manualUrl != null) {
                                 val processor = remember { PdfManualProcessor(applicationContext) }
@@ -366,11 +365,7 @@ class GameMenuActivity : RetrogradeComponentActivity() {
 
                                 androidx.compose.runtime.LaunchedEffect(game.manualUrl) {
                                     try {
-                                        android.util.Log.d("ManualViewer", "LaunchedEffect START: manualUrl=${game.manualUrl}")
-                                        
-                                        android.util.Log.d("ManualViewer", "LaunchedEffect: Starting PDF processing with processPdfUri...")
                                         val pages = processor.processPdfUri(game.manualUrl!!, "game_${game.id}")
-                                        android.util.Log.d("ManualViewer", "LaunchedEffect: processPdfUri returned ${pages.size} pages")
                                         manualPages.value = pages
                                     } catch (e: Exception) {
                                         android.util.Log.e("ManualViewer", "Error loading manual: ${e.message}", e)
@@ -384,14 +379,14 @@ class GameMenuActivity : RetrogradeComponentActivity() {
                                         androidx.compose.material3.CircularProgressIndicator()
                                     }
                                 } else if (manualPages.value.isNotEmpty()) {
-                                    android.util.Log.d("ManualViewer", "Rendering GameManualViewerOverlay with ${manualPages.value.size} pages")
                                     GameManualViewerOverlay(
                                         pages = manualPages.value,
                                         isVisible = true,
-                                        onDismiss = { navController.popBackStack() }
+                                        onDismiss = { 
+                                            onBackPressedDispatcher.onBackPressed()
+                                        }
                                     )
                                 } else {
-                                    android.util.Log.d("ManualViewer", "No manual pages loaded")
                                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
                                         androidx.compose.material3.Text("No manual pages could be loaded")
                                     }

@@ -184,7 +184,7 @@ fun ScrapeResultScreen(
                                     )
                                 } else {
                                     Text(
-                                        "✓ Detected",
+                                        "✓ Will be processed",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.primary,
                                         fontWeight = FontWeight.Bold

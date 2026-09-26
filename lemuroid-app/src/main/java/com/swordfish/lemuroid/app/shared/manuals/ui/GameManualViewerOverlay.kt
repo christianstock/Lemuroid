@@ -48,6 +48,11 @@ fun GameManualViewerOverlay(
     ) {
         val pagerState = rememberPagerState(initialPage = 0, pageCount = { pages.size })
         var isZoomedIn by remember { mutableStateOf(false) }
+        
+        // Log page changes for debugging
+        androidx.compose.runtime.LaunchedEffect(pagerState.currentPage) {
+            android.util.Log.d("ManualViewer-Pager", "Page changed to ${pagerState.currentPage}")
+        }
 
         Surface(
             modifier = modifier.fillMaxSize(),
@@ -58,7 +63,7 @@ fun GameManualViewerOverlay(
                 // --- PAGER AREA ---
                 HorizontalPager(
                     state = pagerState,
-                    userScrollEnabled = !isZoomedIn, // Lock page swipes while zoomed into a page
+                    userScrollEnabled = true, // TEMP: Always enabled for testing
                     modifier = Modifier.fillMaxSize()
                 ) { pageIdx ->
                     ZoomableManualPage(
@@ -86,7 +91,12 @@ fun GameManualViewerOverlay(
                         fontWeight = FontWeight.Bold
                     )
 
-                    IconButton(onClick = onDismiss) {
+                    IconButton(
+                        onClick = {
+                            android.util.Log.d("ManualViewer-Close", "Close button clicked!")
+                            onDismiss()
+                        }
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Close Manual",
