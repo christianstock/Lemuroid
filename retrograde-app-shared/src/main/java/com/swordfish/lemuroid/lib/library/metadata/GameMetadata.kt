@@ -12,5 +12,6 @@ data class GameMetadata(
     val releaseDate: String?,
     val summary: String?,
     val country: String?,
+    val manualUrl: String? = null,
     val debugInfo: String? = null,
 )

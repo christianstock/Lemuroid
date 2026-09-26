@@ -95,4 +95,11 @@ object Migrations {
                 database.execSQL("ALTER TABLE games ADD COLUMN cartridgeUrl TEXT")
             }
         }
+
+    val VERSION_14_15: Migration =
+        object : Migration(14, 15) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE games ADD COLUMN manualUrl TEXT")
+            }
+        }
 }

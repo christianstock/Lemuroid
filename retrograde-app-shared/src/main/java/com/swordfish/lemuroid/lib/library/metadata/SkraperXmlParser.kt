@@ -74,7 +74,7 @@ class SkraperXmlParser {
                     "releasedate" -> currentReleaseDate = parser.nextText().trim()
                     "boxfront" -> currentCoverFront = parser.nextText().trim()
                     "boxback" -> currentCoverBack = parser.nextText().trim()
-                    "cartridge" -> currentCartridge = parser.nextText().trim()
+                    "cartridge", "support", "support2d", "cart2d", "cart3d" -> currentCartridge = currentCartridge ?: parser.nextText().trim()
                 }
             } else if (eventType == XmlPullParser.END_TAG && parser.name.lowercase() == "game") {
                 if (!currentTitle.isNullOrEmpty() || !currentAppPath.isNullOrEmpty()) {
@@ -142,8 +142,8 @@ class SkraperXmlParser {
                     "releasedate", "date" -> currentRelease = parser.nextText().trim()
                     "image", "box" -> currentImage = currentImage ?: parser.nextText().trim()
                     "imageback", "boxback" -> currentImageBack = currentImageBack ?: parser.nextText().trim()
-                    "imagecartridge", "cartridge" -> currentImageCartridge = currentImageCartridge ?: parser.nextText().trim()
-                    "manual" -> currentManual = parser.nextText().trim()
+                    "imagecartridge", "cartridge", "support", "support2d", "cart2d", "cart3d" -> currentImageCartridge = currentImageCartridge ?: parser.nextText().trim()
+                    "manual", "manualpath" -> currentManual = currentManual ?: parser.nextText().trim()
                     "genre" -> currentGenre = parser.nextText().trim()
                 }
             } else if (eventType == XmlPullParser.END_TAG && parser.name.lowercase() == "game") {

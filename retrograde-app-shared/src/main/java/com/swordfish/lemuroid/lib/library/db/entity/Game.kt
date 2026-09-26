@@ -52,6 +52,7 @@ data class Game(
     val releaseDate: String?,
     val summary: String?,
     val country: String?,
+    val manualUrl: String? = null,
     val lastIndexedAt: Long,
     val lastPlayedAt: Long? = null,
     val isFavorite: Boolean = false,

@@ -70,7 +70,7 @@ fun GameInfoScreen(
             game = game,
             metadata = pendingMetadata,
             onDismiss = { viewModel.clearPendingMetadata() },
-            onAccept = { title, releaseDate, publisher, developer, region, coverFrontUrl, coverBackUrl, cartridgeUrl ->
+            onAccept = { title, releaseDate, publisher, developer, region, coverFrontUrl, coverBackUrl, cartridgeUrl, manualUrl ->
                 viewModel.applyCustomScrapedMetadata(
                     title = title,
                     releaseDate = releaseDate,
@@ -79,7 +79,8 @@ fun GameInfoScreen(
                     region = region,
                     coverFrontUrl = coverFrontUrl,
                     coverBackUrl = coverBackUrl,
-                    cartridgeUrl = cartridgeUrl
+                    cartridgeUrl = cartridgeUrl,
+                    manualUrl = manualUrl
                 )
             }
         )
@@ -116,20 +117,12 @@ fun GameInfoScreen(
                 }
 
                 item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(0.6f)
-                            .aspectRatio(1f)
-                            .clip(MaterialTheme.shapes.medium)
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                    ) {
-                        LemuroidGameImage(
-                            game = game,
-                            modifier = Modifier.fillMaxSize(),
-                            applyAspectRatio = false,
-                            contentScale = ContentScale.Fit
-                        )
-                    }
+                    // Box Art Swiper (Front/Back)
+                    BoxArtSwiper(
+                        frontImageUrl = game.coverFrontUrl,
+                        backImageUrl = game.coverBackUrl,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
 
                 item {

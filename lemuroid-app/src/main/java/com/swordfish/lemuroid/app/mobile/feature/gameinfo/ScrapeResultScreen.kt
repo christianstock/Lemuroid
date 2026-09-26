@@ -2,8 +2,10 @@ package com.swordfish.lemuroid.app.mobile.feature.gameinfo
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
@@ -26,7 +28,7 @@ fun ScrapeResultScreen(
     game: Game,
     metadata: GameMetadata,
     onDismiss: () -> Unit,
-    onAccept: (title: String, releaseDate: String?, publisher: String?, developer: String?, region: String?, coverFrontUrl: String?, coverBackUrl: String?, cartridgeUrl: String?) -> Unit
+    onAccept: (title: String, releaseDate: String?, publisher: String?, developer: String?, region: String?, coverFrontUrl: String?, coverBackUrl: String?, cartridgeUrl: String?, manualUrl: String?) -> Unit
 ) {
     var title by remember { mutableStateOf(metadata.name ?: game.title) }
     var releaseDate by remember { mutableStateOf(metadata.releaseDate ?: game.releaseDate ?: "") }
@@ -36,12 +38,14 @@ fun ScrapeResultScreen(
     var selectedCoverFrontUrl by remember { mutableStateOf(metadata.thumbnail ?: game.coverFrontUrl) }
     var selectedCoverBackUrl by remember { mutableStateOf(metadata.thumbnailBack ?: game.coverBackUrl) }
     var selectedCartridgeUrl by remember { mutableStateOf(metadata.cartridgeImage ?: game.cartridgeUrl) }
+    var selectedManualUrl by remember { mutableStateOf(metadata.manualUrl ?: game.manualUrl) }
 
     // Parse metadata options from debugInfo
     val releaseDateOptions = remember { parseMetadataOptions(metadata.debugInfo, "dates") }
     val coverArtOptions = remember { parseMetadataOptions(metadata.debugInfo, "arts") }
     val coverBackOptions = remember { parseMetadataOptions(metadata.debugInfo, "backs") }
     val cartridgeOptions = remember { parseMetadataOptions(metadata.debugInfo, "carts") }
+    val manualOptions = remember { parseMetadataOptions(metadata.debugInfo, "manuals") }
     val developerOptions = remember { parseMetadataOptions(metadata.debugInfo, "devs") }
     val publisherOptions = remember { parseMetadataOptions(metadata.debugInfo, "pubs") }
     
@@ -50,6 +54,7 @@ fun ScrapeResultScreen(
         android.util.Log.d("ScrapeResult", "coverArtOptions parsed: $coverArtOptions")
         android.util.Log.d("ScrapeResult", "coverBackOptions parsed: $coverBackOptions")
         android.util.Log.d("ScrapeResult", "cartridgeOptions parsed: $cartridgeOptions")
+        android.util.Log.d("ScrapeResult", "manualOptions parsed: $manualOptions")
         android.util.Log.d("ScrapeResult", "releaseDateOptions parsed: $releaseDateOptions")
     }
 
@@ -73,7 +78,8 @@ fun ScrapeResultScreen(
                                 region.ifBlank { null },
                                 selectedCoverFrontUrl,
                                 selectedCoverBackUrl,
-                                selectedCartridgeUrl
+                                selectedCartridgeUrl,
+                                selectedManualUrl
                             )
                         }
                     ) {
@@ -136,6 +142,44 @@ fun ScrapeResultScreen(
                         onImageSelected = { selectedCartridgeUrl = it },
                         options = cartridgeOptions
                     )
+                }
+            }
+
+            // --- MANUAL ---
+            if (manualOptions.isNotEmpty() || metadata.manualUrl != null || game.manualUrl != null) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Manual PDF", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            
+                            val existingManual = game.manualUrl != null
+                            val scrapedManual = metadata.manualUrl != null || manualOptions.isNotEmpty()
+                            
+                            if (existingManual || scrapedManual) {
+                                Text(
+                                    "✓ Detected",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            } else {
+                                Text(
+                                    "No manual found",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
                 }
             }
 
@@ -220,7 +264,8 @@ fun ScrapeResultScreen(
                                 region.ifBlank { null },
                                 selectedCoverFrontUrl,
                                 selectedCoverBackUrl,
-                                selectedCartridgeUrl
+                                selectedCartridgeUrl,
+                                selectedManualUrl
                             )
                         },
                         modifier = Modifier.weight(1f).height(50.dp)
@@ -243,6 +288,8 @@ private fun ImageGalleryCard(
     onImageSelected: (String?) -> Unit,
     options: List<String>
 ) {
+    val validImages = options.filter { it.isNotBlank() && isValidImageUri(it) }
+    
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
@@ -251,62 +298,33 @@ private fun ImageGalleryCard(
             Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(8.dp))
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 existingImage?.let { img ->
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .aspectRatio(1f)
-                            .clip(MaterialTheme.shapes.medium)
-                            .background(
-                                if (selectedImage == img) MaterialTheme.colorScheme.primaryContainer
-                                else MaterialTheme.colorScheme.surface
-                            )
-                            .clickable { onImageSelected(img) }
-                            .padding(4.dp)
-                    ) {
-                        AsyncImage(
-                            model = img,
-                            contentDescription = "Existing $title",
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Fit
-                        )
-                        Text(
-                            "Existing",
-                            style = MaterialTheme.typography.labelSmall,
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.6f))
-                                .padding(horizontal = 4.dp),
-                            color = androidx.compose.ui.graphics.Color.White
-                        )
-                    }
-                }
-
-                options.forEach { scrapedImage ->
-                    if (scrapedImage.isNotBlank()) {
+                    if (isValidImageUri(img)) {
                         Box(
                             modifier = Modifier
-                                .weight(1f)
+                                .width(140.dp)
                                 .aspectRatio(1f)
                                 .clip(MaterialTheme.shapes.medium)
                                 .background(
-                                    if (selectedImage == scrapedImage) MaterialTheme.colorScheme.primaryContainer
+                                    if (selectedImage == img) MaterialTheme.colorScheme.primaryContainer
                                     else MaterialTheme.colorScheme.surface
                                 )
-                                .clickable { onImageSelected(scrapedImage) }
+                                .clickable { onImageSelected(img) }
                                 .padding(4.dp)
                         ) {
                             AsyncImage(
-                                model = scrapedImage,
-                                contentDescription = "Scraped $title",
+                                model = img,
+                                contentDescription = "Existing $title",
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Fit
                             )
                             Text(
-                                "Scraped",
+                                "Existing",
                                 style = MaterialTheme.typography.labelSmall,
                                 modifier = Modifier
                                     .align(Alignment.BottomCenter)
@@ -315,6 +333,37 @@ private fun ImageGalleryCard(
                                 color = androidx.compose.ui.graphics.Color.White
                             )
                         }
+                    }
+                }
+
+                validImages.forEach { scrapedImage ->
+                    Box(
+                        modifier = Modifier
+                            .width(140.dp)
+                            .aspectRatio(1f)
+                            .clip(MaterialTheme.shapes.medium)
+                            .background(
+                                if (selectedImage == scrapedImage) MaterialTheme.colorScheme.primaryContainer
+                                else MaterialTheme.colorScheme.surface
+                            )
+                            .clickable { onImageSelected(scrapedImage) }
+                            .padding(4.dp)
+                    ) {
+                        AsyncImage(
+                            model = scrapedImage,
+                            contentDescription = "Scraped $title",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Fit
+                        )
+                        Text(
+                            "Scraped",
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.6f))
+                                .padding(horizontal = 4.dp),
+                            color = androidx.compose.ui.graphics.Color.White
+                        )
                     }
                 }
             }
@@ -378,6 +427,16 @@ private fun parseMetadataOptions(debugInfo: String?, key: String): List<String> 
     val match = pattern.find(debugInfo) ?: return emptyList()
     val values = match.groupValues[1].split("||").filter { it.isNotEmpty() }
     return values
+}
+
+private fun isValidImageUri(uri: String?): Boolean {
+    if (uri == null || uri.isBlank()) return false
+    // Check for valid URI scheme - must be one of these
+    val validSchemes = listOf("http://", "https://", "file://", "content://")
+    if (!validSchemes.any { uri.startsWith(it) }) return false
+    // Valid image URIs should not contain multiple URLs separated by comma
+    // (commas in the URL itself are OK, but not as separators)
+    return !uri.contains(",http") && !uri.contains(",content") && !uri.contains(",file")
 }
 
 private fun String?.isNull_or_Empty(): Boolean = this.isNullOrEmpty()
