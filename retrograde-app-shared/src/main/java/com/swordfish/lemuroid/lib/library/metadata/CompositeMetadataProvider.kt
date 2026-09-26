@@ -56,7 +56,12 @@ class CompositeMetadataProvider(
             .filter { it.isNotBlank() }
             .distinct()
 
-        Log.d("CompositeMetadata", "Front arts: $allArts | Back arts: $allArtsBack | Cartridges: $allCarts")
+        // Combine manual options
+        val allManuals = (skraperOptions["manuals"].orEmpty() + libretroOptions["manuals"].orEmpty())
+            .filter { it.isNotBlank() }
+            .distinct()
+
+        Log.d("CompositeMetadata", "Front arts: $allArts | Back arts: $allArtsBack | Cartridges: $allCarts | Manuals: $allManuals")
 
         // Build debug OPTIONS string
         val mergedOptions = buildString {
@@ -65,6 +70,7 @@ class CompositeMetadataProvider(
             if (allArts.isNotEmpty()) append("arts:${allArts.joinToString("||")}|")
             if (allArtsBack.isNotEmpty()) append("backs:${allArtsBack.joinToString("||")}|")
             if (allCarts.isNotEmpty()) append("carts:${allCarts.joinToString("||")}|")
+            if (allManuals.isNotEmpty()) append("manuals:${allManuals.joinToString("||")}|")
             if (allDevs.isNotEmpty()) append("devs:${allDevs.joinToString("||")}|")
             if (allPubs.isNotEmpty()) append("pubs:${allPubs.joinToString("||")}")
         }.removeSuffix("|")
@@ -84,6 +90,7 @@ class CompositeMetadataProvider(
             thumbnail = allArts.firstOrNull() ?: skraperMetadata?.thumbnail ?: libretroMetadata?.thumbnail,
             thumbnailBack = allArtsBack.firstOrNull() ?: skraperMetadata?.thumbnailBack ?: libretroMetadata?.thumbnailBack,
             cartridgeImage = allCarts.firstOrNull() ?: skraperMetadata?.cartridgeImage ?: libretroMetadata?.cartridgeImage,
+            manualUrl = allManuals.firstOrNull() ?: skraperMetadata?.manualUrl ?: libretroMetadata?.manualUrl,
             releaseDate = allDates.firstOrNull()
                 ?: skraperMetadata?.releaseDate?.ifBlank { null }
                 ?: libretroMetadata?.releaseDate?.ifBlank { null },
@@ -110,6 +117,7 @@ class CompositeMetadataProvider(
         result["arts"] = mutableListOf()
         result["backs"] = mutableListOf()
         result["carts"] = mutableListOf()
+        result["manuals"] = mutableListOf()
 
         metadata.releaseDate?.takeIf { it.isNotBlank() }?.let { result["dates"]?.add(it) }
         metadata.developer?.takeIf { it.isNotBlank() }?.let { result["devs"]?.add(it) }
@@ -117,10 +125,11 @@ class CompositeMetadataProvider(
         metadata.thumbnail?.takeIf { isValidImageUri(it) }?.let { result["arts"]?.add(it) }
         metadata.thumbnailBack?.takeIf { isValidImageUri(it) }?.let { result["backs"]?.add(it) }
         metadata.cartridgeImage?.takeIf { isValidImageUri(it) }?.let { result["carts"]?.add(it) }
+        metadata.manualUrl?.takeIf { it.isNotBlank() }?.let { result["manuals"]?.add(it) }
 
         val debugInfo = metadata.debugInfo
         if (debugInfo != null && debugInfo.startsWith("OPTIONS|")) {
-            val keys = listOf("dates", "devs", "pubs", "arts", "backs", "carts")
+            val keys = listOf("dates", "devs", "pubs", "arts", "backs", "carts", "manuals")
             for (key in keys) {
                 // Match "key:" followed by anything that's not a single pipe (but allows ||)
                 val pattern = Regex("$key:([^|]*(?:\\|\\|[^|]*)*)")
@@ -131,6 +140,8 @@ class CompositeMetadataProvider(
                     if (key in listOf("arts", "backs", "carts")) {
                         // Filter dead URLs from image fields
                         result[key]?.addAll(values.filter { isValidImageUri(it) })
+                    } else if (key == "manuals") {
+                        result[key]?.addAll(values.filter { it.isNotBlank() })
                     } else {
                         result[key]?.addAll(values)
                     }

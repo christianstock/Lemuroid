@@ -43,6 +43,10 @@ import kotlinx.coroutines.flow.flatMapConcat
 import kotlinx.coroutines.flow.flatMapMerge
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import java.util.concurrent.ConcurrentHashMap
 
 class LemuroidLibrary(
     private val retrogradedb: RetrogradeDatabase,
@@ -51,8 +55,24 @@ class LemuroidLibrary(
     private val skraperMetadataProvider: Lazy<SkraperMetadataProvider>,
     private val biosManager: BiosManager,
 ) {
+    private val _systemProgress = MutableStateFlow<List<SystemScanProgress>>(emptyList())
+    val systemProgress: StateFlow<List<SystemScanProgress>> = _systemProgress.asStateFlow()
+
+    private val _totalGamesFound = MutableStateFlow(0)
+    val totalGamesFound: StateFlow<Int> = _totalGamesFound.asStateFlow()
+
+    private val _scanComplete = MutableStateFlow(false)
+    val scanComplete: StateFlow<Boolean> = _scanComplete.asStateFlow()
+
+    private val systemGamesCountMap = ConcurrentHashMap<String, Int>()
+
     suspend fun indexLibrary() {
         val startedAtMs = System.currentTimeMillis()
+
+        _systemProgress.value = emptyList()
+        _totalGamesFound.value = 0
+        _scanComplete.value = false
+        systemGamesCountMap.clear()
 
         try {
             // Clear Skraper cache to ensure fresh XML/DAT file scanning on rescan
@@ -62,6 +82,10 @@ class LemuroidLibrary(
             // Ignored
         } finally {
             cleanUp(startedAtMs)
+            _systemProgress.value = _systemProgress.value.map {
+                it.copy(isCurrentlyScanning = false, isComplete = true)
+            }
+            _scanComplete.value = true
         }
     }
 
@@ -96,7 +120,7 @@ class LemuroidLibrary(
 
         val existingEntries = entries.filterIsInstance<ScanEntry.GameFile>()
         if (existingEntries.isNotEmpty()) {
-            handleExistingEntries(existingEntries, startedAtMs)
+            handleExistingEntries(existingEntries, startedAtMs, provider, gameMetadata)
         }
 
         val newEntries =
@@ -124,17 +148,21 @@ class LemuroidLibrary(
         }
     }
 
-    private fun handleExistingEntries(
+    private suspend fun handleExistingEntries(
         entries: List<ScanEntry.GameFile>,
         startedAtMs: Long,
+        provider: StorageProvider,
+        gameMetadata: GameMetadataProvider,
     ) {
-        updateGames(entries, startedAtMs)
+        updateGames(entries, startedAtMs, provider, gameMetadata)
         updateDataFiles(entries, startedAtMs)
     }
 
-    private fun updateGames(
+    private suspend fun updateGames(
         entries: List<ScanEntry.GameFile>,
         startedAtMs: Long,
+        provider: StorageProvider,
+        gameMetadata: GameMetadataProvider,
     ) {
         val updatedGames =
             entries
@@ -143,13 +171,51 @@ class LemuroidLibrary(
                     // This self-heals cases where fileName was accidentally corrupted in the DB
                     // (e.g. set to a cleaned title instead of the real ROM filename).
                     // Zipped games are skipped: we cannot recover the inner filename here.
-                    val primaryName = storageFiles.primaryFile.name
+                    val primaryFile = storageFiles.primaryFile
+                    val primaryName = primaryFile.name
                     val correctedFileName = if (!primaryName.endsWith(".zip", ignoreCase = true)) {
                         primaryName
                     } else {
                         game.fileName
                     }
-                    game.copy(lastIndexedAt = startedAtMs, fileName = correctedFileName)
+
+                    val storageFile = safeStorageFile(provider, primaryFile)
+                    val metadata = if (storageFile != null) {
+                        runCatching { gameMetadata.retrieveMetadata(storageFile) { } }.getOrNull()
+                    } else null
+
+                    val updatedGame = if (metadata != null) {
+                        val newTitle = if (game.title.isNotBlank()) game.title else (metadata.name ?: game.title)
+                        val newDev = game.developer ?: metadata.developer
+                        val newPub = game.publisher ?: metadata.publisher
+                        val newDate = game.releaseDate ?: metadata.releaseDate
+                        val newCountry = game.country ?: metadata.country
+                        val newSummary = game.summary ?: metadata.summary
+                        val newCover = game.coverFrontUrl ?: metadata.thumbnail
+                        val newCoverBack = game.coverBackUrl ?: metadata.thumbnailBack
+                        val newCartridge = game.cartridgeUrl ?: metadata.cartridgeImage
+                        val newManual = game.manualUrl ?: metadata.manualUrl
+
+                        game.copy(
+                            title = newTitle,
+                            developer = newDev,
+                            publisher = newPub,
+                            releaseDate = newDate,
+                            country = newCountry,
+                            summary = newSummary,
+                            coverFrontUrl = newCover,
+                            coverBackUrl = newCoverBack,
+                            cartridgeUrl = newCartridge,
+                            manualUrl = newManual,
+                            lastIndexedAt = startedAtMs,
+                            fileName = correctedFileName
+                        )
+                    } else {
+                        game.copy(lastIndexedAt = startedAtMs, fileName = correctedFileName)
+                    }
+
+                    recordGameProgress(updatedGame)
+                    updatedGame
                 }
 
         retrogradedb.gameDao().update(updatedGames)
@@ -219,6 +285,44 @@ class LemuroidLibrary(
                 }
 
         retrogradedb.dataFileDao().insert(dataFiles)
+
+        games.forEach { recordGameProgress(it) }
+    }
+
+    private fun recordGameProgress(game: Game) {
+        val gameSystem = GameSystem.findById(game.systemId)
+        val systemName = gameSystem.libretroFullName
+
+        val currentCount = synchronized(systemGamesCountMap) {
+            val count = (systemGamesCountMap[systemName] ?: 0) + 1
+            systemGamesCountMap[systemName] = count
+            count
+        }
+
+        val currentList = _systemProgress.value.toMutableList()
+        val index = currentList.indexOfFirst { it.systemName == systemName }
+
+        if (index >= 0) {
+            currentList[index] = currentList[index].copy(
+                gamesFound = currentCount,
+                isCurrentlyScanning = true
+            )
+        } else {
+            val updated = currentList.map { it.copy(isCurrentlyScanning = false, isComplete = true) }.toMutableList()
+            updated.add(
+                SystemScanProgress(
+                    systemName = systemName,
+                    gamesFound = currentCount,
+                    isCurrentlyScanning = true,
+                    isComplete = false
+                )
+            )
+            currentList.clear()
+            currentList.addAll(updated)
+        }
+
+        _systemProgress.value = currentList
+        _totalGamesFound.value = systemGamesCountMap.values.sum()
     }
 
     private fun handleUnknownFiles(
@@ -376,7 +480,10 @@ class LemuroidLibrary(
                             releaseDate = newDate,
                             country = newCountry,
                             summary = newSummary,
-                            coverFrontUrl = newCover
+                            coverFrontUrl = newCover,
+                            coverBackUrl = game.coverBackUrl ?: metadata.thumbnailBack,
+                            cartridgeUrl = game.cartridgeUrl ?: metadata.cartridgeImage,
+                            manualUrl = game.manualUrl ?: metadata.manualUrl
                         )
                         if (updatedGame != game) {
                             updatedGames.add(updatedGame)

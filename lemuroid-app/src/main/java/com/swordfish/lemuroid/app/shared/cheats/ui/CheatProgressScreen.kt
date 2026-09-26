@@ -23,14 +23,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.swordfish.lemuroid.lib.library.SystemScanProgress
 import kotlinx.coroutines.flow.StateFlow
-
-data class SystemScanProgress(
-    val systemName: String,
-    val gamesFound: Int,
-    val isCurrentlyScanning: Boolean = false,
-    val isComplete: Boolean = false
-)
 
 @Composable
 fun CheatProgressScreen(

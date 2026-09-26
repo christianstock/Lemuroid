@@ -8,9 +8,10 @@ import com.fredporciuncula.flow.preferences.FlowSharedPreferences
 import com.swordfish.lemuroid.R
 import com.swordfish.lemuroid.app.shared.cheats.CheatDownloader
 import com.swordfish.lemuroid.app.shared.cheats.CheatManager
-import com.swordfish.lemuroid.app.shared.cheats.ui.SystemScanProgress
 import com.swordfish.lemuroid.app.shared.library.PendingOperationsMonitor
 import com.swordfish.lemuroid.app.shared.settings.SettingsInteractor
+import com.swordfish.lemuroid.lib.library.LemuroidLibrary
+import com.swordfish.lemuroid.lib.library.SystemScanProgress
 import com.swordfish.lemuroid.lib.savesync.SaveSyncManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,6 +30,7 @@ class SettingsViewModel(
     sharedPreferences: FlowSharedPreferences,
     private val cheatDownloader: CheatDownloader,
     private val cheatManager: CheatManager,
+    private val lemuroidLibrary: LemuroidLibrary,
 ) : ViewModel() {
     class Factory(
         private val context: Context,
@@ -37,6 +39,7 @@ class SettingsViewModel(
         private val sharedPreferences: FlowSharedPreferences,
         private val cheatDownloader: CheatDownloader,
         private val cheatManager: CheatManager,
+        private val lemuroidLibrary: LemuroidLibrary,
     ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             return SettingsViewModel(
@@ -46,6 +49,7 @@ class SettingsViewModel(
                 sharedPreferences,
                 cheatDownloader,
                 cheatManager,
+                lemuroidLibrary,
             ) as T
         }
     }
@@ -88,12 +92,22 @@ class SettingsViewModel(
         .flowOn(Dispatchers.IO)
         .stateIn(viewModelScope, SharingStarted.Lazily, State())
 
-    // Separate flows for system progress
+    // Separate flows for cheat system progress
     val systemScanProgress = cheatManager.systemProgress
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     val scanComplete = cheatManager.scanComplete
         .stateIn(viewModelScope, SharingStarted.Lazily, false)
+
+    // Separate flows for ROM scan system progress
+    val romSystemProgress = lemuroidLibrary.systemProgress
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    val romScanComplete = lemuroidLibrary.scanComplete
+        .stateIn(viewModelScope, SharingStarted.Lazily, false)
+
+    val romTotalGamesFound = lemuroidLibrary.totalGamesFound
+        .stateIn(viewModelScope, SharingStarted.Lazily, 0)
 
     fun changeLocalStorageFolder() {
         settingsInteractor.changeLocalStorageFolder()

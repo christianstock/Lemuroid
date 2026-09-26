@@ -31,7 +31,7 @@ import androidx.navigation.NavController
 import com.swordfish.lemuroid.R
 import com.swordfish.lemuroid.app.mobile.feature.main.MainRoute
 import com.swordfish.lemuroid.app.mobile.feature.main.navigateToRoute
-import com.swordfish.lemuroid.app.shared.cheats.ui.SystemScanProgress
+import com.swordfish.lemuroid.lib.library.SystemScanProgress
 import com.swordfish.lemuroid.app.shared.library.LibraryIndexScheduler
 import com.swordfish.lemuroid.app.utils.android.settings.LemuroidCardSettingsGroup
 import com.swordfish.lemuroid.app.utils.android.settings.LemuroidSettingsList
@@ -75,12 +75,30 @@ fun SettingsScreen(
             .collectAsState(false)
             .value
 
+    val romSystemProgress =
+        viewModel.romSystemProgress
+            .collectAsState(emptyList())
+            .value
+
+    val romScanComplete =
+        viewModel.romScanComplete
+            .collectAsState(false)
+            .value
+
+    val romTotalGames =
+        viewModel.romTotalGamesFound
+            .collectAsState(0)
+            .value
+
     LemuroidSettingsPage(modifier = modifier) {
         RomsSettings(
             state = state,
             onChangeFolder = { viewModel.changeLocalStorageFolder() },
             indexingInProgress = indexingInProgress,
             scanInProgress = scanInProgress,
+            romSystemProgress = romSystemProgress,
+            romScanComplete = romScanComplete,
+            romTotalGames = romTotalGames,
         )
         CheatsSettings(
             state = state,
@@ -342,6 +360,9 @@ private fun RomsSettings(
     onChangeFolder: () -> Unit,
     indexingInProgress: Boolean,
     scanInProgress: Boolean,
+    romSystemProgress: List<SystemScanProgress> = emptyList(),
+    romScanComplete: Boolean = false,
+    romTotalGames: Int = 0,
 ) {
     val context = LocalContext.current
 
@@ -355,6 +376,8 @@ private fun RomsSettings(
             }.getOrNull() ?: emptyDirectory
         }
 
+    val currentSystem = romSystemProgress.find { it.isCurrentlyScanning }
+
     LemuroidCardSettingsGroup(title = { Text(text = stringResource(id = R.string.roms)) }) {
         LemuroidSettingsMenuLink(
             title = { Text(text = stringResource(id = R.string.directory)) },
@@ -362,7 +385,7 @@ private fun RomsSettings(
             onClick = { onChangeFolder() },
             enabled = !indexingInProgress,
         )
-        if (scanInProgress) {
+        if (scanInProgress || indexingInProgress) {
             LemuroidSettingsMenuLink(
                 title = { Text(text = stringResource(id = R.string.stop)) },
                 onClick = { LibraryIndexScheduler.cancelLibrarySync(context) },
@@ -373,6 +396,91 @@ private fun RomsSettings(
                 onClick = { LibraryIndexScheduler.scheduleLibrarySync(context) },
                 enabled = !indexingInProgress,
             )
+        }
+
+        // Show active scanning card with current system progress
+        if (indexingInProgress && currentSystem != null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f),
+                        shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
+                    )
+                    .padding(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Scanning ROMs",
+                            fontSize = 10.sp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = currentSystem.systemName,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "${currentSystem.gamesFound} game${if (currentSystem.gamesFound != 1) "s" else ""} found",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        )
+                    }
+                    CircularProgressIndicator(
+                        modifier = Modifier.align(Alignment.CenterVertically),
+                        strokeWidth = 2.dp,
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
+        if (indexingInProgress) {
+            LinearProgressIndicator(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            )
+        }
+
+        // Show final summary when ROM scan is complete
+        if (romScanComplete && romSystemProgress.isNotEmpty() && !indexingInProgress) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp)
+            ) {
+                Text(
+                    text = "ROM scan complete ($romTotalGames games total):",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                val systemSummary = romSystemProgress
+                    .filter { it.gamesFound > 0 }
+                    .sortedBy { it.systemName }
+
+                systemSummary.forEach { system ->
+                    Text(
+                        text = "${system.systemName} - ${system.gamesFound} game${if (system.gamesFound != 1) "s" else ""}",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+                        modifier = Modifier.padding(start = 8.dp, top = 4.dp)
+                    )
+                }
+            }
         }
     }
 }

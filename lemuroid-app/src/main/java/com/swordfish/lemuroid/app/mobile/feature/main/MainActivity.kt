@@ -36,6 +36,7 @@ import com.swordfish.lemuroid.app.mobile.feature.gamemenu.GameMenuActivity
 import com.swordfish.lemuroid.app.mobile.feature.gamemenu.GameMenuRoute
 import com.swordfish.lemuroid.app.mobile.feature.home.HomeScreen
 import com.swordfish.lemuroid.app.mobile.feature.home.HomeViewModel
+import com.swordfish.lemuroid.lib.library.LemuroidLibrary
 import com.swordfish.lemuroid.lib.library.metadata.GameMetadataProvider
 import com.swordfish.lemuroid.lib.storage.StorageProviderRegistry
 import com.swordfish.lemuroid.app.mobile.feature.search.SearchScreen
@@ -118,6 +119,9 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
 
     @Inject
     lateinit var cheatManager: CheatManager
+
+    @Inject
+    lateinit var lemuroidLibrary: LemuroidLibrary
 
     @Inject
     lateinit var gameMetadataProvider: GameMetadataProvider
@@ -305,6 +309,7 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
                                             ),
                                             cheatDownloader,
                                             cheatManager,
+                                            lemuroidLibrary,
                                         ),
                                 ),
                             navController = navController,

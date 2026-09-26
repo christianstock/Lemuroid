@@ -69,9 +69,13 @@ android {
 
     packagingOptions {
         jniLibs {
-            // Stripping created some issues with some libretro cores such as ppsspp
-            keepDebugSymbols += setOf("*/*/*_libretro_android.so")
+            // Stripping created some issues with libretrodroid and androidx graphics
+            // Disable stripping for all .so files - let them keep their original format
             useLegacyPackaging = true
+            // Also explicitly keep debug symbols for common problem libraries
+            keepDebugSymbols += setOf(
+                "**/*.so"  // Keep all .so files with debug symbols
+            )
         }
         resources {
             excludes += setOf("META-INF/DEPENDENCIES", "META-INF/library_release.kotlin_module")

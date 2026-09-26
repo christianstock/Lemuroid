@@ -3,7 +3,7 @@ package com.swordfish.lemuroid.app.shared.cheats
 // Manages cheat database operations and LibRetro integration
 import com.swordfish.lemuroid.app.shared.cheats.parser.CheatParser
 import com.swordfish.lemuroid.app.shared.cheats.parser.CwCheatParser
-import com.swordfish.lemuroid.app.shared.cheats.ui.SystemScanProgress
+import com.swordfish.lemuroid.lib.library.SystemScanProgress
 import com.swordfish.lemuroid.lib.library.GameSystem
 import com.swordfish.lemuroid.lib.library.db.RetrogradeDatabase
 import com.swordfish.lemuroid.lib.library.db.dao.GameCheatDao
