@@ -20,6 +20,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,9 +49,10 @@ fun GameManualViewerOverlay(
     ) {
         val pagerState = rememberPagerState(initialPage = 0, pageCount = { pages.size })
         var isZoomedIn by remember { mutableStateOf(false) }
-        
-        // Log page changes for debugging
-        androidx.compose.runtime.LaunchedEffect(pagerState.currentPage) {
+
+        // Automatically reset zoom state when switching pages
+        LaunchedEffect(pagerState.currentPage) {
+            isZoomedIn = false
             android.util.Log.d("ManualViewer-Pager", "Page changed to ${pagerState.currentPage}")
         }
 
@@ -63,7 +65,7 @@ fun GameManualViewerOverlay(
                 // --- PAGER AREA ---
                 HorizontalPager(
                     state = pagerState,
-                    userScrollEnabled = true, // TEMP: Always enabled for testing
+                    userScrollEnabled = !isZoomedIn, // Enable page swipe ONLY when unzoomed
                     modifier = Modifier.fillMaxSize()
                 ) { pageIdx ->
                     ZoomableManualPage(
