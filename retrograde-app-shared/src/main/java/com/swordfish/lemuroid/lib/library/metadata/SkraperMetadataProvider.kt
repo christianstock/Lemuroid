@@ -74,7 +74,9 @@ class SkraperMetadataProvider(
         Log.d("SkraperMetadata", "Final thumbnails (front) after filtering: $allThumbnailsFront")
         Log.d("SkraperMetadata", "Final thumbnails (back) after filtering: $allThumbnailsBack")
         Log.d("SkraperMetadata", "Final cartridges after filtering: $allCartridges")
-        Log.d("SkraperMetadata", "Final manuals after filtering: $allManuals")
+        Log.d("SkraperMetadata", "MANUAL-DETECTOR: Final manuals after filtering: $allManuals")
+        Log.d("SkraperMetadata", "MANUAL-DETECTOR: XML manuals: $manualsFromXml")
+        Log.d("SkraperMetadata", "MANUAL-DETECTOR: Media folder manuals: ${mediaResult.manuals}")
         Log.d("SkraperMetadata", "Final releaseDates after filtering: $releaseDates")
 
         if (matchedEntries.isEmpty() && allThumbnailsFront.isEmpty() && allCartridges.isEmpty() && allManuals.isEmpty()) {
@@ -104,7 +106,9 @@ class SkraperMetadataProvider(
             thumbnail = allThumbnailsFront.firstOrNull(),
             thumbnailBack = allThumbnailsBack.firstOrNull(),
             cartridgeImage = allCartridges.firstOrNull(),
-            manualUrl = allManuals.firstOrNull(),
+            manualUrl = allManuals.firstOrNull().also { 
+                Log.d("SkraperMetadata", "MANUAL-DETECTOR: STORING manualUrl=$it (from ${allManuals.size} options)")
+            },
             releaseDate = releaseDates.firstOrNull(),
             summary = matchedEntries.mapNotNull { it.description?.takeIf { d -> d.isNotEmpty() } }.distinct().firstOrNull(),
             country = extractCountryFromFileName(romFileName),
@@ -139,11 +143,35 @@ class SkraperMetadataProvider(
             "content" -> {
                 try {
                     val docId = DocumentsContract.getDocumentId(storageFile.uri)
+                    
+                    // If cleanPath is an absolute Windows path (e.g., C:/Games/...), extract only the relative portion
+                    val relativePath = if (cleanPath.contains(":") && cleanPath[1] == ':') {
+                        // Absolute Windows path - find where "media" starts (for manuals/images)
+                        val mediaIndex = cleanPath.lowercase().indexOf("media/")
+                        if (mediaIndex >= 0) {
+                            // Extract from "media" onwards
+                            cleanPath.substring(mediaIndex)
+                        } else {
+                            // Fallback: extract everything after the last "Roms" folder
+                            val lastRomsIndex = cleanPath.lowercase().lastIndexOf("roms")
+                            if (lastRomsIndex >= 0) {
+                                cleanPath.substring(lastRomsIndex + 5).removePrefix("/")
+                            } else {
+                                cleanPath
+                            }
+                        }
+                    } else {
+                        cleanPath
+                    }
+                    
+                    Log.d("SkraperMetadata", "MANUAL-DETECTOR: resolveRelativePath: rawPath=$rawPath, cleanPath=$cleanPath, relativePath=$relativePath")
+                    
                     val parentDocId = if (docId.contains("/")) docId.substringBeforeLast("/") else docId.substringBefore(":") + ":"
-                    val targetDocId = "$parentDocId/$cleanPath"
+                    val targetDocId = "$parentDocId/$relativePath"
                     val fileUri = DocumentsContract.buildDocumentUriUsingTree(storageFile.uri, targetDocId)
                     fileUri.toString()
                 } catch (e: Exception) {
+                    Log.e("SkraperMetadata", "MANUAL-DETECTOR: resolveRelativePath error: ${e.message}")
                     null
                 }
             }
@@ -294,13 +322,22 @@ class SkraperMetadataProvider(
 
                         // 4. Manuals inside media folders
                         manualFolderNames.forEach { folderName ->
-                            scanPdfFolder(File(systemDir, folderName), zipFileName)?.let { mediaManuals.add(it) }
-                            scanPdfFolder(File(mediaDir, folderName), zipFileName)?.let { mediaManuals.add(it) }
+                            scanPdfFolder(File(systemDir, folderName), zipFileName)?.let { 
+                                Log.d("SkraperMetadata", "MANUAL-DETECTOR: Found manual in systemDir/$folderName: $it")
+                                mediaManuals.add(it) 
+                            }
+                            scanPdfFolder(File(mediaDir, folderName), zipFileName)?.let { 
+                                Log.d("SkraperMetadata", "MANUAL-DETECTOR: Found manual in mediaDir/$folderName: $it")
+                                mediaManuals.add(it) 
+                            }
                         }
                     }
 
                     // 5. Check manual directly in ROM directory
-                    scanPdfFolder(romDir, zipFileName)?.let { mediaManuals.add(it) }
+                    scanPdfFolder(romDir, zipFileName)?.let { 
+                        Log.d("SkraperMetadata", "MANUAL-DETECTOR: Found manual in romDir: $it")
+                        mediaManuals.add(it) 
+                    }
                 }
                 "content" -> {
                     val docId = DocumentsContract.getDocumentId(storageFile.uri)
@@ -460,38 +497,41 @@ class SkraperMetadataProvider(
 
     private fun scanPdfFolder(folder: File, romNameWithoutExt: String): String? {
         if (!folder.exists() || !folder.isDirectory) {
-            Log.d("SkraperMetadata", "scanPdfFolder: folder does not exist or is not directory: ${folder.absolutePath}")
+            Log.d("SkraperMetadata", "MANUAL-DETECTOR: scanPdfFolder: folder does not exist or is not directory: ${folder.absolutePath}")
             return null
         }
 
-        Log.d("SkraperMetadata", "scanPdfFolder: scanning folder ${folder.absolutePath} for rom: $romNameWithoutExt")
+        Log.d("SkraperMetadata", "MANUAL-DETECTOR: scanPdfFolder: scanning folder ${folder.absolutePath} for rom: $romNameWithoutExt")
         
         // List files in folder for debugging
         val filesInFolder = folder.listFiles()?.map { it.name } ?: emptyList()
-        Log.d("SkraperMetadata", "scanPdfFolder: files in folder: $filesInFolder")
+        Log.d("SkraperMetadata", "MANUAL-DETECTOR: scanPdfFolder: files in folder: $filesInFolder")
 
         val exactPdf = File(folder, "$romNameWithoutExt.pdf")
         if (exactPdf.exists() && exactPdf.isFile) {
-            Log.d("SkraperMetadata", "scanPdfFolder: found exact PDF: ${exactPdf.absolutePath}")
-            return Uri.fromFile(exactPdf).toString()
+            val uri = Uri.fromFile(exactPdf).toString()
+            Log.d("SkraperMetadata", "MANUAL-DETECTOR: scanPdfFolder: found exact PDF: ${exactPdf.absolutePath} → URI: $uri")
+            return uri
         }
 
         val manualPdf = File(folder, "manual.pdf")
         if (manualPdf.exists() && manualPdf.isFile) {
-            Log.d("SkraperMetadata", "scanPdfFolder: found manual.pdf: ${manualPdf.absolutePath}")
-            return Uri.fromFile(manualPdf).toString()
+            val uri = Uri.fromFile(manualPdf).toString()
+            Log.d("SkraperMetadata", "MANUAL-DETECTOR: scanPdfFolder: found manual.pdf: ${manualPdf.absolutePath} → URI: $uri")
+            return uri
         }
 
         val nameWithoutRegion = romNameWithoutExt.replaceFirst(Regex("\\s*\\([^)]*\\)\\s*$"), "")
         if (nameWithoutRegion != romNameWithoutExt) {
             val altPdf = File(folder, "$nameWithoutRegion.pdf")
             if (altPdf.exists() && altPdf.isFile) {
-                Log.d("SkraperMetadata", "scanPdfFolder: found region-stripped PDF: ${altPdf.absolutePath}")
-                return Uri.fromFile(altPdf).toString()
+                val uri = Uri.fromFile(altPdf).toString()
+                Log.d("SkraperMetadata", "MANUAL-DETECTOR: scanPdfFolder: found region-stripped PDF: ${altPdf.absolutePath} → URI: $uri")
+                return uri
             }
         }
 
-        Log.d("SkraperMetadata", "scanPdfFolder: no PDF found in ${folder.absolutePath} for rom: $romNameWithoutExt")
+        Log.d("SkraperMetadata", "MANUAL-DETECTOR: scanPdfFolder: no PDF found in ${folder.absolutePath} for rom: $romNameWithoutExt")
         return null
     }
 

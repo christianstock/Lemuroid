@@ -96,6 +96,8 @@ fun CheatMenuScreen(
     }
 
     val lazyListState = rememberLazyListState()
+    val draggedItemIndex = remember { mutableStateOf<Int?>(null) }
+    val mutableCheats = remember(cheats) { mutableStateOf(cheats) }
 
     Box(modifier = modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -226,16 +228,26 @@ fun CheatMenuScreen(
                         .padding(horizontal = 8.dp),
                     state = lazyListState,
                 ) {
-                    itemsIndexed(cheats) { index, cheat ->
+                    itemsIndexed(mutableCheats.value) { index, cheat ->
                         CheatItemRow(
                             cheat = cheat,
                             displayOrder = index,
+                            isDragged = draggedItemIndex.value == index,
                             onToggle = { enabled ->
                                 onCheatToggle(cheat, enabled)
                             },
                             onDelete = {
                                 onDeleteCheat(cheat)
                             },
+                            onReorder = { fromIndex, toIndex ->
+                                val newList = mutableCheats.value.toMutableList()
+                                val item = newList.removeAt(fromIndex)
+                                newList.add(toIndex, item)
+                                mutableCheats.value = newList
+                                onUpdateCheatOrder(cheat.id, toIndex)
+                            },
+                            onDragStart = { draggedItemIndex.value = index },
+                            onDragEnd = { draggedItemIndex.value = null },
                         )
                     }
                 }
@@ -273,8 +285,12 @@ fun CheatMenuScreen(
 private fun CheatItemRow(
     cheat: GameCheatEntity,
     displayOrder: Int,
+    isDragged: Boolean = false,
     onToggle: (Boolean) -> Unit,
     onDelete: () -> Unit,
+    onReorder: (fromIndex: Int, toIndex: Int) -> Unit = { _, _ -> },
+    onDragStart: () -> Unit = {},
+    onDragEnd: () -> Unit = {},
 ) {
     val backgroundColor = getSourceColor(cheat.source)
 
@@ -283,10 +299,22 @@ private fun CheatItemRow(
             .fillMaxWidth()
             .padding(vertical = 8.dp, horizontal = 8.dp)
             .background(
-                color = backgroundColor.copy(alpha = 0.1f),
+                color = if (isDragged) 
+                    backgroundColor.copy(alpha = 0.3f) 
+                else 
+                    backgroundColor.copy(alpha = 0.1f),
                 shape = RoundedCornerShape(8.dp)
             )
-            .padding(8.dp),
+            .padding(8.dp)
+            .pointerInput(Unit) {
+                detectDragGesturesAfterLongPress(
+                    onDragStart = { onDragStart() },
+                    onDrag = { change, dragAmount ->
+                        change.consume()
+                    },
+                    onDragEnd = { onDragEnd() }
+                )
+            },
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {

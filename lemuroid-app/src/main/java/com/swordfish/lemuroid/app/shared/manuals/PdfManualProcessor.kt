@@ -27,10 +27,25 @@ class PdfManualProcessor(private val context: Context) {
      */
     fun getExistingPages(gameId: String): List<ManualPageInfo> {
         val outputDir = File(context.filesDir, "manuals/$gameId")
-        if (!outputDir.exists() || !outputDir.isDirectory) return emptyList()
+        Log.d("PdfManualProcessor", "getExistingPages: Looking for cached pages in ${outputDir.absolutePath}")
+        
+        if (!outputDir.exists() || !outputDir.isDirectory) {
+            Log.d("PdfManualProcessor", "getExistingPages: Directory does not exist: ${outputDir.absolutePath}")
+            return emptyList()
+        }
 
-        val files = outputDir.listFiles()?.filter { it.extension == "webp" }?.sortedBy { it.name } ?: return emptyList()
-        return files.mapIndexed { index, file ->
+        val files = outputDir.listFiles()?.filter { it.extension == "webp" }?.sortedBy { it.name } ?: emptyList()
+        Log.d("PdfManualProcessor", "getExistingPages: Found ${files.size} webp files in ${outputDir.absolutePath}")
+        files.forEach { file ->
+            Log.d("PdfManualProcessor", "  - ${file.name} (${file.length()} bytes)")
+        }
+        
+        if (files.isEmpty()) {
+            Log.d("PdfManualProcessor", "getExistingPages: No webp files found, returning empty list")
+            return emptyList()
+        }
+
+        val pages = files.mapIndexed { index, file ->
             ManualPageInfo(
                 pageIndex = index,
                 filePath = file.absolutePath,
@@ -38,6 +53,8 @@ class PdfManualProcessor(private val context: Context) {
                 height = 1200
             )
         }
+        Log.d("PdfManualProcessor", "getExistingPages: Returning ${pages.size} pages")
+        return pages
     }
 
     /**
@@ -51,26 +68,41 @@ class PdfManualProcessor(private val context: Context) {
         aspectRatioThreshold: Float = 1.5f,
         quality: Int = 80
     ): List<ManualPageInfo> = withContext(Dispatchers.IO) {
+        Log.d("PdfManualProcessor", "processPdfUri START: gameId=$gameId, uri=$pdfUriString")
+        
         val existing = getExistingPages(gameId)
-        if (existing.isNotEmpty()) return@withContext existing
+        if (existing.isNotEmpty()) {
+            Log.d("PdfManualProcessor", "processPdfUri: Using existing cached pages, count=${existing.size}")
+            return@withContext existing
+        }
 
-        val fileDescriptor: ParcelFileDescriptor = try {
+        val fileDescriptor: ParcelFileDescriptor? = try {
             if (pdfUriString.startsWith("content://") || pdfUriString.startsWith("file://")) {
+                Log.d("PdfManualProcessor", "processPdfUri: Opening as content/file URI")
                 context.contentResolver.openFileDescriptor(Uri.parse(pdfUriString), "r")
             } else {
+                Log.d("PdfManualProcessor", "processPdfUri: Opening as file path")
                 ParcelFileDescriptor.open(File(pdfUriString), ParcelFileDescriptor.MODE_READ_ONLY)
             }
         } catch (e: Exception) {
+            Log.e("PdfManualProcessor", "processPdfUri: Error opening file descriptor: ${e.message}", e)
             null
-        } ?: return@withContext emptyList()
+        }
+        
+        if (fileDescriptor == null) {
+            Log.e("PdfManualProcessor", "processPdfUri: Failed to open file descriptor, returning empty")
+            return@withContext emptyList()
+        }
 
-        return@withContext renderPdfFileDescriptor(
+        val result = renderPdfFileDescriptor(
             fileDescriptor = fileDescriptor,
             gameId = gameId,
             targetHeight = targetHeight,
             aspectRatioThreshold = aspectRatioThreshold,
             quality = quality
         )
+        Log.d("PdfManualProcessor", "processPdfUri END: gameId=$gameId, pages loaded=${result.size}")
+        return@withContext result
     }
 
     suspend fun processPdf(
@@ -121,7 +153,8 @@ class PdfManualProcessor(private val context: Context) {
         val outputDir = File(context.filesDir, "manuals/$gameId").apply {
             if (!exists()) mkdirs()
         }
-        Log.d("PdfManualProcessor", "renderPdfFileDescriptor: outputDir=${outputDir.absolutePath}, created=${outputDir.exists()}")
+        Log.d("PdfManualProcessor", "renderPdfFileDescriptor: OUTPUT DIRECTORY = ${outputDir.absolutePath}")
+        Log.d("PdfManualProcessor", "renderPdfFileDescriptor: outputDir created=${outputDir.exists()}, isDir=${outputDir.isDirectory}, canWrite=${outputDir.canWrite()}")
 
         val pdfRenderer = try {
             PdfRenderer(fileDescriptor)
@@ -163,6 +196,7 @@ class PdfManualProcessor(private val context: Context) {
                     val leftBitmap = cropBitmap(fullBitmap, 0, 0, singlePageTargetWidth, targetHeight)
                     val leftFile = File(outputDir, "page_${pageIndexCounter.toString().padStart(3, '0')}.webp")
                     saveCompressedBitmap(leftBitmap, leftFile, quality)
+                    Log.d("PdfManualProcessor", "renderPdfFileDescriptor: SAVED LEFT PAGE to ${leftFile.absolutePath} (${leftFile.length()} bytes)")
                     pagesInfo.add(ManualPageInfo(pageIndexCounter++, leftFile.absolutePath, singlePageTargetWidth, targetHeight))
                     leftBitmap.recycle()
 
@@ -170,6 +204,7 @@ class PdfManualProcessor(private val context: Context) {
                     val rightBitmap = cropBitmap(fullBitmap, singlePageTargetWidth, 0, singlePageTargetWidth, targetHeight)
                     val rightFile = File(outputDir, "page_${pageIndexCounter.toString().padStart(3, '0')}.webp")
                     saveCompressedBitmap(rightBitmap, rightFile, quality)
+                    Log.d("PdfManualProcessor", "renderPdfFileDescriptor: SAVED RIGHT PAGE to ${rightFile.absolutePath} (${rightFile.length()} bytes)")
                     pagesInfo.add(ManualPageInfo(pageIndexCounter++, rightFile.absolutePath, singlePageTargetWidth, targetHeight))
                     rightBitmap.recycle()
 
@@ -188,6 +223,7 @@ class PdfManualProcessor(private val context: Context) {
 
                     val pageFile = File(outputDir, "page_${pageIndexCounter.toString().padStart(3, '0')}.webp")
                     saveCompressedBitmap(bitmap, pageFile, quality)
+                    Log.d("PdfManualProcessor", "renderPdfFileDescriptor: SAVED SINGLE PAGE to ${pageFile.absolutePath} (${pageFile.length()} bytes)")
                     pagesInfo.add(ManualPageInfo(pageIndexCounter++, pageFile.absolutePath, targetWidth, targetHeight))
                     bitmap.recycle()
                 }
@@ -199,6 +235,7 @@ class PdfManualProcessor(private val context: Context) {
             fileDescriptor.close()
         }
 
+        Log.d("PdfManualProcessor", "renderPdfFileDescriptor: COMPLETE - Saved ${pagesInfo.size} pages total to ${outputDir.absolutePath}")
         return pagesInfo
     }
 

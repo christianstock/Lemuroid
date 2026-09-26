@@ -461,45 +461,71 @@ private fun isValidImageUri(uri: String?): Boolean {
 private fun String?.isNull_or_Empty(): Boolean = this.isNullOrEmpty()
 
 private fun countPdfPages(uri: String?): Int {
-    if (uri == null || uri.isBlank()) return 0
+    android.util.Log.d("ScrapeResult-MANUAL-COUNT", "countPdfPages START: uri=$uri")
+    if (uri == null || uri.isBlank()) {
+        android.util.Log.d("ScrapeResult-MANUAL-COUNT", "countPdfPages: uri is null or blank, returning 0")
+        return 0
+    }
     
     return try {
         when {
             uri.startsWith("file://") -> {
+                android.util.Log.d("ScrapeResult-MANUAL-COUNT", "countPdfPages: Processing file:// URI")
                 val filePath = uri.removePrefix("file://")
+                android.util.Log.d("ScrapeResult-MANUAL-COUNT", "countPdfPages: filePath=$filePath")
                 val file = java.io.File(filePath)
-                if (!file.exists()) return 0
-                countPdfPagesFromFile(file)
+                android.util.Log.d("ScrapeResult-MANUAL-COUNT", "countPdfPages: file.exists=${file.exists()}, file.isFile=${file.isFile()}")
+                if (!file.exists()) {
+                    android.util.Log.d("ScrapeResult-MANUAL-COUNT", "countPdfPages: File does not exist")
+                    return 0
+                }
+                val count = countPdfPagesFromFile(file)
+                android.util.Log.d("ScrapeResult-MANUAL-COUNT", "countPdfPages: Counted $count pages from file:// URI")
+                count
             }
             uri.startsWith("content://") -> {
                 // For content URIs, we can't easily count pages without context
                 // Return 0 to show "Detected" instead
+                android.util.Log.d("ScrapeResult-MANUAL-COUNT", "countPdfPages: content:// URI detected, returning 0 (will show 'Detected')")
                 0
             }
             uri.startsWith("/") -> {
                 // Direct file path
+                android.util.Log.d("ScrapeResult-MANUAL-COUNT", "countPdfPages: Processing direct file path")
                 val file = java.io.File(uri)
-                if (!file.exists()) return 0
-                countPdfPagesFromFile(file)
+                android.util.Log.d("ScrapeResult-MANUAL-COUNT", "countPdfPages: file.exists=${file.exists()}, file.isFile=${file.isFile()}")
+                if (!file.exists()) {
+                    android.util.Log.d("ScrapeResult-MANUAL-COUNT", "countPdfPages: File does not exist")
+                    return 0
+                }
+                val count = countPdfPagesFromFile(file)
+                android.util.Log.d("ScrapeResult-MANUAL-COUNT", "countPdfPages: Counted $count pages from direct path")
+                count
             }
-            else -> 0
+            else -> {
+                android.util.Log.d("ScrapeResult-MANUAL-COUNT", "countPdfPages: Unknown URI scheme, returning 0")
+                0
+            }
         }
     } catch (e: Exception) {
-        android.util.Log.e("ScrapeResult", "Error counting PDF pages: ${e.message}")
+        android.util.Log.e("ScrapeResult-MANUAL-COUNT", "Error counting PDF pages: ${e.message}", e)
         0
     }
 }
 
 private fun countPdfPagesFromFile(file: java.io.File): Int {
+    android.util.Log.d("ScrapeResult-MANUAL-COUNT", "countPdfPagesFromFile: Attempting to read ${file.absolutePath}")
     return try {
         val fileDescriptor = android.os.ParcelFileDescriptor.open(file, android.os.ParcelFileDescriptor.MODE_READ_ONLY)
+        android.util.Log.d("ScrapeResult-MANUAL-COUNT", "countPdfPagesFromFile: ParcelFileDescriptor opened successfully")
         val pdfRenderer = android.graphics.pdf.PdfRenderer(fileDescriptor)
         val pageCount = pdfRenderer.pageCount
+        android.util.Log.d("ScrapeResult-MANUAL-COUNT", "countPdfPagesFromFile: PDF has $pageCount pages")
         pdfRenderer.close()
         fileDescriptor.close()
         pageCount
     } catch (e: Exception) {
-        android.util.Log.e("ScrapeResult", "Error reading PDF file: ${e.message}")
+        android.util.Log.e("ScrapeResult-MANUAL-COUNT", "Error reading PDF file: ${e.message}", e)
         0
     }
 }

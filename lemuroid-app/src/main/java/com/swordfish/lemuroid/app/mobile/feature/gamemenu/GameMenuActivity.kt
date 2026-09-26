@@ -176,7 +176,10 @@ class GameMenuActivity : RetrogradeComponentActivity() {
                         navigationIcon = {
                             AnimatedContent(targetState = currentRoute.canGoBack() && !isDirectAccess, label = "Back") { canGoBack ->
                                 if (canGoBack) {
-                                    IconButton(onClick = { navController.popBackStack() }) {
+                                    IconButton(onClick = { 
+                                        android.util.Log.d("GameMenuActivity", "Back button pressed, route=$currentRoute, popping backstack")
+                                        navController.popBackStack()
+                                    }) {
                                         Icon(
                                             Icons.AutoMirrored.Filled.ArrowBack,
                                             stringResource(R.string.back),
@@ -364,17 +367,11 @@ class GameMenuActivity : RetrogradeComponentActivity() {
                                 androidx.compose.runtime.LaunchedEffect(game.manualUrl) {
                                     try {
                                         android.util.Log.d("ManualViewer", "LaunchedEffect START: manualUrl=${game.manualUrl}")
-                                        val pdfFile = java.io.File(game.manualUrl!!)
-                                        android.util.Log.d("ManualViewer", "LaunchedEffect: pdfFile.path=${pdfFile.absolutePath}, exists=${pdfFile.exists()}, size=${pdfFile.length()}")
                                         
-                                        if (pdfFile.exists()) {
-                                            android.util.Log.d("ManualViewer", "LaunchedEffect: Starting PDF processing...")
-                                            val pages = processor.processPdf(pdfFile, "game_${game.id}")
-                                            android.util.Log.d("ManualViewer", "LaunchedEffect: processPdf returned ${pages.size} pages")
-                                            manualPages.value = pages
-                                        } else {
-                                            android.util.Log.e("ManualViewer", "PDF file not found: ${game.manualUrl}")
-                                        }
+                                        android.util.Log.d("ManualViewer", "LaunchedEffect: Starting PDF processing with processPdfUri...")
+                                        val pages = processor.processPdfUri(game.manualUrl!!, "game_${game.id}")
+                                        android.util.Log.d("ManualViewer", "LaunchedEffect: processPdfUri returned ${pages.size} pages")
+                                        manualPages.value = pages
                                     } catch (e: Exception) {
                                         android.util.Log.e("ManualViewer", "Error loading manual: ${e.message}", e)
                                     } finally {
