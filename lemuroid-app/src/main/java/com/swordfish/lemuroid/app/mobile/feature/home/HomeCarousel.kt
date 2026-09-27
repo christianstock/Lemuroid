@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PageSize
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -32,6 +33,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
@@ -205,9 +207,16 @@ private fun SystemPage(
 
         // Middle Games Carousel
         if (games.isNotEmpty()) {
+            val cartridgeWidth = 300.dp
+
+            val screenWidth = LocalConfiguration.current.screenWidthDp.dp
+            val dynamicPadding = ((screenWidth - cartridgeWidth) / 2).coerceAtLeast(0.dp)
+
             HorizontalPager(
                 state = gamePagerState,
-                contentPadding = PaddingValues(horizontal = 80.dp),
+                pageSize = PageSize.Fixed(cartridgeWidth),
+                pageSpacing = (-60).dp,
+                contentPadding = PaddingValues(horizontal = dynamicPadding),
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(bottom = 160.dp, top = 140.dp)
@@ -223,12 +232,12 @@ private fun SystemPage(
                         .fillMaxWidth()
                         .graphicsLayer {
                             val pageOffset = ((gamePagerState.currentPage - page) + gamePagerState.currentPageOffsetFraction).absoluteValue
-                            val scale = lerp(start = 0.75f, stop = 1f, fraction = 1f - pageOffset.coerceIn(0f, 1f))
+                            val scale = lerp(start = 0.8f, stop = 1.0f, fraction = 1f - pageOffset.coerceIn(0f, 1f))
                             scaleX = scale
                             scaleY = scale
                             alpha = if (locked) 1f else lerp(start = 0.5f, stop = 1f, fraction = 1f - pageOffset.coerceIn(0f, 1f))
                         }
-                        .padding(16.dp),
+                        .padding(8.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Box(

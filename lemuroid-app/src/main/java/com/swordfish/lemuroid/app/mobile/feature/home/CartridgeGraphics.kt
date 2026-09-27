@@ -64,11 +64,7 @@ private fun SimpleCartridgeImage(
     val fallbackPainter = rememberDrawablePainter(drawable = fallbackDrawable)
 
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            .aspectRatio(1.0f)
-            .clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp))
-            .background(Color.Black),
+        modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
         AsyncImage(
