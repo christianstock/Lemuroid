@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -18,9 +19,14 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import com.google.accompanist.drawablepainter.rememberDrawablePainter
 import com.swordfish.lemuroid.app.mobile.shared.compose.ui.LemuroidGameImage
+import com.swordfish.lemuroid.app.shared.covers.CoverUtils
 import com.swordfish.lemuroid.lib.library.db.entity.Game
 
 @Composable
@@ -29,14 +35,52 @@ fun GameCartridge(
     modifier: Modifier = Modifier,
 ) {
     Box(
-        modifier = modifier.aspectRatio(0.85f), // Slightly taller for notch
+        modifier = modifier.aspectRatio(1.0f),
         contentAlignment = Alignment.Center
     ) {
-        when (game.systemId) {
-            "gb", "gbc" -> GbGbcCartridgeShape(game)
-            "gba" -> GbaCartridgeShape(game)
-            else -> DefaultCartridgeShape(game)
+        when {
+            !game.cartridgeUrl.isNullOrEmpty() -> SimpleCartridgeImage(game)
+            else -> {
+                Box(modifier = Modifier.aspectRatio(0.85f), contentAlignment = Alignment.Center) {
+                    when (game.systemId) {
+                        "gb", "gbc" -> GbGbcCartridgeShape(game)
+                        "gba" -> GbaCartridgeShape(game)
+                        else -> DefaultCartridgeShape(game)
+                    }
+                }
+            }
         }
+    }
+}
+
+@Composable
+private fun SimpleCartridgeImage(
+    game: Game,
+    modifier: Modifier = Modifier,
+) {
+    val fallbackDrawable = remember(game) {
+        CoverUtils.getFallbackDrawable(game)
+    }
+    val fallbackPainter = rememberDrawablePainter(drawable = fallbackDrawable)
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .aspectRatio(1.0f)
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp))
+            .background(Color.Black),
+        contentAlignment = Alignment.Center
+    ) {
+        AsyncImage(
+            model = ImageRequest.Builder(LocalContext.current)
+                .data(game.cartridgeUrl)
+                .build(),
+            contentDescription = game.title,
+            modifier = Modifier.fillMaxSize(),
+            fallback = fallbackPainter,
+            error = fallbackPainter,
+            contentScale = ContentScale.Fit,
+        )
     }
 }
 
