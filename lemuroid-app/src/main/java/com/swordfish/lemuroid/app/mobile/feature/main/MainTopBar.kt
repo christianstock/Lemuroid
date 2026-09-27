@@ -154,15 +154,13 @@ fun LemuroidTopBarActions(
                 )
             }
         }
-        if (route.showBottomNavigation) {
-            IconButton(
-                onClick = { navController.navigate(MainRoute.SETTINGS.route) },
-            ) {
-                Icon(
-                    Icons.Outlined.Settings,
-                    stringResource(R.string.settings),
-                )
-            }
+        IconButton(
+            onClick = { navController.navigate(MainRoute.SETTINGS.route) },
+        ) {
+            Icon(
+                Icons.Outlined.Settings,
+                stringResource(R.string.settings),
+            )
         }
     }
 }
