@@ -119,38 +119,62 @@ private fun DrawScope.drawColorBezelBranding(
     val o4Text = "O"
     val r5Text = "R"
 
-    val startX = gameScreenRect?.left ?: (bezelRect.left + 16.dp.toPx())
-    val baselineY = (gameScreenRect?.bottom ?: (bezelRect.bottom - 40.dp.toPx())) + 24.dp.toPx()
-
-    val paint = android.graphics.Paint().apply {
+    val paintGb = android.graphics.Paint().apply {
         isAntiAlias = true
         typeface = android.graphics.Typeface.create("sans-serif-condensed", android.graphics.Typeface.BOLD_ITALIC)
-        textSize = 22.dp.toPx()
+        textSize = 26.dp.toPx()
+        color = fontColor.toArgb()
     }
 
-    paint.color = fontColor.toArgb()
-    var gbWidth = paint.measureText(gbText)
-    canvas.drawText(gbText, startX, baselineY, paint)
+    val paintColor = android.graphics.Paint().apply {
+        isAntiAlias = true
+        typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)
+        textSize = 26.dp.toPx()
+    }
 
-    paint.color = "#C81F55".toColorInt()
-    paint.typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD_ITALIC)
-    canvas.drawText(c1Text, startX + gbWidth, baselineY, paint)
-    gbWidth += paint.measureText(c1Text)
+    // Measure individual widths
+    val wGb = paintGb.measureText(gbText)
+    val wC = paintColor.measureText(c1Text)
+    val wO1 = paintColor.measureText(o2Text)
+    val wL = paintColor.measureText(l3Text)
+    val wO2 = paintColor.measureText(o4Text)
+    val wR = paintColor.measureText(r5Text)
 
-    paint.color = "#4D3380".toColorInt()
-    canvas.drawText(o2Text, startX + gbWidth, baselineY, paint)
-    gbWidth += paint.measureText(o2Text)
+    val totalWidth = wGb + wC + wO1 + wL + wO2 + wR
 
-    paint.color = "#76C043".toColorInt()
-    canvas.drawText(l3Text, startX + gbWidth, baselineY, paint)
-    gbWidth += paint.measureText(l3Text)
+    // Center horizontally across gameScreenRect if available, otherwise bezelRect
+    val centerX = gameScreenRect?.center?.x ?: bezelRect.center.x
+    var currentX = centerX - (totalWidth / 2f)
 
-    paint.color = "#F9C623".toColorInt()
-    canvas.drawText(o4Text, startX + gbWidth, baselineY, paint)
-    gbWidth += paint.measureText(o4Text)
+    val baselineY = (gameScreenRect?.bottom ?: (bezelRect.bottom - 40.dp.toPx())) + 24.dp.toPx()
 
-    paint.color = "#008B9B".toColorInt()
-    canvas.drawText(r5Text, startX + gbWidth, baselineY, paint)
+    // 1. "GAME BOY "
+    canvas.drawText(gbText, currentX, baselineY, paintGb)
+    currentX += wGb
+
+    // 2. "C"
+    paintColor.color = "#C81F55".toColorInt()
+    canvas.drawText(c1Text, currentX, baselineY, paintColor)
+    currentX += wC
+
+    // 3. "O"
+    paintColor.color = "#4D3380".toColorInt()
+    canvas.drawText(o2Text, currentX, baselineY, paintColor)
+    currentX += wO1
+
+    // 4. "L"
+    paintColor.color = "#76C043".toColorInt()
+    canvas.drawText(l3Text, currentX, baselineY, paintColor)
+    currentX += wL
+
+    // 5. "O"
+    paintColor.color = "#F9C623".toColorInt()
+    canvas.drawText(o4Text, currentX, baselineY, paintColor)
+    currentX += wO2
+
+    // 6. "R"
+    paintColor.color = "#008B9B".toColorInt()
+    canvas.drawText(r5Text, currentX, baselineY, paintColor)
 }
 
 private fun DrawScope.drawColorNintendoBranding(
@@ -214,14 +238,17 @@ private fun DrawScope.drawColorSpeakerGrill(w: Float, h: Float) {
     val dotSpacing = 12.dp.toPx()
     val dotRadius = 3.5.dp.toPx()
 
+    val upwardShiftPerCol = 1.0.dp.toPx()
+
     val columns = listOf(
-        5 to 1,
-        6 to 0,
-        7 to -1,
-        7 to -1,
-        7 to -1,
-        6 to -1,
-        5 to -1
+        6 to 1,
+        8 to 0,
+        8 to 0,
+        8 to 0,
+        8 to 0,
+        8 to 0,
+        8 to 0,
+        6 to 1,
     )
 
     val totalColumns = columns.size
@@ -232,7 +259,9 @@ private fun DrawScope.drawColorSpeakerGrill(w: Float, h: Float) {
 
     columns.forEachIndexed { colIndex, (dotCount, topRowOffset) ->
         val x = startX + (colIndex * dotSpacing)
-        val startY = baseTopY + (topRowOffset * dotSpacing)
+
+        // Subtract (colIndex * upwardShiftPerCol) to lift each successive column up
+        val startY = baseTopY + (topRowOffset * dotSpacing) - (colIndex * upwardShiftPerCol)
 
         repeat(dotCount) { rowIndex ->
             val y = startY + (rowIndex * dotSpacing)
@@ -256,7 +285,7 @@ private fun DrawScope.drawPowerIndicator(
     val screenCenterY = gameScreenRect?.center?.y ?: (bezelRect.top + 60.dp.toPx())
 
     val textX = screenLeft - 22.dp.toPx()
-    val ledX = screenLeft - 30.dp.toPx()
+    val ledX = screenLeft - 32.dp.toPx()
     val ledY = screenCenterY - 70.dp.toPx()
     val ledRadius = 5.dp.toPx()
     val textY = ledY + 20.dp.toPx()
@@ -283,7 +312,7 @@ private fun DrawScope.drawPowerIndicator(
     val moonSpacing = 8.dp.toPx()
     val startX = ledX + 8.dp.toPx()
 
-    repeat(2) { i ->
+    repeat(3) { i ->
         val cx = startX + (i * moonSpacing)
 
         val moonPath = android.graphics.Path().apply {
@@ -308,6 +337,18 @@ private fun DrawScope.drawPowerIndicator(
 
         canvas.drawPath(moonPath, moonPaint)
     }
+
+    val labelColor = skin.brandingColor.toArgb()
+
+    val textPaint = android.graphics.Paint().apply {
+        isAntiAlias = true
+        color = labelColor
+        typeface = android.graphics.Typeface.create("sans-serif-condensed", android.graphics.Typeface.BOLD)
+        textSize = 10.sp.toPx()
+        textAlign = android.graphics.Paint.Align.CENTER
+    }
+
+    canvas.drawText("POWER", textX, textY, textPaint)
 }
 
 private fun DrawScope.calculateBezelPath(rect: Rect): Path {

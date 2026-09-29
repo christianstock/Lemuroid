@@ -194,7 +194,7 @@ private fun PadKitScope.GameBoyColorMenuButtons(
         .size(width = 90.dp, height = 60.dp)
         .offset(y = 50.dp)
     val rotation = 0f
-    val expansion = 0.0f
+    val expansion = 2.0f
 
     Box(
         modifier = modifier
