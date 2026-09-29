@@ -67,8 +67,8 @@ fun GameBoyAdvanceActionButtonForeground(
         ) {
             Text(
                 text = label,
-                color = Color.Black.copy(alpha = 0.8f),
-                fontSize = 50.sp,
+                color = Color.Black.copy(alpha = 0.2f),
+                fontSize = 40.sp,
                 fontWeight = FontWeight.Bold,
                 fontFamily = FontFamily.SansSerif,
                 textAlign = TextAlign.Center,

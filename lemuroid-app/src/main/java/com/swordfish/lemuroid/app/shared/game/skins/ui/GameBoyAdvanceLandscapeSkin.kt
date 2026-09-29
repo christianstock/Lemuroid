@@ -13,9 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -31,7 +29,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.swordfish.lemuroid.app.shared.game.skins.GameBoyAdvanceModel
 import com.swordfish.lemuroid.app.shared.game.skins.GameBoyAdvanceSkin
-import com.swordfish.lemuroid.app.shared.game.skins.art.GbaArt
+import com.swordfish.lemuroid.app.shared.game.skins.art.GameBoyAdvanceArt
 import com.swordfish.touchinput.radial.controls.GbControlFaceButtons
 import com.swordfish.touchinput.radial.settings.TouchControllerSettingsManager
 import gg.padkit.PadKitScope
@@ -81,27 +79,54 @@ fun PadKitScope.GameBoyAdvanceLandscapeSkin(
                 compositingStrategy = CompositingStrategy.Offscreen
             }
             .drawBehind {
-                GbaArt.run {
-                    drawHandheld(skin.caseColor, bezelRect, false)
+                GameBoyAdvanceArt.run {
+                    drawHandheld(gameScreenRect, bezelRect, skin, false, batteryLevel = batteryLevel)
                 }
             }
     ) {
+        // 1. FLUSH TOP SHOULDER BUTTON OVERLAY LAYER
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.TopCenter),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            // Left Shoulder Button (Flush Top-Left)
+            GameBoyAdvanceShoulderButton(
+                id = Id.Key(KeyEvent.KEYCODE_BUTTON_L1),
+                side = ShoulderSide.LEFT,
+                label = "L",
+                buttonColor = skin.actionButtonColor,
+            )
+
+            // Right Shoulder Button (Flush Top-Right)
+            GameBoyAdvanceShoulderButton(
+                id = Id.Key(KeyEvent.KEYCODE_BUTTON_R1),
+                side = ShoulderSide.RIGHT,
+                label = "R",
+                buttonColor = skin.actionButtonColor,
+            )
+        }
+
+        // 2. MAIN CONTROLS & SCREEN CONTENT LAYER
         Row(
             modifier = Modifier.fillMaxSize(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Left Control Panel
+            // Left Control Panel (D-Pad & Menu Buttons)
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
-                    .padding(16.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                    verticalArrangement = Arrangement.spacedBy(24.dp)
                 ) {
+                    Spacer(modifier = Modifier.height(20.dp))
+
                     GameBoyAdvanceDpad(
                         skin = skin,
                     )
@@ -143,13 +168,19 @@ fun PadKitScope.GameBoyAdvanceLandscapeSkin(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
-                    .padding(24.dp),
-                contentAlignment = Alignment.Center
+                    .padding(horizontal = 24.dp, vertical = 8.dp),
+                contentAlignment = Alignment.TopCenter
             ) {
-                GameBoyAdvanceActionButtons(
-                    skin = skin,
-                    modifier = Modifier.align(Alignment.TopEnd)
-                )
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(24.dp)
+                ) {
+                    Spacer(modifier = Modifier.height(70.dp))
+
+                    GameBoyAdvanceActionButtons(
+                        skin = skin,
+                    )
+                }
             }
         }
     }
@@ -170,7 +201,7 @@ private fun PadKitScope.GameBoyAdvanceActionButtons(
             Id.Key(KeyEvent.KEYCODE_BUTTON_B),
         ),
         background = { },
-        idsForegrounds = persistentMapOf<Id.Key, @Composable (State<Boolean>) -> Unit>(
+        idsForegrounds = persistentMapOf<Id.Key, @Composable (androidx.compose.runtime.State<Boolean>) -> Unit>(
             Id.Key(KeyEvent.KEYCODE_BUTTON_A) to { state ->
                 GameBoyAdvanceActionButtonForeground(
                     pressed = state,
@@ -197,9 +228,8 @@ private fun PadKitScope.GameBoyAdvanceMenuButtons(
     skin: GameBoyAdvanceSkin,
     modifier: Modifier = Modifier,
 ) {
-    val rotation = -10.0f
-    // Pin explicit size for GBControlButton so layout engine never inflates or expands them
-    val buttonModifier = Modifier.size(width = 100.dp, height = 46.dp)
+    val rotation = 10.0f
+    val buttonModifier = Modifier.size(width = 120.dp, height = 46.dp)
 
     Column(
         modifier = modifier,

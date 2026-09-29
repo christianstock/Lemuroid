@@ -18,12 +18,10 @@ import com.swordfish.touchinput.radial.ui.LemuroidControlBackground
 import gg.padkit.PadKitScope
 import gg.padkit.controls.ControlButton
 import gg.padkit.ids.Id
-import gg.padkit.layouts.radial.secondarydials.LayoutRadialSecondaryDialsScope
 import androidx.compose.runtime.State
 
-context(PadKitScope, LayoutRadialSecondaryDialsScope)
 @Composable
-fun LemuroidControlButton(
+fun PadKitScope.LemuroidControlButton(
     modifier: Modifier = Modifier,
     id: Id.Key,
     label: String? = null,
@@ -49,7 +47,7 @@ fun PadKitScope.GBControlButton(
 ) {
     val theme = LocalLemuroidPadTheme.current
     ControlButton(
-        modifier = modifier.padding(theme.padding),
+        //modifier = modifier.padding(theme.padding),
         id = id,
         background = background,
         foreground = foreground,
@@ -89,32 +87,31 @@ fun PadKitScope.GBAControlButton(
 }
 
 
-context(PadKitScope, LayoutRadialSecondaryDialsScope)
 @Composable
-fun GbaSideControlButton(
+fun PadKitScope.GbaSideControlButton(
     modifier: Modifier = Modifier,
     id: Id.Key,
     label: String? = null,
     icon: Int? = null,
+    foreground: @Composable () -> Unit = {},
+    background: @Composable () -> Unit = {},
 ) {
     val theme = LocalLemuroidPadTheme.current
 
     Box(
         modifier = modifier
-            // 1. Force the outer container to be wider and noticeably taller than the button
             .requiredWidth(140.dp)
-            .requiredHeight(75.dp), // 45dp (button) + 30dp (creates 15dp spacing top & bottom)
+            .requiredHeight(75.dp),
         contentAlignment = Alignment.Center
     ) {
         ControlButton(
             modifier = Modifier
-                // 2. The button stays its perfect elongated size inside the taller container
                 .requiredWidth(140.dp)
                 .requiredHeight(45.dp)
                 .padding(theme.padding),
             id = id,
-            foreground = { GbaSideButtonForeground(pressed = it, icon = icon, label = label) },
-            background = { GbaSideControlBackground() },
+            foreground = { _ -> foreground() },
+            background = { _ -> background() },
         )
     }
 }

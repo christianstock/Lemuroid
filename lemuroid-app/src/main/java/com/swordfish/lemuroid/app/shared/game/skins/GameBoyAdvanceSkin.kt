@@ -19,9 +19,9 @@ data class GameBoyAdvanceSkin(
     val name: String,
     val model: GameBoyAdvanceModel = GameBoyAdvanceModel.AGB_001,
     val caseColor: Color,
-    val dPadColor: Color = Color(0xFF222222),
-    val actionButtonColor: Color = Color(0xFF222222),
-    val menuButtonColor: Color = Color(0xFF222222),
+    val dPadColor: Color = Color(0xFF888888),
+    val actionButtonColor: Color = Color(0xFF888888),
+    val menuButtonColor: Color = Color(0xFF888888),
     val labelColor: Color = Color(0xFF222222),
     val buttonColor: Color = Color(0xFF333333),
 ) {

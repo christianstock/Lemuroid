@@ -30,10 +30,10 @@ import com.swordfish.touchinput.radial.controls.GBControlButton
 import gg.padkit.PadKitScope
 import gg.padkit.ids.Id
 
-private val LABEL_CONTAINER_WIDTH = 46.dp
-private val BUTTON_SIZE = 14.dp
-private val HORIZONTAL_PADDING = 8.dp
-private val VERTICAL_PADDING = 4.dp
+private val LABEL_CONTAINER_WIDTH = 50.dp
+private val BUTTON_SIZE = 30.dp
+private val HORIZONTAL_PADDING = 2.dp
+private val VERTICAL_PADDING = 2.dp
 
 @Composable
 fun PadKitScope.GameBoyAdvanceMenuButton(
@@ -41,7 +41,7 @@ fun PadKitScope.GameBoyAdvanceMenuButton(
     label: String,
     skin: GameBoyAdvanceSkin,
     modifier: Modifier = Modifier,
-    rotation: Float = -10f,
+    rotation: Float = 10f,
     labelScale: Float = 1.0f,
 ) {
     Box(
@@ -84,7 +84,7 @@ fun GameBoyAdvanceMenuButtonBackground(
                 shape = RoundedCornerShape(percent = 50)
             )
             .padding(
-                start = HORIZONTAL_PADDING,
+                start = HORIZONTAL_PADDING * 4,
                 end = HORIZONTAL_PADDING,
                 top = VERTICAL_PADDING,
                 bottom = VERTICAL_PADDING
@@ -98,10 +98,10 @@ fun GameBoyAdvanceMenuButtonBackground(
             textAlign = TextAlign.Center,
             maxLines = 1,
             softWrap = false,
-            fontWeight = FontWeight.Black,
+            fontWeight = FontWeight.Bold,
             fontFamily = FontFamily.SansSerif,
             color = Color.White.copy(alpha = 0.1f),
-            fontSize = (10f * labelScale).sp
+            fontSize = (12f * labelScale).sp
         )
 
         Spacer(modifier = Modifier.width(4.dp))
@@ -128,7 +128,7 @@ fun GameBoyAdvanceMenuButtonForeground(
     Row(
         modifier = modifier
             .padding(
-                start = HORIZONTAL_PADDING,
+                start = HORIZONTAL_PADDING * 4,
                 end = HORIZONTAL_PADDING,
                 top = VERTICAL_PADDING,
                 bottom = VERTICAL_PADDING
