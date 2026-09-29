@@ -78,6 +78,7 @@ import kotlinx.coroutines.launch
 import com.swordfish.lemuroid.app.shared.game.BaseGameScreenViewModel
 import com.swordfish.lemuroid.app.shared.game.viewmodel.GameViewModelRetroGameView
 import com.swordfish.lemuroid.app.shared.game.PhysicalScreenSizeCalculator
+import com.swordfish.lemuroid.app.shared.game.skins.GameBoyAdvanceModel
 import com.swordfish.lemuroid.app.shared.game.skins.GameBoySkin
 import com.swordfish.lemuroid.app.shared.game.skins.GbSkinManager
 import com.swordfish.lemuroid.app.shared.game.skins.GameBoyAdvanceSkin
@@ -85,8 +86,9 @@ import com.swordfish.lemuroid.app.shared.game.skins.GbaSkinManager
 import com.swordfish.lemuroid.app.shared.game.skins.GameBoyColorSkin
 import com.swordfish.lemuroid.app.shared.game.skins.GbcSkinManager
 import com.swordfish.lemuroid.app.shared.game.skins.ui.GameBoyPortraitSkin
-import com.swordfish.lemuroid.app.shared.game.skins.ui.GbaLandscapeSkin
-import com.swordfish.lemuroid.app.shared.game.skins.ui.GbcPortraitSkin
+import com.swordfish.lemuroid.app.shared.game.skins.ui.GameBoyAdvanceLandscapeSkin
+import com.swordfish.lemuroid.app.shared.game.skins.ui.GameBoyColorPortraitSkin
+import com.swordfish.lemuroid.app.shared.game.skins.ui.GameBoyAdvancePortraitSkin
 import com.swordfish.lemuroid.app.shared.game.skins.ui.PspLandscapeSkin
 import com.swordfish.lemuroid.app.shared.game.viewmodel.GameViewModelTouchControls.Companion.MENU_LOADING_ANIMATION_MILLIS
 import com.swordfish.lemuroid.app.shared.settings.HapticFeedbackMode
@@ -169,7 +171,8 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
             val viewportPosition = remember { mutableStateOf<Rect?>(null) }
 
             val gameState by viewModel.getGameState().collectAsState(GameViewModelRetroGameView.GameState.Uninitialized)
-            val isLoaded = gameState is GameViewModelRetroGameView.GameState.Loaded || gameState is GameViewModelRetroGameView.GameState.Ready
+            val isLoaded =
+                gameState is GameViewModelRetroGameView.GameState.Loaded || gameState is GameViewModelRetroGameView.GameState.Ready
 
             Box(modifier = Modifier.fillMaxSize()) {
                 if (isLoaded) {
@@ -209,24 +212,24 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
 
             val isVisible =
                 touchControllerSettings != null &&
-                    currentControllerConfig != null &&
-                    touchControlsVisibleState.value
+                        currentControllerConfig != null &&
+                        touchControlsVisibleState.value
 
             if (isVisible) {
                 // Get the appropriate skin manager and current skin based on system ID
-                val gbSkinManagerRef = remember { 
-                    if (viewModel.game.systemId == "gb") 
-                        GbSkinManager.getInstance(context) 
+                val gbSkinManagerRef = remember {
+                    if (viewModel.game.systemId == "gb")
+                        GbSkinManager.getInstance(context)
                     else null
                 }
-                val gbcSkinManagerRef = remember { 
-                    if (viewModel.game.systemId == "gbc") 
-                        GbcSkinManager.getInstance(context) 
+                val gbcSkinManagerRef = remember {
+                    if (viewModel.game.systemId == "gbc")
+                        GbcSkinManager.getInstance(context)
                     else null
                 }
-                val gbaSkinManagerRef = remember { 
-                    if (viewModel.game.systemId == "gba") 
-                        GbaSkinManager.getInstance(context) 
+                val gbaSkinManagerRef = remember {
+                    if (viewModel.game.systemId == "gba")
+                        GbaSkinManager.getInstance(context)
                     else null
                 }
 
@@ -293,7 +296,7 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
                     }
                     val actionButtonColor = when (viewModel.game.systemId) {
                         "gb" -> (currentSkin as? GameBoySkin)?.actionButtonColor
-                        "gbc" -> (currentSkin as? GameBoyColorSkin)?.buttonColor
+                        "gbc" -> (currentSkin as? GameBoyColorSkin)?.actionButtonColor
                         "gba" -> (currentSkin as? GameBoyAdvanceSkin)?.buttonColor
                         else -> null
                     }
@@ -306,9 +309,9 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
                         else -> null
                     }
                     val textColor = when (viewModel.game.systemId) {
-                    "gb" -> (currentSkin as? GameBoySkin)?.labelColor
-                    else -> null
-                }
+                        "gb" -> (currentSkin as? GameBoySkin)?.labelColor
+                        else -> null
+                    }
                     getThemeForSystem(
                         viewModel.game.systemId,
                         shellColor = shellColor,
@@ -386,26 +389,27 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
                     when (viewModel.game.systemId) {
                         "gbc" -> {
                             val gbcSkin = currentSkin as? GameBoyColorSkin ?: GameBoyColorSkin.BERRY
-                            GbcPortraitSkin(
+                            GameBoyColorPortraitSkin(
                                 skin = gbcSkin,
-                                gameScreenContent = {
+                                gameScreen = {
                                     Box(modifier = Modifier.fillMaxSize()) {
                                         gameScreenContent()
                                         overlaysContent(Modifier.matchParentSize())
                                     }
                                 },
-                                leftPad = { mod ->
-                                    leftGamePad?.invoke(this, mod, touchControllerSettings)
+                                actionBar = {
+                                    interactiveBarContent(
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .height(56.dp)
+                                    )
                                 },
-                                rightPad = { mod ->
-                                    rightGamePad?.invoke(this, mod, touchControllerSettings)
-                                },
-                                interactiveBar = {
-                                    interactiveBarContent(Modifier.fillMaxWidth().height(56.dp))
-                                },
+                                touchControllerSettings = touchControllerSettings,
+                                gameScreenPos = viewportPosition.value,
                                 modifier = Modifier.fillMaxSize()
                             )
                         }
+
                         "gb" -> {
                             val gbSkin = currentSkin as? GameBoySkin ?: GameBoySkin.GREY
                             GameBoyPortraitSkin(
@@ -417,34 +421,61 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
                                     }
                                 },
                                 actionBar = {
-                                    interactiveBarContent(Modifier.fillMaxWidth().height(56.dp))
+                                    interactiveBarContent(
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .height(56.dp)
+                                    )
                                 },
                                 touchControllerSettings = touchControllerSettings,
                                 gameScreenPos = viewportPosition.value,
                                 modifier = Modifier.fillMaxSize()
                             )
                         }
+
                         "gba" -> {
                             val gbaSkin = currentSkin as? GameBoyAdvanceSkin ?: GameBoyAdvanceSkin.INDIGO
-                            GbaLandscapeSkin(
-                                skin = gbaSkin,
-                                gameScreenContent = {
-                                    Box(modifier = Modifier.fillMaxSize()) {
-                                        gameScreenContent()
-                                        overlaysContent(Modifier.matchParentSize())
-                                    }
-                                },
-                                leftPad = { mod ->
-                                    leftGamePad?.invoke(this, mod, touchControllerSettings)
-                                },
-                                rightPad = { mod ->
-                                    rightGamePad?.invoke(this, mod, touchControllerSettings)
-                                },
-                                interactiveBar = {
-                                    interactiveBarContent(Modifier.fillMaxWidth().height(40.dp))
-                                },
-                                modifier = Modifier.fillMaxSize()
-                            )
+                            if (gbaSkin.model == GameBoyAdvanceModel.AGB_001 || gbaSkin.model == GameBoyAdvanceModel.OXY_001) {
+                                GameBoyAdvanceLandscapeSkin(
+                                    skin = gbaSkin,
+                                    gameScreen = {
+                                        Box(modifier = Modifier.fillMaxSize()) {
+                                            gameScreenContent()
+                                            overlaysContent(Modifier.matchParentSize())
+                                        }
+                                    },
+                                    actionBar = {
+                                        interactiveBarContent(
+                                            Modifier
+                                                .fillMaxWidth()
+                                                .height(40.dp)
+                                        )
+                                    },
+                                    touchControllerSettings = touchControllerSettings,
+                                    gameScreenPos = viewportPosition.value,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            } else {
+                                GameBoyAdvancePortraitSkin(
+                                    skin = gbaSkin,
+                                    gameScreen = {
+                                        Box(modifier = Modifier.fillMaxSize()) {
+                                            gameScreenContent()
+                                            overlaysContent(Modifier.matchParentSize())
+                                        }
+                                    },
+                                    actionBar = {
+                                        interactiveBarContent(
+                                            Modifier
+                                                .fillMaxWidth()
+                                                .height(56.dp)
+                                        )
+                                    },
+                                    touchControllerSettings = touchControllerSettings,
+                                    gameScreenPos = viewportPosition.value,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
                         }
                         "psp" -> {
                             PspLandscapeSkin(
@@ -461,11 +492,16 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
                                     rightGamePad?.invoke(this, mod, touchControllerSettings)
                                 },
                                 interactiveBar = {
-                                    interactiveBarContent(Modifier.fillMaxWidth().height(40.dp))
+                                    interactiveBarContent(
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .height(40.dp)
+                                    )
                                 },
                                 modifier = Modifier.fillMaxSize()
                             )
                         }
+
                         else -> {
                             // Default layout for other systems
                             ConstraintLayout(
@@ -825,10 +861,10 @@ private fun RewindProgressOverlay(
     Box(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
-     ) {
-         Box(contentAlignment = Alignment.Center) {
-             val text = "REWIND %.1f SECS".format(java.util.Locale.US, progress)
-             Text(
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            val text = "REWIND %.1f SECS".format(java.util.Locale.US, progress)
+            Text(
                 text = text,
                 color = Color.Black,
                 fontSize = 24.sp,

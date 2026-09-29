@@ -29,8 +29,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalConfiguration
@@ -44,10 +47,6 @@ import androidx.compose.ui.util.lerp
 import com.swordfish.lemuroid.app.shared.game.skins.GbSkinManager
 import com.swordfish.lemuroid.app.shared.game.skins.GbaSkinManager
 import com.swordfish.lemuroid.app.shared.game.skins.GbcSkinManager
-import com.swordfish.lemuroid.app.shared.game.skins.art.GameBoyArt
-import com.swordfish.lemuroid.app.shared.game.skins.art.GbaArt
-import com.swordfish.lemuroid.app.shared.game.skins.art.GbcArt
-import com.swordfish.lemuroid.app.shared.game.skins.art.PspArt
 import com.swordfish.lemuroid.lib.library.db.entity.Game
 import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
@@ -247,13 +246,13 @@ private fun SystemPage(
                             .draggable(
                                 state = rememberDraggableState { delta ->
                                     if (isFocused && !locked) {
-                                        coroutineScope.launch { offsetY.snapTo((offsetY.value + delta).coerceIn(0f, 250f)) }
+                                        coroutineScope.launch { offsetY.snapTo((offsetY.value + delta).coerceIn(0f, 500f)) }
                                     }
                                 },
                                 orientation = Orientation.Vertical,
                                 onDragStopped = {
                                     if (isFocused && !locked) {
-                                        if (offsetY.value > 120f) {
+                                        if (offsetY.value > 240f) {
                                             locked = true
                                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                             onGameClick(game)
@@ -306,20 +305,21 @@ private fun SystemForegroundView(
     }
 
     Canvas(modifier = modifier) {
-        val bezelW = if (systemIdNorm == "psp") size.width * 0.95f else size.width * 0.9f
-        val bezelH = size.height * 1.1f
-        val bezelX = (size.width - bezelW) / 2
-        val bezelY = 40.dp.toPx()
-        val bezelRect = Rect(bezelX, bezelY, bezelX + bezelW, bezelY + bezelH)
+        val cornerPx = 8.dp.toPx()
+        val topOffset = 100.dp.toPx()
 
-        when (systemIdNorm) {
-            "gb" -> GameBoyArt.run { drawHandheld(bezelRect, bezelRect, GbSkinManager.getInstance(context).getSelectedSkin(), true, 0.0f) }
-            "gbc" -> GbcArt.run { drawHandheld(caseColor, bezelRect, true) }
-            "gba" -> GbaArt.run { drawHandheld(caseColor, bezelRect, true) }
-            "psp" -> PspArt.run { drawHandheld(caseColor, bezelRect, true) }
-            else -> {
-                drawRect(Color(0xFF1A1A1A), topLeft = bezelRect.topLeft, size = bezelRect.size)
-            }
+        clipRect(
+            left = 0f,
+            top = topOffset,
+            right = size.width,
+            bottom = size.height
+        ) {
+            drawRoundRect(
+                color = caseColor,
+                topLeft = Offset(0f, topOffset),
+                size = Size(size.width, size.height - topOffset + cornerPx),
+                cornerRadius = CornerRadius(cornerPx, cornerPx)
+            )
         }
     }
 }

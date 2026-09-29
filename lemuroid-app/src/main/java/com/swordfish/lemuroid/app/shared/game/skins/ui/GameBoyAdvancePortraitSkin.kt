@@ -26,18 +26,19 @@ import androidx.compose.ui.layout.boundsInParent
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.dp
 import com.swordfish.lemuroid.app.shared.game.skins.GameBoyAdvanceSkin
+import com.swordfish.touchinput.radial.settings.TouchControllerSettingsManager
 
 /**
  * GBA skin renderer for portrait mode featuring an expanded
  * wide cutout window with a stylized bottom bow edge tracking profile.
  */
 @Composable
-fun GbaPortraitSkin(
+fun GameBoyAdvancePortraitSkin(
     skin: GameBoyAdvanceSkin,
-    gameScreenContent: @Composable () -> Unit,
-    leftPad: @Composable (Modifier) -> Unit,
-    rightPad: @Composable (Modifier) -> Unit,
-    interactiveBar: @Composable () -> Unit,
+    gameScreen: @Composable () -> Unit,
+    actionBar: @Composable () -> Unit,
+    touchControllerSettings: TouchControllerSettingsManager.Settings,
+    gameScreenPos: Rect?,
     modifier: Modifier = Modifier,
 ) {
     val bezelRect = remember { mutableStateOf<Rect?>(null) }
@@ -107,7 +108,7 @@ fun GbaPortraitSkin(
                 },
             contentAlignment = Alignment.Center
         ) {
-            gameScreenContent()
+            gameScreen()
         }
 
         Spacer(modifier = Modifier.fillMaxWidth().height(48.dp))
@@ -121,8 +122,8 @@ fun GbaPortraitSkin(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Top
         ) {
-            leftPad(Modifier.weight(1f))
-            rightPad(Modifier.weight(1f))
+            //leftPad(Modifier.weight(1f))
+            //rightPad(Modifier.weight(1f))
         }
 
         // --- SECTION 3: INTERACTIVE BAR (Moved to bottom) ---
@@ -133,7 +134,7 @@ fun GbaPortraitSkin(
                 .padding(horizontal = 12.dp),
             contentAlignment = Alignment.Center
         ) {
-            interactiveBar()
+            actionBar()
         }
     }
 }

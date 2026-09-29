@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.swordfish.lemuroid.app.shared.game.skins.GameBoyColorSkin
 import com.swordfish.lemuroid.app.shared.game.skins.GameBoySkin
 import com.swordfish.touchinput.radial.LocalLemuroidPadTheme
 import com.swordfish.touchinput.radial.controls.GBControlButton
@@ -34,10 +35,10 @@ import gg.padkit.PadKitScope
 import gg.padkit.ids.Id
 
 @Composable
-fun PadKitScope.GameBoyMenuButton(
+fun PadKitScope.GameBoyColorMenuButton(
     id: Id.Key,
     label: String,
-    skin: GameBoySkin,
+    skin: GameBoyColorSkin,
     modifier: Modifier = Modifier,
     rotation: Float = 0f,
     expansion: Float = 0.0f,
@@ -50,7 +51,7 @@ fun PadKitScope.GameBoyMenuButton(
         GBControlButton(
             id = id,
             background = {
-                GameBoyMenuButtonBackground(
+                GameBoyColorMenuButtonBackground(
                     label = label,
                     labelScale = labelScale,
                     expansion = expansion,
@@ -58,7 +59,7 @@ fun PadKitScope.GameBoyMenuButton(
                 )
             },
             foreground = { pressed ->
-                GameBoyMenuButtonForeground(
+                GameBoyColorMenuButtonForeground(
                     pressed = pressed,
                     skin = skin,
                 )
@@ -68,18 +69,18 @@ fun PadKitScope.GameBoyMenuButton(
 }
 
 @Composable
-fun GameBoyMenuButtonBackground(
+fun GameBoyColorMenuButtonBackground(
     modifier: Modifier = Modifier,
     label: String? = null,
     labelScale: Float = 1.0f,
     expansion: Float = 0.0f,
-    skin: GameBoySkin,
+    skin: GameBoyColorSkin,
 ) {
     Column(
         modifier = modifier.fillMaxWidth(0.7f),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        GameBoyMenuButtonBevel(
+        GameBoyColorMenuButtonBevel(
             modifier = Modifier.fillMaxWidth(),
             expansion = expansion,
         )
@@ -87,7 +88,7 @@ fun GameBoyMenuButtonBackground(
         Spacer(modifier = Modifier.height(2.dp))
 
         if (label != null) {
-            GameBoyMenuButtonLabel(
+            GameBoyColorMenuButtonLabel(
                 label = label,
                 labelScale = labelScale,
                 skin = skin,
@@ -97,7 +98,7 @@ fun GameBoyMenuButtonBackground(
 }
 
 @Composable
-fun GameBoyMenuButtonBevel(
+fun GameBoyColorMenuButtonBevel(
     modifier: Modifier = Modifier,
     expansion: Float = 0.0f,
 ) {
@@ -122,11 +123,11 @@ fun GameBoyMenuButtonBevel(
 }
 
 @Composable
-fun GameBoyMenuButtonLabel(
+fun GameBoyColorMenuButtonLabel(
     label: String,
     modifier: Modifier = Modifier,
     labelScale: Float = 1.0f,
-    skin: GameBoySkin,
+    skin: GameBoyColorSkin,
 ) {
     Text(
         text = label,
@@ -148,10 +149,10 @@ fun GameBoyMenuButtonLabel(
 }
 
 @Composable
-fun GameBoyMenuButtonForeground(
+fun GameBoyColorMenuButtonForeground(
     pressed: State<Boolean>,
     modifier: Modifier = Modifier,
-    skin: GameBoySkin,
+    skin: GameBoyColorSkin,
 ) {
     val baseColor = skin.menuButtonColor
     val isPressed = pressed.value
@@ -188,14 +189,4 @@ fun GameBoyMenuButtonForeground(
     }
 }
 
-val Color.isVeryDark: Boolean
-    get() {
-        val maxChannel = maxOf(red, green, blue)
-        return maxChannel < 0.25f
-    }
-
-fun Color.adjustBrightness(alpha: Float): Color {
-    val overlayColor = if (isVeryDark) Color.White else Color.Black
-    return overlayColor.copy(alpha = alpha).compositeOver(this)
-}
 

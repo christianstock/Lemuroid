@@ -77,23 +77,23 @@ object GameBoyArt {
             }
 
             if (skin.model == GameBoyModel.MGB_101) {
-            drawLightBezelBranding(
-                canvas = drawContext.canvas.nativeCanvas,
-                bezelRect = rect,
-                gameScreenRect = gameScreenRect,
-                fontColor = skin.brandingColor,
-                lensColor = skin.screenLensColor
-            )
+                drawLightBezelBranding(
+                    canvas = drawContext.canvas.nativeCanvas,
+                    bezelRect = rect,
+                    gameScreenRect = gameScreenRect,
+                    fontColor = skin.brandingColor,
+                    lensColor = skin.screenLensColor
+                )
 
-            drawPocketNintendoBranding(
-                canvas = drawContext.canvas.nativeCanvas,
-                bezelRect = rect
-            )
+                drawPocketNintendoBranding(
+                    canvas = drawContext.canvas.nativeCanvas,
+                    bezelRect = rect
+                )
 
-            if (!isCarouselMode) {
-                drawPocketSpeakerGrill(width, height)
+                if (!isCarouselMode) {
+                    drawPocketSpeakerGrill(width, height)
+                }
             }
-        }
         }
     }
 
@@ -286,7 +286,7 @@ private fun DrawScope.drawPocketBezelBranding(
     val horizontalPadding = 6.dp.toPx()
     val verticalPadding = 2.dp.toPx()
     val badgeLeft = startX + gbWidth
-    val badgeTop = baselineY + fontMetrics.ascent -  2 * verticalPadding
+    val badgeTop = baselineY + fontMetrics.ascent - 2 * verticalPadding
     val badgeRight = badgeLeft + pocketTextWidth + (horizontalPadding * 3)
     val badgeBottom = baselineY + fontMetrics.descent
     val cornerRadius = 3.dp.toPx()

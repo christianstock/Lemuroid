@@ -15,7 +15,11 @@ data class GameBoyColorSkin(
     val id: String,
     val name: String,
     val caseColor: Color,
-    val buttonColor: Color = Color(0xFF1C1C1C),
+    val dPadColor: Color = Color(0xFF222222),
+    val actionButtonColor: Color = Color(0xFF222222),
+    val menuButtonColor: Color = Color(0xFF222222),
+    val labelColor: Color = Color(0xFF222222),
+    val brandingColor: Color = Color(0xFFaaaaaa),
     val model: GameBoyColorModel = GameBoyColorModel.CBG_01,
 ) {
     val preferredOrientation: SkinOrientation get() = model.preferredOrientation

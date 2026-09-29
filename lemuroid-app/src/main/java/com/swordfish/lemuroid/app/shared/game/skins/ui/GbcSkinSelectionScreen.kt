@@ -150,7 +150,7 @@ private fun GbcSkinCard(
                         modifier = Modifier
                             .size(8.dp)
                             .background(
-                                color = skin.buttonColor,
+                                color = skin.actionButtonColor,
                                 shape = RoundedCornerShape(2.dp)
                             )
                     )
@@ -158,7 +158,7 @@ private fun GbcSkinCard(
                         modifier = Modifier
                             .size(8.dp)
                             .background(
-                                color = skin.buttonColor,
+                                color = skin.actionButtonColor,
                                 shape = RoundedCornerShape(2.dp)
                             )
                     )
