@@ -231,6 +231,7 @@ fun ScrapeResultScreen(
                     label = "Publisher",
                     existingValue = game.publisher,
                     scrapedValue = metadata.publisher,
+                    scrapedOptions = publisherOptions,
                     currentValue = publisher,
                     onValueChange = { publisher = it }
                 )
@@ -242,6 +243,7 @@ fun ScrapeResultScreen(
                     label = "Developer",
                     existingValue = game.developer,
                     scrapedValue = metadata.developer,
+                    scrapedOptions = developerOptions,
                     currentValue = developer,
                     onValueChange = { developer = it }
                 )

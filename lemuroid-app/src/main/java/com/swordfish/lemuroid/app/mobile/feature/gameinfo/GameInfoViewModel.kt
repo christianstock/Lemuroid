@@ -89,8 +89,7 @@ class GameInfoViewModel(
             }
 
             if (metadata != null) {
-                // Ensure debugInfo OPTIONS only contains unique, non-blank valid images (max 2)
-                _pendingMetadata.value = sanitizeMetadataOptions(metadata, currentGame.coverFrontUrl)
+                _pendingMetadata.value = metadata
             }
 
             _isRescanning.value = false
@@ -177,42 +176,7 @@ class GameInfoViewModel(
         return null
     }
 
-    /**
-     * Sanitizes the metadata debugInfo OPTIONS block before handing it to the UI dialog,
-     * guaranteeing at most 2 unique, loadable image URLs/URIs (Existing + LibretroDB).
-     */
-    private fun sanitizeMetadataOptions(metadata: GameMetadata, currentCoverUrl: String?): GameMetadata {
-        val validCurrent = currentCoverUrl?.takeIf { isValidImageUri(it) }
-        val validNew = metadata.thumbnail?.takeIf { isValidImageUri(it) }
 
-        // Strictly combine at most 2 distinct valid images
-        val uniqueArts = listOfNotNull(validCurrent, validNew).distinct()
-
-        val debugInfo = metadata.debugInfo
-        if (debugInfo == null || !debugInfo.startsWith("OPTIONS|")) {
-            val optionsStr = "OPTIONS|arts:${uniqueArts.joinToString(",")}"
-            return metadata.copy(debugInfo = optionsStr)
-        }
-
-        // Re-pack arts inside the debugInfo string safely
-        val parts = debugInfo.split("|").toMutableList()
-        val updatedParts = parts.map { part ->
-            if (part.startsWith("arts:")) {
-                "arts:${uniqueArts.joinToString(",")}"
-            } else {
-                part
-            }
-        }.toMutableList()
-
-        if (parts.none { it.startsWith("arts:") } && uniqueArts.isNotEmpty()) {
-            updatedParts.add("arts:${uniqueArts.joinToString(",")}")
-        }
-
-        return metadata.copy(
-            thumbnail = uniqueArts.firstOrNull(),
-            debugInfo = updatedParts.joinToString("|")
-        )
-    }
 
     private fun isValidImageUri(path: String?): Boolean {
         if (path.isNullOrBlank()) return false

@@ -144,12 +144,18 @@ class HomeViewModel(
 
     init {
         viewModelScope.launch {
-            if (selectedSystemIdState.value == null) {
+            if (selectedSystemIdState.value == null || selectedSystemIdState.value?.lowercase() == "psp") {
                 val lastPlayedGame = retrogradeDb.gameDao().selectLastPlayedGameFlow().first()
-                if (lastPlayedGame != null) {
+                if (lastPlayedGame != null && lastPlayedGame.systemId.lowercase() != "psp") {
                     setSelectedSystem(lastPlayedGame.systemId)
                 } else {
+                    val preferred = listOf("gb", "gbc", "gba")
                     val systems = retrogradeDb.gameDao().selectSystems()
+                        .filter { it.lowercase() != "psp" }
+                        .sortedBy { sysId ->
+                            val idx = preferred.indexOf(sysId.lowercase())
+                            if (idx != -1) idx else Int.MAX_VALUE
+                        }
                     if (systems.isNotEmpty()) setSelectedSystem(systems.first())
                 }
             }
@@ -181,7 +187,15 @@ class HomeViewModel(
                 val microphoneEnabled = params[8] as Boolean
                 val desmumeWarning = params[9] as Boolean
 
-                val systemLibraries = availableSystems.map { sysId ->
+                val preferredSystemOrder = listOf("gb", "gbc", "gba")
+                val filteredSystems = availableSystems
+                    .filter { it.lowercase() != "psp" }
+                    .sortedBy { sysId ->
+                        val idx = preferredSystemOrder.indexOf(sysId.lowercase())
+                        if (idx != -1) idx else Int.MAX_VALUE
+                    }
+
+                val systemLibraries = filteredSystems.map { sysId ->
                     val systemGames = allGames
                         .filter { it.systemId.lowercase() == sysId.lowercase() }
                         .sortedWith(compareByDescending<Game> { it.lastPlayedAt ?: 0L }.thenBy { it.title })

@@ -186,15 +186,15 @@ class LemuroidLibrary(
 
                     val updatedGame = if (metadata != null) {
                         val newTitle = if (game.title.isNotBlank()) game.title else (metadata.name ?: game.title)
-                        val newDev = game.developer ?: metadata.developer
-                        val newPub = game.publisher ?: metadata.publisher
-                        val newDate = game.releaseDate ?: metadata.releaseDate
-                        val newCountry = game.country ?: metadata.country
-                        val newSummary = game.summary ?: metadata.summary
-                        val newCover = game.coverFrontUrl ?: metadata.thumbnail
-                        val newCoverBack = game.coverBackUrl ?: metadata.thumbnailBack
-                        val newCartridge = game.cartridgeUrl ?: metadata.cartridgeImage
-                        val newManual = game.manualUrl ?: metadata.manualUrl
+                        val newDev = game.developer?.takeIf { it.isNotBlank() } ?: metadata.developer
+                        val newPub = game.publisher?.takeIf { it.isNotBlank() } ?: metadata.publisher
+                        val newDate = game.releaseDate?.takeIf { it.isNotBlank() } ?: metadata.releaseDate
+                        val newCountry = game.country?.takeIf { it.isNotBlank() } ?: metadata.country
+                        val newSummary = game.summary?.takeIf { it.isNotBlank() } ?: metadata.summary
+                        val newCover = game.coverFrontUrl?.takeIf { it.isNotBlank() } ?: metadata.thumbnail
+                        val newCoverBack = game.coverBackUrl?.takeIf { it.isNotBlank() } ?: metadata.thumbnailBack
+                        val newCartridge = game.cartridgeUrl?.takeIf { it.isNotBlank() } ?: metadata.cartridgeImage
+                        val newManual = game.manualUrl?.takeIf { it.isNotBlank() } ?: metadata.manualUrl
 
                         game.copy(
                             title = newTitle,
@@ -466,12 +466,15 @@ class LemuroidLibrary(
                     if (metadata != null) {
                         // Non-overwriting rule: Only populate missing/null/blank fields!
                         val newTitle = if (game.title.isNotBlank()) game.title else (metadata.name ?: game.title)
-                        val newDev = game.developer ?: metadata.developer
-                        val newPub = game.publisher ?: metadata.publisher
-                        val newDate = game.releaseDate ?: metadata.releaseDate
-                        val newCountry = game.country ?: metadata.country
-                        val newSummary = game.summary ?: metadata.summary
-                        val newCover = game.coverFrontUrl ?: metadata.thumbnail
+                        val newDev = game.developer?.takeIf { it.isNotBlank() } ?: metadata.developer
+                        val newPub = game.publisher?.takeIf { it.isNotBlank() } ?: metadata.publisher
+                        val newDate = game.releaseDate?.takeIf { it.isNotBlank() } ?: metadata.releaseDate
+                        val newCountry = game.country?.takeIf { it.isNotBlank() } ?: metadata.country
+                        val newSummary = game.summary?.takeIf { it.isNotBlank() } ?: metadata.summary
+                        val newCover = game.coverFrontUrl?.takeIf { it.isNotBlank() } ?: metadata.thumbnail
+                        val newCoverBack = game.coverBackUrl?.takeIf { it.isNotBlank() } ?: metadata.thumbnailBack
+                        val newCartridge = game.cartridgeUrl?.takeIf { it.isNotBlank() } ?: metadata.cartridgeImage
+                        val newManual = game.manualUrl?.takeIf { it.isNotBlank() } ?: metadata.manualUrl
 
                         val updatedGame = game.copy(
                             title = newTitle,
@@ -481,9 +484,9 @@ class LemuroidLibrary(
                             country = newCountry,
                             summary = newSummary,
                             coverFrontUrl = newCover,
-                            coverBackUrl = game.coverBackUrl ?: metadata.thumbnailBack,
-                            cartridgeUrl = game.cartridgeUrl ?: metadata.cartridgeImage,
-                            manualUrl = game.manualUrl ?: metadata.manualUrl
+                            coverBackUrl = newCoverBack,
+                            cartridgeUrl = newCartridge,
+                            manualUrl = newManual
                         )
                         if (updatedGame != game) {
                             updatedGames.add(updatedGame)

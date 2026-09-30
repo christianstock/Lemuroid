@@ -66,9 +66,37 @@ class SkraperXmlParserTest {
         assertEquals("Nintendo EAD", entry.developer)
         assertEquals("Nintendo", entry.publisher)
         assertEquals("An epic adventure.", entry.description)
-        assertEquals("19911121", entry.releaseDate)
+        assertEquals("1991-11-21", entry.releaseDate)
         assertEquals("./covers/zelda.png", entry.coverFrontPath)
         assertEquals("Action-Adventure", entry.genre)
+    }
+
+    @Test
+    fun `parse lowercase gamelist format`() {
+        val xml = """
+            <?xml version="1.0" encoding="utf-8"?>
+            <gamelist>
+                <game>
+                    <path>./Super Mario Kart (USA).sfc</path>
+                    <name>Super Mario Kart</name>
+                    <description>A fun racing game.</description>
+                    <dev>Nintendo EAD</dev>
+                    <pub>Nintendo</pub>
+                    <date>1992-08-27</date>
+                </game>
+            </gamelist>
+        """.trimIndent()
+
+        val entries = parser.parse(ByteArrayInputStream(xml.toByteArray()))
+
+        assertEquals(1, entries.size)
+        val entry = entries.first()
+        assertEquals("Super Mario Kart", entry.title)
+        assertEquals("Super Mario Kart (USA).sfc", entry.romFileName)
+        assertEquals("Nintendo EAD", entry.developer)
+        assertEquals("Nintendo", entry.publisher)
+        assertEquals("A fun racing game.", entry.description)
+        assertEquals("1992-08-27", entry.releaseDate)
     }
 
     @Test

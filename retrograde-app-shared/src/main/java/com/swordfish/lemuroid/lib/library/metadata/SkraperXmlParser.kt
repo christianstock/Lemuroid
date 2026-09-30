@@ -23,11 +23,12 @@ class SkraperXmlParser {
             return emptyList()
         }
 
-        return when (parser.name) {
-            "LaunchBox" -> parseLaunchBoxFormat(parser)
-            "gameList" -> parseEmulationStationFormat(parser)
-            "datafile" -> parseLogiqxFormat(parser)
-            else -> emptyList()
+        val tagLower = parser.name?.lowercase() ?: ""
+        return when {
+            tagLower == "launchbox" -> parseLaunchBoxFormat(parser)
+            tagLower == "gamelist" || tagLower == "games" || tagLower == "menu" -> parseEmulationStationFormat(parser)
+            tagLower == "datafile" -> parseLogiqxFormat(parser)
+            else -> parseEmulationStationFormat(parser)
         }
     }
 
@@ -66,19 +67,19 @@ class SkraperXmlParser {
                     }
                     "title" -> currentTitle = parser.nextText().trim()
                     "applicationpath" -> currentAppPath = parser.nextText().trim()
-                    "developer" -> currentDev = parser.nextText().trim()
-                    "publisher" -> currentPub = parser.nextText().trim()
-                    "notes" -> currentNotes = parser.nextText().trim()
+                    "developer", "dev" -> currentDev = parser.nextText().trim()
+                    "publisher", "pub" -> currentPub = parser.nextText().trim()
+                    "notes", "desc", "description", "summary" -> currentNotes = parser.nextText().trim()
                     "manualpath" -> currentManual = parser.nextText().trim()
                     "genre" -> currentGenre = parser.nextText().trim()
-                    "releasedate" -> currentReleaseDate = parser.nextText().trim()
+                    "releasedate", "date", "release", "year" -> currentReleaseDate = parser.nextText().trim()
                     "boxfront" -> currentCoverFront = parser.nextText().trim()
                     "boxback" -> currentCoverBack = parser.nextText().trim()
                     "cartridge", "support", "support2d", "cart2d", "cart3d" -> currentCartridge = currentCartridge ?: parser.nextText().trim()
                 }
             } else if (eventType == XmlPullParser.END_TAG && parser.name.lowercase() == "game") {
                 if (!currentTitle.isNullOrEmpty() || !currentAppPath.isNullOrEmpty()) {
-                    val romName = currentAppPath?.substringAfterLast('\\')?.substringAfterLast('/')
+                    val romName = currentAppPath?.replace('\\', '/')?.substringAfterLast('/')?.removePrefix("./")
                     entries.add(
                         SkraperGameEntry(
                             title = currentTitle ?: romName ?: "Unknown",
@@ -136,10 +137,10 @@ class SkraperXmlParser {
                     }
                     "name" -> currentTitle = parser.nextText().trim()
                     "path" -> currentPath = parser.nextText().trim()
-                    "desc" -> currentDesc = parser.nextText().trim()
-                    "developer" -> currentDev = parser.nextText().trim()
-                    "publisher" -> currentPub = parser.nextText().trim()
-                    "releasedate", "date" -> currentRelease = parser.nextText().trim()
+                    "desc", "description", "notes", "summary" -> currentDesc = parser.nextText().trim()
+                    "developer", "dev" -> currentDev = parser.nextText().trim()
+                    "publisher", "pub" -> currentPub = parser.nextText().trim()
+                    "releasedate", "date", "release", "year" -> currentRelease = parser.nextText().trim()
                     "image", "box" -> currentImage = currentImage ?: parser.nextText().trim()
                     "imageback", "boxback" -> currentImageBack = currentImageBack ?: parser.nextText().trim()
                     "imagecartridge", "cartridge", "support", "support2d", "cart2d", "cart3d" -> currentImageCartridge = currentImageCartridge ?: parser.nextText().trim()
@@ -147,7 +148,7 @@ class SkraperXmlParser {
                     "genre" -> currentGenre = parser.nextText().trim()
                 }
             } else if (eventType == XmlPullParser.END_TAG && parser.name.lowercase() == "game") {
-                val romName = currentPath?.substringAfterLast('/')
+                val romName = currentPath?.replace('\\', '/')?.substringAfterLast('/')?.removePrefix("./")
                 Log.d("SkraperXmlParser", "EmulationStation: Game '${currentTitle}' found images - front: $currentImage, back: $currentImageBack, cartridge: $currentImageCartridge")
                 entries.add(
                     SkraperGameEntry(
