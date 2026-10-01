@@ -30,16 +30,52 @@ class SkraperMetadataProvider(
         val romFileName = storageFile.name
         val extensionlessName = storageFile.extensionlessName
         val cleanedRomName = extensionlessName.cleanGameTitle()
+        val normalizedRomName = normalizeForMatching(extensionlessName)
 
-        // Find all matching entries
+        // Try to find the original ZIP file in the ROM directory (if the current file is extracted)
+        val zipFileName = findZipFileInDirectory(storageFile)
+        val zipFileNameNormalized = zipFileName?.let { normalizeForMatching(it.substringBeforeLast(".")) }
+        
+        Log.d("SkraperMetadata", "DEBUG: Matching ROM: romFileName='$romFileName', extensionlessName='$extensionlessName', zipFileName='$zipFileName', normalized='$normalizedRomName'")
+        Log.d("SkraperMetadata", "DEBUG: Total entries to search: ${entries.size}")
+
+        // Find all matching entries - use normalized comparison for better matching
         val matchedEntries = entries.filter { entry ->
             val isMatchByRomFileName = entry.romFileName?.equals(romFileName, ignoreCase = true) == true
             val isMatchByRomFileNameNoExt = entry.romFileName?.equals(extensionlessName, ignoreCase = true) == true
+            val isMatchByNormalizedRomName = entry.romFileName?.let { normalizeForMatching(it.substringBeforeLast(".")) }
+                ?.equals(normalizedRomName, ignoreCase = true) == true
+            
+            // NEW: Match against ZIP filename if found
+            val isMatchByZipFileName = zipFileName != null && 
+                entry.romFileName?.equals(zipFileName, ignoreCase = true) == true
+            val isMatchByNormalizedZipFileName = zipFileNameNormalized != null &&
+                entry.romFileName?.let { normalizeForMatching(it.substringBeforeLast(".")) }
+                    ?.equals(zipFileNameNormalized, ignoreCase = true) == true
+            
             val isMatchByTitleExact = entry.title.equals(extensionlessName, ignoreCase = true)
             val isMatchByTitleCleaned = entry.title.cleanGameTitle().equals(cleanedRomName, ignoreCase = true)
+            val isMatchByNormalizedTitle = normalizeForMatching(entry.title).equals(normalizedRomName, ignoreCase = true)
 
-            isMatchByRomFileName || isMatchByRomFileNameNoExt || isMatchByTitleExact || isMatchByTitleCleaned
+            val matched = isMatchByRomFileName || isMatchByRomFileNameNoExt || isMatchByNormalizedRomName || 
+                         isMatchByZipFileName || isMatchByNormalizedZipFileName ||
+                         isMatchByTitleExact || isMatchByTitleCleaned || isMatchByNormalizedTitle
+            if (matched || entry.title.contains("Adventure Island", ignoreCase = true)) {
+                Log.d("SkraperMetadata", "DEBUG ENTRY: title='${entry.title}', romFileName='${entry.romFileName}'")
+                Log.d("SkraperMetadata", "  - romFileName match: $isMatchByRomFileName")
+                Log.d("SkraperMetadata", "  - romFileNameNoExt match: $isMatchByRomFileNameNoExt")
+                Log.d("SkraperMetadata", "  - normalizedRomName match: $isMatchByNormalizedRomName")
+                Log.d("SkraperMetadata", "  - zipFileName match: $isMatchByZipFileName (zipFile='$zipFileName')")
+                Log.d("SkraperMetadata", "  - normalizedZipFileName match: $isMatchByNormalizedZipFileName (normalized='$zipFileNameNormalized')")
+                Log.d("SkraperMetadata", "  - titleExact match: $isMatchByTitleExact")
+                Log.d("SkraperMetadata", "  - titleCleaned match: $isMatchByTitleCleaned (cleaned='${entry.title.cleanGameTitle()}')")
+                Log.d("SkraperMetadata", "  - normalizedTitle match: $isMatchByNormalizedTitle (normalized='${normalizeForMatching(entry.title)}')")
+                Log.d("SkraperMetadata", "  - MATCHED: $matched")
+            }
+
+            matched
         }
+        Log.d("SkraperMetadata", "DEBUG: Matched entries: ${matchedEntries.size} of ${entries.size}")
 
         // Resolve relative paths from XML entries into absolute URIs
         val resolvedEntries = matchedEntries.map { entry ->
@@ -559,5 +595,73 @@ class SkraperMetadataProvider(
 
     fun clearCache() {
         parsedDirectoryCache.clear()
+    }
+
+    /**
+     * Normalize a game name for matching by:
+     * - Removing region information in parentheses
+     * - Treating underscores and colons as equivalent
+     * - Removing extra whitespace
+     * - Converting to lowercase for comparison
+     * 
+     * Examples:
+     * "Adventure Island (USA, Europe)" → "adventure island"
+     * "Adventure Island II_ Aliens in Paradise" → "adventure island 2 aliens in paradise"
+     * "Adventure Island II: Aliens in Paradise" → "adventure island 2 aliens in paradise"
+     */
+    private suspend fun findZipFileInDirectory(storageFile: StorageFile): String? {
+       return try {
+           when (storageFile.uri.scheme) {
+               "file" -> {
+                   val romPath = storageFile.uri.path ?: return null
+                   val romFile = File(romPath)
+                   val romDir = romFile.parentFile ?: return null
+                    
+                   // Get normalized name without extension for matching
+                   val extensionlessName = storageFile.extensionlessName
+                   val normalizedName = normalizeForMatching(extensionlessName)
+                    
+                   // Search for .zip files in the same directory
+                   val zipFiles = romDir.listFiles { file ->
+                       file.isFile && file.extension.equals("zip", ignoreCase = true)
+                   } ?: emptyArray()
+                    
+                   // Find a ZIP that matches the ROM name (normalized)
+                   val matchedZip = zipFiles.firstOrNull { zipFile ->
+                       val zipNameNormalized = normalizeForMatching(zipFile.nameWithoutExtension)
+                       zipNameNormalized.equals(normalizedName, ignoreCase = true)
+                   }
+                    
+                   if (matchedZip != null) {
+                       Log.d("SkraperMetadata", "DEBUG: Found matching ZIP file: ${matchedZip.name}")
+                       matchedZip.name
+                   } else {
+                       Log.d("SkraperMetadata", "DEBUG: No matching ZIP file found in directory")
+                       null
+                   }
+               }
+               "content" -> {
+                   // For content:// URIs, we'd need to scan the directory via DocumentsContract
+                   // For now, return null - the mediaFolderScanning will handle images
+                   Log.d("SkraperMetadata", "DEBUG: ZIP search not supported for content:// URIs yet")
+                   null
+               }
+               else -> null
+           }
+       } catch (e: Exception) {
+           Log.d("SkraperMetadata", "DEBUG: Error searching for ZIP file: ${e.message}")
+           null
+       }
+    }
+
+    private fun normalizeForMatching(input: String): String {
+        return input
+            .replace(Regex("\\s*\\([^)]*\\)\\s*"), " ") // Remove parentheses and their content
+            .replace(Regex("\\s*\\[[^]]*\\]\\s*"), " ") // Remove brackets and their content
+            .replace("_", " ") // Convert underscores to spaces
+            .replace(":", " ") // Convert colons to spaces
+            .replace(Regex("\\s+"), " ") // Normalize multiple spaces
+            .trim()
+            .lowercase()
     }
 }
