@@ -641,10 +641,46 @@ class SkraperMetadataProvider(
                    }
                }
                "content" -> {
-                   // For content:// URIs, we'd need to scan the directory via DocumentsContract
-                   // For now, return null - the mediaFolderScanning will handle images
-                   Log.d("SkraperMetadata", "DEBUG: ZIP search not supported for content:// URIs yet")
-                   null
+                   // For content:// URIs, use DocumentsContract to scan the directory
+                   val extensionlessName = storageFile.extensionlessName
+                   val normalizedName = normalizeForMatching(extensionlessName)
+                    
+                   try {
+                       val parentUri = DocumentsContract.getDocumentId(storageFile.uri)
+                       val parentDocumentUri = DocumentsContract.buildChildDocumentsUriUsingTree(
+                           storageFile.uri.buildUpon().authority(storageFile.uri.authority).build(),
+                           parentUri
+                       )
+                        
+                       val cursor = appContext.contentResolver.query(
+                           parentDocumentUri,
+                           arrayOf(DocumentsContract.Document.COLUMN_DOCUMENT_ID, 
+                                  DocumentsContract.Document.COLUMN_DISPLAY_NAME),
+                           null,
+                           null,
+                           null
+                       )
+                        
+                       cursor?.use { c ->
+                           while (c.moveToNext()) {
+                               val fileName = c.getString(1) ?: continue
+                               if (fileName.endsWith(".zip", ignoreCase = true)) {
+                                   val zipNameNormalized = normalizeForMatching(
+                                       fileName.substringBeforeLast(".")
+                                   )
+                                   if (zipNameNormalized.equals(normalizedName, ignoreCase = true)) {
+                                       Log.d("SkraperMetadata", "DEBUG: Found matching ZIP file (content://): $fileName")
+                                       return fileName
+                                   }
+                               }
+                           }
+                       }
+                       Log.d("SkraperMetadata", "DEBUG: No matching ZIP file found in content:// directory")
+                       null
+                   } catch (e: Exception) {
+                       Log.d("SkraperMetadata", "DEBUG: Error searching content:// directory for ZIP: ${e.message}")
+                       null
+                   }
                }
                else -> null
            }
@@ -656,10 +692,10 @@ class SkraperMetadataProvider(
 
     private fun normalizeForMatching(input: String): String {
         return input
-            .replace(Regex("\\s*\\([^)]*\\)\\s*"), " ") // Remove parentheses and their content
+            .replace(Regex("\\s*\\([^)]*\\)\\s*"), " ") // Remove parentheses and their content (region info)
             .replace(Regex("\\s*\\[[^]]*\\]\\s*"), " ") // Remove brackets and their content
             .replace("_", " ") // Convert underscores to spaces
-            .replace(":", " ") // Convert colons to spaces
+            .replace("-", " ") // Convert dashes to spaces
             .replace(Regex("\\s+"), " ") // Normalize multiple spaces
             .trim()
             .lowercase()
