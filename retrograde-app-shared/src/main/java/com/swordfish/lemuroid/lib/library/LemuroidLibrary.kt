@@ -19,7 +19,10 @@
 
 package com.swordfish.lemuroid.lib.library
 
+import android.content.Context
+import android.util.Log
 import com.swordfish.lemuroid.common.coroutines.batchWithSizeAndTime
+import com.swordfish.lemuroid.common.kotlin.calculateCrc32
 import com.swordfish.lemuroid.lib.bios.BiosManager
 import com.swordfish.lemuroid.lib.library.db.RetrogradeDatabase
 import com.swordfish.lemuroid.lib.library.db.entity.DataFile
@@ -50,6 +53,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 class LemuroidLibrary(
     private val retrogradedb: RetrogradeDatabase,
+    private val appContext: Context,
     private val storageProviderRegistry: Lazy<StorageProviderRegistry>,
     private val gameMetadataProvider: Lazy<GameMetadataProvider>,
     private val skraperMetadataProvider: Lazy<SkraperMetadataProvider>,
@@ -167,10 +171,6 @@ class LemuroidLibrary(
         val updatedGames =
             entries
                 .map { (storageFiles, game) ->
-                    // Re-sync fileName from the actual file on disk for non-zipped games.
-                    // This self-heals cases where fileName was accidentally corrupted in the DB
-                    // (e.g. set to a cleaned title instead of the real ROM filename).
-                    // Zipped games are skipped: we cannot recover the inner filename here.
                     val primaryFile = storageFiles.primaryFile
                     val primaryName = primaryFile.name
                     val correctedFileName = if (!primaryName.endsWith(".zip", ignoreCase = true)) {
@@ -179,10 +179,35 @@ class LemuroidLibrary(
                         game.fileName
                     }
 
-                    val storageFile = safeStorageFile(provider, primaryFile)
+                    Log.d("LemuroidLibrary", "UPDATE_GAME: Processing game '${game.title}' (${game.fileName}), systemId=${game.systemId}")
+                    
+                    var storageFile = safeStorageFile(provider, primaryFile)
+                    Log.d("LemuroidLibrary", "UPDATE_GAME: storageFile obtained, systemID=${storageFile?.systemID?.dbname}, crc=${storageFile?.crc}")
+                    
                     val metadata = if (storageFile != null) {
-                        runCatching { gameMetadata.retrieveMetadata(storageFile) { } }.getOrNull()
-                    } else null
+                        // Reconstruct systemID if missing (needed for metadata retrieval)
+                        if (storageFile.systemID == null) {
+                            val reconstructedSystem = SystemID.entries.find { it.dbname == game.systemId }
+                            storageFile = storageFile.copy(systemID = reconstructedSystem)
+                            Log.d("LemuroidLibrary", "UPDATE_GAME: Reconstructed systemID=${storageFile.systemID?.dbname}")
+                        }
+                        
+                        // Calculate CRC if missing (needed for proper metadata matching)
+                        if (storageFile.crc == null || storageFile.crc == "0") {
+                            Log.d("LemuroidLibrary", "UPDATE_GAME: Calculating CRC for ${storageFile.name}...")
+                            val crc = appContext.contentResolver.openInputStream(storageFile.uri)?.use { it.calculateCrc32() }
+                            storageFile = storageFile.copy(crc = crc)
+                            Log.d("LemuroidLibrary", "UPDATE_GAME: CRC calculated: $crc")
+                        }
+                        
+                        Log.d("LemuroidLibrary", "UPDATE_GAME: Calling retrieveMetadata for '${game.title}'...")
+                        val retrievedMetadata = gameMetadata.retrieveMetadata(storageFile) { }
+                        Log.d("LemuroidLibrary", "UPDATE_GAME: Metadata retrieved: name=${retrievedMetadata?.name}, pub=${retrievedMetadata?.publisher}, date=${retrievedMetadata?.releaseDate}")
+                        retrievedMetadata
+                    } else {
+                        Log.d("LemuroidLibrary", "UPDATE_GAME: storageFile is null, skipping metadata")
+                        null
+                    }
 
                     val updatedGame = if (metadata != null) {
                         val newTitle = if (game.title.isNotBlank()) game.title else (metadata.name ?: game.title)
@@ -196,6 +221,8 @@ class LemuroidLibrary(
                         val newCartridge = game.cartridgeUrl?.takeIf { it.isNotBlank() } ?: metadata.cartridgeImage
                         val newManual = game.manualUrl?.takeIf { it.isNotBlank() } ?: metadata.manualUrl
 
+                        Log.d("LemuroidLibrary", "UPDATE_GAME: Final values - pub=$newPub, date=$newDate")
+                        
                         game.copy(
                             title = newTitle,
                             developer = newDev,
@@ -211,6 +238,7 @@ class LemuroidLibrary(
                             fileName = correctedFileName
                         )
                     } else {
+                        Log.d("LemuroidLibrary", "UPDATE_GAME: No metadata returned")
                         game.copy(lastIndexedAt = startedAtMs, fileName = correctedFileName)
                     }
 
@@ -350,12 +378,42 @@ class LemuroidLibrary(
             sortedFilesForScanning(groupedStorageFile).asFlow()
                 .mapNotNull { safeStorageFile(provider, it) }
                 .mapNotNull { storageFile ->
-                    val metadata = metadataProvider.retrieveMetadata(storageFile) { }
-                    convertGameMetadataToGame(groupedStorageFile, storageFile, metadata, startedAtMs)
+                    // Reconstruct systemID from file path if missing (needed for metadata retrieval)
+                    var processedStorageFile = storageFile
+                    if (processedStorageFile.systemID == null) {
+                        val reconstructedSystem = extractSystemIDFromPath(processedStorageFile)
+                        processedStorageFile = processedStorageFile.copy(systemID = reconstructedSystem)
+                    }
+                    
+                    val metadata = metadataProvider.retrieveMetadata(processedStorageFile) { }
+                    convertGameMetadataToGame(groupedStorageFile, processedStorageFile, metadata, startedAtMs)
                 }
                 .firstOrNull()
 
         return buildScanEntry(groupedStorageFile, game)
+    }
+
+    private fun extractSystemIDFromPath(storageFile: StorageFile): SystemID? {
+        val uri = storageFile.uri
+        val path = when (uri.scheme) {
+            "file" -> uri.path
+            "content" -> uri.pathSegments.getOrNull(3) // Extract document ID portion
+            else -> null
+        } ?: return null
+
+        // Extract system folder name from path (e.g., /Roms/gba/game.gba -> gba)
+        val normalizedPath = path.replace("\\", "/").lowercase()
+        val romsIndex = normalizedPath.indexOf("/roms/")
+        if (romsIndex < 0) return null
+
+        val afterRoms = normalizedPath.substring(romsIndex + 6)
+        val systemFolder = afterRoms.substringBefore("/")
+        
+        // Try to find matching SystemID by checking folder names
+        return SystemID.entries.find { 
+            it.dbname.lowercase() == systemFolder ||
+            systemFolder.contains(it.dbname.lowercase())
+        }
     }
 
     private fun safeStorageFile(

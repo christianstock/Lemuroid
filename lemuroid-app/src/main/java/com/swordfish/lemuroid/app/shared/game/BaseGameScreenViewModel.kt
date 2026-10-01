@@ -444,6 +444,12 @@ class BaseGameScreenViewModel(
         }
     }
 
+    fun clearAllCheats() {
+        viewModelScope.launch {
+            cheatManager.clearCheatsForGame(game.id)
+        }
+    }
+
     fun setSearchQuery(query: String) {
         _searchQuery.value = query
     }

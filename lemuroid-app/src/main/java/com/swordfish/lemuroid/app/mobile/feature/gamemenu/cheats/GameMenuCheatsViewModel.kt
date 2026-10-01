@@ -46,25 +46,52 @@ class GameMenuCheatsViewModel(
     var cheatsChanged: Boolean = false
         private set
 
-    val cheats: Flow<List<GameCheatEntity>> = allCheats.combine(
-        _searchQuery
-    ) { allCheats, query ->
-        val filtered = if (query.isBlank()) {
-            allCheats
+    private val cheatComparator = Comparator<GameCheatEntity> { a, b ->
+        // 1. lastUsed descending (most recently toggled on top)
+        if (a.lastUsed != b.lastUsed) {
+            return@Comparator b.lastUsed.compareTo(a.lastUsed)
+        }
+
+        // 2. source alphabetically, but "Others" / null last
+        val sourceA = a.source?.trim() ?: "Others"
+        val sourceB = b.source?.trim() ?: "Others"
+        val isOthersA = sourceA.equals("Others", ignoreCase = true) || sourceA.equals("Other", ignoreCase = true)
+        val isOthersB = sourceB.equals("Others", ignoreCase = true) || sourceB.equals("Other", ignoreCase = true)
+
+        if (isOthersA != isOthersB) {
+            if (isOthersA) 1 else -1
         } else {
-            allCheats.filter { cheat ->
+            val sourceCompare = sourceA.compareTo(sourceB, ignoreCase = true)
+            if (sourceCompare != 0) {
+                sourceCompare
+            } else {
+                a.displayOrder.compareTo(b.displayOrder)
+            }
+        }
+    }
+
+    val cheats: Flow<List<GameCheatEntity>> = combine(
+        allCheats,
+        _searchQuery,
+        _selectedSources
+    ) { cheatsList, query, selected ->
+        val filtered = if (query.isBlank()) {
+            cheatsList
+        } else {
+            cheatsList.filter { cheat ->
                 val queryLower = query.lowercase()
                 cheat.description.lowercase().contains(queryLower) ||
                 cheat.code.lowercase().contains(queryLower)
             }
         }
 
-        val selected = _selectedSources.value
-        if (selected.isEmpty()) {
+        val sourceFiltered = if (selected.isEmpty()) {
             filtered
         } else {
             filtered.filter { it.source in selected }
         }
+
+        sourceFiltered.sortedWith(cheatComparator)
     }
 
     fun setSearchQuery(query: String) {
@@ -131,6 +158,13 @@ class GameMenuCheatsViewModel(
     fun disableAllCheats() {
         viewModelScope.launch {
             cheatManager.disableAllCheats(gameId)
+            cheatsChanged = true
+        }
+    }
+
+    fun clearAllCheats() {
+        viewModelScope.launch {
+            cheatManager.clearCheatsForGame(gameId)
             cheatsChanged = true
         }
     }

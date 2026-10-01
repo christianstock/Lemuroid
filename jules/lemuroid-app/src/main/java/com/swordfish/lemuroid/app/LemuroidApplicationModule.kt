@@ -57,6 +57,7 @@ import com.swordfish.lemuroid.lib.library.db.RetrogradeDatabase
 import com.swordfish.lemuroid.lib.library.db.dao.GameSearchDao
 import com.swordfish.lemuroid.lib.library.db.dao.Migrations
 import com.swordfish.lemuroid.lib.library.metadata.GameMetadataProvider
+import com.swordfish.lemuroid.lib.library.metadata.SkraperMetadataProvider
 import com.swordfish.lemuroid.lib.migration.DesmumeMigrationHandler
 import com.swordfish.lemuroid.lib.preferences.SharedPreferencesHelper
 import com.swordfish.lemuroid.lib.saves.SavesCoherencyEngine
@@ -156,6 +157,12 @@ abstract class LemuroidApplicationModule {
         @Provides
         @PerApp
         @JvmStatic
+        fun skraperMetadataProvider(context: Context): SkraperMetadataProvider =
+            SkraperMetadataProvider(context)
+
+        @Provides
+        @PerApp
+        @JvmStatic
         fun gameMetadataProvider(libretroDBManager: LibretroDBManager): GameMetadataProvider =
             LibretroDBMetadataProvider(libretroDBManager)
 
@@ -187,10 +194,12 @@ abstract class LemuroidApplicationModule {
         @JvmStatic
         fun lemuroidLibrary(
             db: RetrogradeDatabase,
+            context: Context,
             storageProviderRegistry: Lazy<StorageProviderRegistry>,
             gameMetadataProvider: Lazy<GameMetadataProvider>,
+            skraperMetadataProvider: Lazy<SkraperMetadataProvider>,
             biosManager: BiosManager,
-        ) = LemuroidLibrary(db, storageProviderRegistry, gameMetadataProvider, biosManager)
+        ) = LemuroidLibrary(db, context, storageProviderRegistry, gameMetadataProvider, skraperMetadataProvider, biosManager)
 
         @Provides
         @PerApp

@@ -1,20 +1,21 @@
 package com.swordfish.lemuroid.app.shared.cheats.ui
 
 import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -23,21 +24,20 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -48,15 +48,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.swordfish.lemuroid.lib.library.db.entity.GameCheatEntity
 import kotlinx.coroutines.flow.Flow
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun CheatMenuScreen(
     modifier: Modifier = Modifier,
@@ -69,12 +67,13 @@ fun CheatMenuScreen(
     onDeleteCheat: (GameCheatEntity) -> Unit,
     onUndoDeleteCheat: (Int) -> Unit,
     onUpdateCheatOrder: (cheatId: Int, newOrder: Int) -> Unit,
-    onImportCheats: (Uri) -> Unit,
+    onImportCheats: (Uri) -> Unit = {},
     onSetSearchQuery: (String) -> Unit,
     onToggleSourceFilter: (String) -> Unit,
     onClearSourceFilter: () -> Unit,
     onRescanCheats: () -> Unit,
-    onDisableAllCheats: () -> Unit,
+    onClearCheats: () -> Unit = {},
+    onDisableAllCheats: () -> Unit = {},
     onClose: () -> Unit,
 ) {
     val cheats = cheatsFlow.collectAsState(initial = emptyList()).value
@@ -84,16 +83,29 @@ fun CheatMenuScreen(
     val deletedCheats = deletedCheatsFlow.collectAsState(initial = emptyMap()).value
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Extract all unique sources
+    // Extract all unique sources sorted alphabetically, with "Others" / "Other" last
     val allSources = remember(cheats) {
-        cheats.mapNotNull { it.source }.distinct().sorted()
+        cheats.mapNotNull { it.source }
+            .distinct()
+            .sortedWith { a, b ->
+                val isOthersA = a.equals("Others", ignoreCase = true) || a.equals("Other", ignoreCase = true)
+                val isOthersB = b.equals("Others", ignoreCase = true) || b.equals("Other", ignoreCase = true)
+                if (isOthersA != isOthersB) {
+                    if (isOthersA) 1 else -1
+                } else {
+                    a.compareTo(b, ignoreCase = true)
+                }
+            }
     }
 
+    /*
+    // ZIP import functionality commented out per user request
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let { onImportCheats(it) }
     }
+    */
 
     val lazyListState = rememberLazyListState()
     val draggedItemIndex = remember { mutableStateOf<Int?>(null) }
@@ -101,7 +113,7 @@ fun CheatMenuScreen(
 
     Box(modifier = modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Header with title and action buttons
+            // Header with clear labeled actions
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -117,49 +129,65 @@ fun CheatMenuScreen(
 
                 Spacer(modifier = Modifier.weight(1f))
 
-                IconButton(
+                // Rescan button with label
+                OutlinedButton(
                     onClick = onRescanCheats,
-                    enabled = !isRescanning && cheats.isNotEmpty()
+                    enabled = !isRescanning
                 ) {
                     if (isRescanning) {
                         CircularProgressIndicator(
-                            modifier = Modifier.padding(8.dp),
+                            modifier = Modifier.size(16.dp),
                             strokeWidth = 2.dp
                         )
                     } else {
                         Icon(
                             imageVector = Icons.Default.Refresh,
                             contentDescription = "Rescan cheats",
-                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(16.dp)
                         )
                     }
+                    Spacer(modifier = Modifier.size(4.dp))
+                    Text("Rescan")
                 }
 
-                IconButton(
-                    onClick = onDisableAllCheats,
-                    enabled = cheats.isNotEmpty()
+                // Clear All button with label
+                OutlinedButton(
+                    onClick = onClearCheats,
+                    enabled = cheats.isNotEmpty() && !isRescanning
                 ) {
-                    Text(
-                        text = "∅",
-                        style = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                }
-
-                IconButton(onClick = { filePickerLauncher.launch("application/zip") }) {
                     Icon(
-                        imageVector = Icons.Default.FileDownload,
-                        contentDescription = "Import cheats",
-                        tint = MaterialTheme.colorScheme.onSurface,
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Clear all cheats",
+                        modifier = Modifier.size(16.dp)
                     )
+                    Spacer(modifier = Modifier.size(4.dp))
+                    Text("Clear All")
                 }
 
+                // Close button (X)
                 IconButton(onClick = onClose) {
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Close cheats menu",
                         tint = MaterialTheme.colorScheme.onSurface,
                     )
+                }
+            }
+
+            // Progress Bar during database rescan
+            if (isRescanning) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = "Scanning Libretro cheat database...",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                 }
             }
 
@@ -175,33 +203,33 @@ fun CheatMenuScreen(
                 maxLines = 1,
             )
 
-            // Filter chips
+            // Source Filter Chips - FlowRow wraps tabs onto a new line nicely
             if (allSources.isNotEmpty()) {
-                Row(
+                FlowRow(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     FilterChip(
                         selected = selectedSources.isEmpty(),
                         onClick = onClearSourceFilter,
-                        label = { Text("All") }
+                        label = { Text("All", maxLines = 1) }
                     )
 
                     allSources.forEach { source ->
                         FilterChip(
                             selected = source in selectedSources,
                             onClick = { onToggleSourceFilter(source) },
-                            label = { Text(source) }
+                            label = { Text(source, maxLines = 1) }
                         )
                     }
                 }
             }
 
             // Cheat list
-            if (cheats.isEmpty()) {
+            if (cheats.isEmpty() && !isRescanning) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -211,12 +239,18 @@ fun CheatMenuScreen(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = "No cheats available",
+                            text = "No cheats available for this game",
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        Spacer(modifier = Modifier.padding(8.dp))
-                        Button(onClick = { filePickerLauncher.launch("application/zip") }) {
-                            Text("Import from ZIP")
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedButton(onClick = onRescanCheats) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.size(4.dp))
+                            Text("Rescan Libretro Database")
                         }
                     }
                 }

@@ -12,15 +12,19 @@ class CompositeMetadataProvider(
         storageFile: StorageFile,
         onLog: (String) -> Unit
     ): GameMetadata? {
+        Log.d("CompositeMetadata", "COMPOSITE: Retrieving metadata for ${storageFile.name}...")
         val skraperMetadata = runCatching {
             skraperMetadataProvider.retrieveMetadata(storageFile, onLog)
         }.getOrNull()
+        Log.d("CompositeMetadata", "COMPOSITE: SkraperMetadata result - pub=${skraperMetadata?.publisher}, date=${skraperMetadata?.releaseDate}")
 
         val libretroMetadata = runCatching {
             fallbackMetadataProvider.retrieveMetadata(storageFile, onLog)
         }.getOrNull()
+        Log.d("CompositeMetadata", "COMPOSITE: LibretroMetadata result - pub=${libretroMetadata?.publisher}, date=${libretroMetadata?.releaseDate}")
 
         if (skraperMetadata == null && libretroMetadata == null) {
+            Log.d("CompositeMetadata", "COMPOSITE: Both providers returned null, returning null")
             return null
         }
 
@@ -76,6 +80,15 @@ class CompositeMetadataProvider(
         }.removeSuffix("|")
 
         val baseMetadata = skraperMetadata ?: libretroMetadata!!
+        
+        val finalPub = skraperMetadata?.publisher?.ifBlank { null }
+            ?: libretroMetadata?.publisher?.ifBlank { null }
+            ?: allPubs.firstOrNull()
+        val finalDate = allDates.firstOrNull()
+            ?: skraperMetadata?.releaseDate?.ifBlank { null }
+            ?: libretroMetadata?.releaseDate?.ifBlank { null }
+        
+        Log.d("CompositeMetadata", "COMPOSITE: Final result - pub=$finalPub, date=$finalDate")
 
         return baseMetadata.copy(
             name = skraperMetadata?.name?.ifBlank { null } ?: libretroMetadata?.name,
@@ -84,16 +97,12 @@ class CompositeMetadataProvider(
             developer = skraperMetadata?.developer?.ifBlank { null }
                 ?: libretroMetadata?.developer?.ifBlank { null }
                 ?: allDevs.firstOrNull(),
-            publisher = skraperMetadata?.publisher?.ifBlank { null }
-                ?: libretroMetadata?.publisher?.ifBlank { null }
-                ?: allPubs.firstOrNull(),
+            publisher = finalPub,
             thumbnail = allArts.firstOrNull() ?: skraperMetadata?.thumbnail ?: libretroMetadata?.thumbnail,
             thumbnailBack = allArtsBack.firstOrNull() ?: skraperMetadata?.thumbnailBack ?: libretroMetadata?.thumbnailBack,
             cartridgeImage = allCarts.firstOrNull() ?: skraperMetadata?.cartridgeImage ?: libretroMetadata?.cartridgeImage,
             manualUrl = allManuals.firstOrNull() ?: skraperMetadata?.manualUrl ?: libretroMetadata?.manualUrl,
-            releaseDate = allDates.firstOrNull()
-                ?: skraperMetadata?.releaseDate?.ifBlank { null }
-                ?: libretroMetadata?.releaseDate?.ifBlank { null },
+            releaseDate = finalDate,
             summary = skraperMetadata?.summary?.ifBlank { null } ?: libretroMetadata?.summary,
             country = skraperMetadata?.country?.ifBlank { null } ?: libretroMetadata?.country,
             debugInfo = mergedOptions

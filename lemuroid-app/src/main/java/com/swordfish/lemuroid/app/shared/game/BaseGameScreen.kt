@@ -95,6 +95,9 @@ fun BaseGameScreen(
                         onRescanCheats = {
                             viewModel.rescandCheatsForCurrentGame()
                         },
+                        onClearCheats = {
+                            viewModel.clearAllCheats()
+                        },
                         onDisableAllCheats = {
                             viewModel.disableAllCheats()
                         },

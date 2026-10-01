@@ -140,7 +140,13 @@ abstract class LemuroidApplicationModule {
         fun cheatManager(
             retrogradeDatabase: RetrogradeDatabase,
             directoriesManager: DirectoriesManager,
-        ) = CheatManager(retrogradeDatabase.gameCheatDao(), directoriesManager, retrogradeDatabase)
+            cheatDownloader: CheatDownloader,
+        ) = CheatManager(
+            retrogradeDatabase.gameCheatDao(),
+            directoriesManager,
+            retrogradeDatabase,
+            cheatDownloader
+        )
 
         @Provides
         @PerApp
@@ -162,7 +168,7 @@ abstract class LemuroidApplicationModule {
         fun retrogradeDb(app: LemuroidApplication) =
             Room.databaseBuilder(app, RetrogradeDatabase::class.java, RetrogradeDatabase.DB_NAME)
                 .addCallback(GameSearchDao.CALLBACK)
-                .addMigrations(GameSearchDao.MIGRATION, Migrations.VERSION_8_9, Migrations.VERSION_9_10, Migrations.VERSION_11_12, Migrations.VERSION_12_13, Migrations.VERSION_13_14, Migrations.VERSION_14_15)
+                .addMigrations(GameSearchDao.MIGRATION, Migrations.VERSION_8_9, Migrations.VERSION_9_10, Migrations.VERSION_11_12, Migrations.VERSION_12_13, Migrations.VERSION_13_14, Migrations.VERSION_14_15, Migrations.VERSION_15_16)
                 .fallbackToDestructiveMigration()
                 .build()
 
@@ -210,11 +216,12 @@ abstract class LemuroidApplicationModule {
         @JvmStatic
         fun lemuroidLibrary(
             db: RetrogradeDatabase,
+            context: Context,
             storageProviderRegistry: Lazy<StorageProviderRegistry>,
             gameMetadataProvider: Lazy<GameMetadataProvider>,
             skraperMetadataProvider: Lazy<SkraperMetadataProvider>,
             biosManager: BiosManager,
-        ) = LemuroidLibrary(db, storageProviderRegistry, gameMetadataProvider, skraperMetadataProvider, biosManager)
+        ) = LemuroidLibrary(db, context, storageProviderRegistry, gameMetadataProvider, skraperMetadataProvider, biosManager)
 
         @Provides
         @PerApp

@@ -186,17 +186,39 @@ class SkraperMetadataProvider(
             "file" -> {
                 val file = File(uri.path ?: return emptyList())
                 val dir = file.parentFile ?: return emptyList()
+                Log.d("SkraperMetadata", "CACHE_DEBUG: file scheme, cacheKey=${dir.absolutePath}")
                 parsedDirectoryCache.getOrPut(dir.absolutePath) {
+                    Log.d("SkraperMetadata", "CACHE_DEBUG: cache miss for $dir, scanning...")
                     scanAndParseDirectoryFiles(dir)
                 }
             }
             "content" -> {
-                val cacheKey = uri.toString().substringBeforeLast("%2F").substringBeforeLast("/")
-                parsedDirectoryCache.getOrPut(cacheKey) {
+                // Extract the parent directory from content URI
+                // URI format: content://com.android.externalstorage.documents/tree/primary%3ARoms/document/primary%3ARoms%2Fgb%2FRomName.zip
+                // We need to extract: primary:Roms/gb (the system folder path)
+                val uriString = uri.toString()
+                // Find the document ID part: primary%3ARoms%2Fgb%2FRomName.zip
+                val documentIdStart = uriString.indexOf("document/")
+                if (documentIdStart < 0) {
+                    Log.d("SkraperMetadata", "CACHE_DEBUG: could not find document/ in uri=$uriString")
+                    return emptyList()
+                }
+                val documentId = uriString.substring(documentIdStart + 9) // "document/".length = 9
+                // Decode URL-encoded characters: %3A -> :, %2F -> /
+                val decodedPath = java.net.URLDecoder.decode(documentId, "UTF-8")
+                // Get parent directory: primary:Roms/gb/RomName.zip -> primary:Roms/gb
+                val parentPath = decodedPath.substringBeforeLast("/")
+                // Use parent path as cache key so each system folder has its own cache
+                Log.d("SkraperMetadata", "CACHE_DEBUG: content scheme, documentId=$documentId, decodedPath=$decodedPath, parentPath=$parentPath")
+                parsedDirectoryCache.getOrPut(parentPath) {
+                    Log.d("SkraperMetadata", "CACHE_DEBUG: cache miss for $parentPath, scanning...")
                     scanAndParseContentDirectory(uri)
                 }
             }
-            else -> emptyList()
+            else -> {
+                Log.d("SkraperMetadata", "CACHE_DEBUG: unknown scheme ${uri.scheme}")
+                emptyList()
+            }
         }
     }
 
