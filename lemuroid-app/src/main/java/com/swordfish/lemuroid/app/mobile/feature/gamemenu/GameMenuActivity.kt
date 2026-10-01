@@ -301,10 +301,6 @@ class GameMenuActivity : RetrogradeComponentActivity() {
                                     viewModel.rescandCheatsForCurrentGame()
                                     cheatsChanged = true
                                 },
-                                onClearCheats = {
-                                    viewModel.clearAllCheats()
-                                    cheatsChanged = true
-                                },
                                 onDisableAllCheats = {
                                     viewModel.disableAllCheats()
                                     cheatsChanged = true

@@ -25,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -113,7 +114,7 @@ fun CheatMenuScreen(
 
     Box(modifier = modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Header with clear labeled actions
+            // Header with action buttons
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -121,14 +122,6 @@ fun CheatMenuScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
-                    text = "Cheats",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-
-                Spacer(modifier = Modifier.weight(1f))
-
                 // Rescan button with label
                 OutlinedButton(
                     onClick = onRescanCheats,
@@ -150,27 +143,18 @@ fun CheatMenuScreen(
                     Text("Rescan")
                 }
 
-                // Clear All button with label
+                // Unselect All button with label
                 OutlinedButton(
-                    onClick = onClearCheats,
+                    onClick = onDisableAllCheats,
                     enabled = cheats.isNotEmpty() && !isRescanning
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "Clear all cheats",
+                        imageVector = Icons.Default.RadioButtonUnchecked,
+                        contentDescription = "Unselect all cheats",
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.size(4.dp))
-                    Text("Clear All")
-                }
-
-                // Close button (X)
-                IconButton(onClick = onClose) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Close cheats menu",
-                        tint = MaterialTheme.colorScheme.onSurface,
-                    )
+                    Text("Unselect All")
                 }
             }
 
