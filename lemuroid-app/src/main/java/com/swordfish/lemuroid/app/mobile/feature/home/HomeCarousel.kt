@@ -271,6 +271,18 @@ private fun SystemPage(
                     ) {
                         GameCartridge(game = game, modifier = Modifier.fillMaxSize())
                     }
+
+                    if (isFocused && !locked) {
+                        val indicatorAlpha = (1f - (offsetY.value / 120f)).coerceIn(0f, 1f)
+                        if (indicatorAlpha > 0f) {
+                            PullDownTriangleIndicator(
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .offset(y = 28.dp)
+                                    .graphicsLayer { alpha = indicatorAlpha }
+                            )
+                        }
+                    }
                 }
             }
         }
