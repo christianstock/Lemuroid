@@ -222,7 +222,7 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
                 ) {
                     composable(MainRoute.HOME) {
                         HomeScreen(
-                            modifier = Modifier.padding(padding),
+                            modifier = Modifier.fillMaxSize(),
                             viewModel = homeViewModel,
                             onGameClick = onGameClick,
                             onGameLongClick = onGameLongClick,

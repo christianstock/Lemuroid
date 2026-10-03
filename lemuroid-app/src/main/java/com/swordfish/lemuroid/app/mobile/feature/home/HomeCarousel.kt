@@ -303,7 +303,8 @@ private fun SystemPage(
             Column(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
-                    .padding(top = 48.dp)
+                    .statusBarsPadding()
+                    .padding(top = 16.dp)
                     .fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
