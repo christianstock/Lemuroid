@@ -21,9 +21,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PageSize
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -92,6 +97,7 @@ fun HomeCarousel(
     onNavigateToList: (Game) -> Unit,
     onSystemSelected: (String) -> Unit,
     onSystemScroll: (String, Int) -> Unit,
+    onOpenSettings: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     if (systemLibraries.isEmpty()) return
@@ -147,7 +153,8 @@ fun HomeCarousel(
                 onScroll = { newIndex -> onSystemScroll(library.systemId, newIndex) },
                 onGameClick = onGameClick,
                 onShowContextMenu = onShowContextMenu,
-                onNavigateToList = onNavigateToList
+                onNavigateToList = onNavigateToList,
+                onOpenSettings = onOpenSettings
             )
         }
     }
@@ -162,7 +169,8 @@ private fun SystemPage(
     onScroll: (Int) -> Unit,
     onGameClick: (Game) -> Unit,
     onShowContextMenu: (Game) -> Unit,
-    onNavigateToList: (Game) -> Unit
+    onNavigateToList: (Game) -> Unit,
+    onOpenSettings: () -> Unit = {}
 ) {
     val games = library.games
     val gamePagerState = rememberPagerState(initialPage = scrollPage) { Int.MAX_VALUE }
@@ -439,6 +447,21 @@ private fun SystemPage(
             contentAlignment = Alignment.BottomCenter
         ) {
             SystemForegroundView(systemId = library.systemId, modifier = Modifier.fillMaxSize())
+        }
+
+        // Top Floating System / Settings Menu Button
+        IconButton(
+            onClick = onOpenSettings,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .statusBarsPadding()
+                .padding(16.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Settings,
+                contentDescription = "System Menu",
+                tint = Color.White.copy(alpha = 0.85f)
+            )
         }
     }
 }

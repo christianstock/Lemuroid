@@ -36,6 +36,7 @@ fun HomeScreen(
     onGameLongClick: (Game) -> Unit,
     onNavigateToSystemList: (Game) -> Unit,
     onOpenCoreSelection: () -> Unit,
+    onOpenSettings: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val applicationContext = context.applicationContext
@@ -71,6 +72,7 @@ fun HomeScreen(
         onShowContextMenu = onGameLongClick,
         onNavigateToSystemList = onNavigateToSystemList,
         onOpenCoreSelection = onOpenCoreSelection,
+        onOpenSettings = onOpenSettings,
         onSystemSelected = { viewModel.setSelectedSystem(it) },
         onEnableNotificationsClicked = {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -91,16 +93,14 @@ private fun HomeScreen(
     onShowContextMenu: (Game) -> Unit,
     onNavigateToSystemList: (Game) -> Unit,
     onOpenCoreSelection: () -> Unit,
+    onOpenSettings: () -> Unit,
     onSystemSelected: (String) -> Unit,
     onEnableNotificationsClicked: () -> Unit,
     onEnableMicrophoneClicked: () -> Unit,
     onSetDirectoryClicked: () -> Unit,
 ) {
     Column(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .padding(top = 16.dp, bottom = 16.dp),
+        modifier = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         AnimatedVisibility(state.showNoNotificationPermissionCard) {
@@ -148,6 +148,7 @@ private fun HomeScreen(
                 onNavigateToList = onNavigateToSystemList,
                 onSystemSelected = onSystemSelected,
                 onSystemScroll = { systemId, pos -> viewModel.setSystemScrollPosition(systemId, pos) },
+                onOpenSettings = onOpenSettings,
                 modifier = Modifier.weight(1f)
             )
         } else if (!state.showNoGamesCard) {

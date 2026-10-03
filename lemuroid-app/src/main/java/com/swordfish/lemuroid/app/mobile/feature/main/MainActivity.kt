@@ -204,13 +204,15 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
 
             Scaffold(
                 topBar = {
-                    MainTopBar(
-                        currentRoute = currentRoute,
-                        navController = navController,
-                        onHelpPressed = onHelpPressed,
-                        mainUIState = mainUIState,
-                        onUpdateQueryString = { mainViewModel.changeQueryString(it) },
-                    )
+                    if (currentRoute != MainRoute.HOME) {
+                        MainTopBar(
+                            currentRoute = currentRoute,
+                            navController = navController,
+                            onHelpPressed = onHelpPressed,
+                            mainUIState = mainUIState,
+                            onUpdateQueryString = { mainViewModel.changeQueryString(it) },
+                        )
+                    }
                 },
             ) { padding ->
                 NavHost(
@@ -232,6 +234,7 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
                                 }
                             },
                             onOpenCoreSelection = { navController.navigateToRoute(MainRoute.SETTINGS_CORES_SELECTION) },
+                            onOpenSettings = { navController.navigate(MainRoute.SETTINGS.route) },
                         )
                     }
                     composable(MainRoute.FAVORITES) {
