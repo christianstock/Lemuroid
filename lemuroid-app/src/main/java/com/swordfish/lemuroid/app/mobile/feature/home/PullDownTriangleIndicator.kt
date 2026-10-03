@@ -1,17 +1,15 @@
 package com.swordfish.lemuroid.app.mobile.feature.home
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -19,6 +17,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.isActive
 import kotlin.math.PI
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -26,6 +25,7 @@ import kotlin.math.sqrt
 @Composable
 fun PullDownTriangleIndicator(
     modifier: Modifier = Modifier,
+    isVisible: Boolean = true,
     count: Int = 3,
     color: Color = MaterialTheme.colorScheme.onSurface,
     baseTriangleWidth: Dp = 22.dp,
@@ -47,16 +47,27 @@ fun PullDownTriangleIndicator(
     val maxTriangleWidthDp = baseTriangleWidth * (scales.firstOrNull() ?: 1f)
     val canvasWidthDp = maxTriangleWidthDp + 4.dp
 
-    val infiniteTransition = rememberInfiniteTransition(label = "PullDownTrianglesTransition")
-    val progress by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = animationDurationMillis, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "PullDownTrianglesProgress"
-    )
+    val progressAnim = remember { Animatable(0f) }
+
+    LaunchedEffect(isVisible) {
+        if (isVisible) {
+            progressAnim.snapTo(0f)
+            while (isActive) {
+                progressAnim.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(
+                        durationMillis = animationDurationMillis,
+                        easing = LinearEasing
+                    )
+                )
+                progressAnim.snapTo(0f)
+            }
+        } else {
+            progressAnim.snapTo(0f)
+        }
+    }
+
+    val progress = progressAnim.value
 
     Canvas(
         modifier = modifier
@@ -153,6 +164,7 @@ private fun createRoundedTrianglePath(
 private fun PullDownTriangleIndicatorPreview() {
     MaterialTheme {
         PullDownTriangleIndicator(
+            isVisible = true,
             color = Color.White
         )
     }

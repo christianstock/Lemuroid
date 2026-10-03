@@ -1,6 +1,12 @@
 package com.swordfish.lemuroid.app.mobile.feature.home
 
+import android.graphics.Bitmap
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
@@ -29,28 +35,50 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.lerp
+import androidx.core.graphics.drawable.toBitmap
+import androidx.core.graphics.ColorUtils
+import androidx.palette.graphics.Palette
+import coil.ImageLoader
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import coil.request.SuccessResult
+import com.swordfish.lemuroid.R
 import com.swordfish.lemuroid.app.shared.game.skins.GbSkinManager
 import com.swordfish.lemuroid.app.shared.game.skins.GbaSkinManager
 import com.swordfish.lemuroid.app.shared.game.skins.GbcSkinManager
 import com.swordfish.lemuroid.lib.library.db.entity.Game
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
+
+// Font Family Definition (Ensure press_start_2p.ttf is inside res/font)
+val PressStart2PFontFamily = FontFamily(
+    Font(R.font.press_start_2p, FontWeight.Normal)
+)
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -140,6 +168,7 @@ private fun SystemPage(
     val gamePagerState = rememberPagerState(initialPage = scrollPage) { Int.MAX_VALUE }
     val haptic = LocalHapticFeedback.current
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     LaunchedEffect(scrollPage) {
         if (gamePagerState.currentPage != scrollPage) {
@@ -153,14 +182,114 @@ private fun SystemPage(
         }
     }
 
+    val currentGame = if (games.isNotEmpty()) {
+        games[gamePagerState.currentPage % games.size]
+    } else null
+
+    // Default vibrant fallback color (e.g. bright cyan/accent) instead of semi-transparent white
+    val fallbackAccentColor = MaterialTheme.colorScheme.primary
+
+    var accentColor by remember { mutableStateOf(fallbackAccentColor) }
+
+    // Key on currentGame id to guarantee update on every carousel page change
+    LaunchedEffect(currentGame?.id, currentGame?.coverFrontUrl) {
+        val coverUrl = currentGame?.coverFrontUrl
+        if (!coverUrl.isNullOrEmpty()) {
+            withContext(Dispatchers.IO) {
+                try {
+                    val loader = ImageLoader(context)
+                    val request = ImageRequest.Builder(context)
+                        .data(coverUrl)
+                        .allowHardware(false) // Palette extraction needs CPU bitmap
+                        .build()
+
+                    val result = loader.execute(request)
+                    if (result is SuccessResult) {
+                        val bitmap = result.drawable.toBitmap()
+                        val palette = Palette.from(bitmap).generate()
+
+                        // Calculate contrast against pure dark background (0.45 black scrim over dark background)
+                        val compositeDarkBg = 0xFF121212.toInt()
+
+                        val candidateSwatches = listOfNotNull(
+                            palette.vibrantSwatch,
+                            palette.lightVibrantSwatch,
+                            palette.dominantSwatch,
+                            palette.lightMutedSwatch,
+                            palette.mutedSwatch
+                        ) + palette.swatches.sortedByDescending { it.population }
+
+                        val chosenColor = candidateSwatches
+                            .map { Color(it.rgb) }
+                            .firstOrNull { candidate ->
+                                val contrast = ColorUtils.calculateContrast(candidate.toArgb(), compositeDarkBg)
+                                contrast >= 2.5 // Contrast ratio threshold for dark background readability
+                            } ?: fallbackAccentColor
+
+                        withContext(Dispatchers.Main) {
+                            accentColor = chosenColor
+                        }
+                    } else {
+                        withContext(Dispatchers.Main) { accentColor = fallbackAccentColor }
+                    }
+                } catch (_: Exception) {
+                    withContext(Dispatchers.Main) { accentColor = fallbackAccentColor }
+                }
+            }
+        } else {
+            accentColor = fallbackAccentColor
+        }
+    }
+
+    val animatedAccentColor by animateColorAsState(
+        targetValue = accentColor,
+        animationSpec = tween(durationMillis = 500),
+        label = "AccentColorCrossfade"
+    )
+
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.BottomCenter
     ) {
+        // 1. Fullscreen Dynamic Crossfading Blurred Cover Art Background
+        Crossfade(
+            targetState = currentGame?.coverFrontUrl,
+            animationSpec = tween(durationMillis = 600),
+            label = "BackgroundBlurCrossfade",
+            modifier = Modifier.fillMaxSize()
+        ) { coverUrl ->
+            if (!coverUrl.isNullOrEmpty()) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(coverUrl)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .blur(radius = 1000.dp)
+                            .graphicsLayer {
+                                scaleX = 1.2f
+                                scaleY = 1.2f
+                            }
+                    )
+                    // Dark scrim overlay for legibility and smooth contrast
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .drawWithContent {
+                                drawRect(Color.Black.copy(alpha = 0.45f))
+                                drawContent()
+                            }
+                    )
+                }
+            }
+        }
+
         // Top Game Info Header
-        if (games.isNotEmpty()) {
-            val index = gamePagerState.currentPage % games.size
-            val currentGame = games[index]
+        if (currentGame != null) {
             val titleParts = currentGame.title.split(" - ", limit = 2).map { it.trim() }
 
             Column(
@@ -170,22 +299,26 @@ private fun SystemPage(
                     .fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                // Main Game Title in "Press Start 2P"
                 Text(
                     text = titleParts[0],
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Black,
+                    fontFamily = PressStart2PFontFamily,
+                    fontSize = 20.sp,
+                    lineHeight = 26.sp,
+                    color = Color.White,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(horizontal = 32.dp)
                 )
                 titleParts.getOrNull(1)?.let {
                     Text(
                         text = it,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Medium,
+                        fontFamily = PressStart2PFontFamily,
+                        fontSize = 16.sp,
+                        lineHeight = 20.sp,
+                        color = Color.White.copy(alpha = 0.85f),
                         textAlign = TextAlign.Center,
                         modifier = Modifier
-                            .padding(horizontal = 32.dp)
-                            .graphicsLayer { scaleX = 0.85f; scaleY = 0.9f }
+                            .padding(start = 32.dp, top = 8.dp, end = 32.dp)
                     )
                 }
 
@@ -196,9 +329,9 @@ private fun SystemPage(
                     Text(
                         text = listOfNotNull(publisher.takeIf { it.isNotEmpty() }, year.takeIf { it.isNotEmpty() }).joinToString(" | "),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        color = animatedAccentColor, // Dynamic accent color applied
                         textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(top = 4.dp)
+                        modifier = Modifier.padding(top = 8.dp)
                     )
                 }
             }
@@ -272,17 +405,27 @@ private fun SystemPage(
                         GameCartridge(game = game, modifier = Modifier.fillMaxSize())
                     }
 
-                    if (isFocused && !locked) {
-                        val indicatorAlpha = (1f - (offsetY.value / 120f)).coerceIn(0f, 1f)
-                        if (indicatorAlpha > 0f) {
-                            PullDownTriangleIndicator(
-                                modifier = Modifier
-                                    .align(Alignment.BottomCenter)
-                                    .offset(y = 28.dp)
-                                    .graphicsLayer { alpha = indicatorAlpha }
-                            )
-                        }
-                    }
+                    val isSwiping = gamePagerState.isScrollInProgress || gamePagerState.currentPageOffsetFraction.absoluteValue > 0.001f
+                    val isVisible = !isSwiping && isFocused && !locked
+                    val swipeAlpha by animateFloatAsState(
+                        targetValue = if (isVisible) 1f else 0f,
+                        animationSpec = tween(
+                            durationMillis = 300,
+                            easing = LinearOutSlowInEasing
+                        ),
+                        label = "IndicatorSwipeAlpha"
+                    )
+                    val dragAlpha = (1f - (offsetY.value / 120f)).coerceIn(0f, 1f)
+                    val totalAlpha = (swipeAlpha * dragAlpha).coerceIn(0f, 1f)
+
+                    PullDownTriangleIndicator(
+                        isVisible = isVisible,
+                        color = animatedAccentColor, // Dynamic accent color applied
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .offset(y = 28.dp)
+                            .graphicsLayer { alpha = totalAlpha }
+                    )
                 }
             }
         }

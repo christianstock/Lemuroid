@@ -134,6 +134,7 @@ dependencies {
     implementation(project(":retrograde-app-shared"))
     implementation(project(":lemuroid-metadata-libretro-db"))
     implementation(project(":lemuroid-touchinput"))
+    implementation("androidx.palette:palette-ktx:1.0.0")
     implementation(deps.libs.androidx.compose.foundationLayout)
     implementation(deps.libs.androidx.compose.foundation)
     implementation(deps.libs.androidx.compose.ui)
