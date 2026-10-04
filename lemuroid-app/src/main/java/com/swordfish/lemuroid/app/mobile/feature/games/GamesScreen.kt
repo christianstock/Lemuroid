@@ -1,5 +1,6 @@
 package com.swordfish.lemuroid.app.mobile.feature.games
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -21,8 +22,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
@@ -51,6 +54,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.abs
 import kotlin.math.exp
 import kotlin.math.hypot
 import kotlin.random.Random
@@ -59,6 +63,16 @@ import kotlin.random.Random
 private val RetroLcdGreen = Color(0xFF9EA83B)
 private val RetroDarkGreen = Color(0xFF1B3B1B)
 private val RetroRedExit = Color(0xFFD32F2F)
+
+// Arcade / Retro CRT Glow Palette extracted dynamically based on active collection
+private val RetroAmbientPalette = listOf(
+    Color(0xFF00E5FF), // Cyan Neon
+    Color(0xFFFF007F), // Neon Pink/Magenta
+    Color(0xFF7C4DFF), // Deep Violet Glow
+    Color(0xFFFF9100), // Amber Gold
+    Color(0xFF00E676), // Arcade Emerald
+    Color(0xFFFF1744)  // CRT Crimson
+)
 
 val pressStart2PFontFamily = FontFamily(
     Font(R.font.press_start_2p, FontWeight.Normal)
@@ -162,6 +176,44 @@ fun GamesScreen(
     val coroutineScope = rememberCoroutineScope()
     val gridState = rememberLazyGridState()
 
+    // Dynamic accent color selection based on active game collection hash
+    val primaryGlowColor = remember(games) {
+        if (games.isEmpty()) {
+            Color(0xFF1F2833)
+        } else {
+            val hash = abs(games.first().title.hashCode() xor games.size)
+            RetroAmbientPalette[hash % RetroAmbientPalette.size]
+        }
+    }
+
+    val animatedGlowColor by animateColorAsState(
+        targetValue = primaryGlowColor,
+        animationSpec = tween(durationMillis = 1000, easing = LinearOutSlowInEasing),
+        label = "GlowColorTransition"
+    )
+
+    // Pulse animation for upper ambient backlight
+    val infiniteTransition = rememberInfiniteTransition(label = "AmbientGlowPulse")
+    val glowAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.22f,
+        targetValue = 0.38f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "GlowAlpha"
+    )
+
+    val glowRadiusScale by infiniteTransition.animateFloat(
+        initialValue = 0.85f,
+        targetValue = 1.15f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(3500, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "GlowRadius"
+    )
+
     // Transition animation state when tapping a cover
     var animatingGame by remember { mutableStateOf<Game?>(null) }
     val animProgress = remember { Animatable(0f) }
@@ -177,18 +229,6 @@ fun GamesScreen(
             }
         }
     }
-
-    // Single game pulse arrow animation
-    val infiniteTransition = rememberInfiniteTransition(label = "ArrowPulse")
-    val arrowOffset by infiniteTransition.animateFloat(
-        initialValue = -12f,
-        targetValue = 12f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(600, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "ArrowOffset"
-    )
 
     // Side arrows pulsing animations (scale & opacity)
     val sideArrowScale by infiniteTransition.animateFloat(
@@ -225,6 +265,32 @@ fun GamesScreen(
     }
 
     Box(modifier = modifier.fillMaxSize().background(Color.Black)) {
+
+        // --- UPPER HALF AMBIENT GLOW BACKLIGHT ---
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .drawBehind {
+                    val radiusPx = size.width * 0.85f
+                    val centerOffset = Offset(
+                        x = size.width / 2f,
+                        y = size.height * 0.32f
+                    )
+
+                    drawRect(
+                        brush = Brush.radialGradient(
+                            colors = listOf(
+                                primaryGlowColor.copy(alpha = 0.4f),
+                                primaryGlowColor.copy(alpha = 0.15f),
+                                Color.Transparent
+                            ),
+                            center = centerOffset,
+                            radius = radiusPx
+                        )
+                    )
+                }
+        )
+
         Column(modifier = Modifier.fillMaxSize()) {
 
             // --- TOP HEADER: RETRO LCD SEARCH & RED EXIT BUTTON ---
@@ -245,7 +311,7 @@ fun GamesScreen(
                         .height(42.dp) // Strictly 42dp height
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 12.dp), // Controlled side padding, NO fillMaxSize()
+                        modifier = Modifier.padding(horizontal = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
@@ -257,7 +323,6 @@ fun GamesScreen(
 
                         Spacer(modifier = Modifier.width(8.dp))
 
-                        // BasicTextField takes no extra vertical space and won't clip text
                         BasicTextField(
                             value = query,
                             onValueChange = { viewModel.updateSearchQuery(it) },
@@ -369,90 +434,42 @@ fun GamesScreen(
                         }
                     }
             ) {
-                when {
-                    games.isEmpty() -> {
-                        // Empty State
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "NO GAMES FOUND",
-                                fontFamily = pressStart2PFontFamily,
-                                fontSize = 12.sp,
-                                color = RetroDarkGreen,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.padding(24.dp)
-                            )
-                        }
+                if (games.isEmpty()) {
+                    // Empty State
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "NO GAMES FOUND",
+                            fontFamily = pressStart2PFontFamily,
+                            fontSize = 12.sp,
+                            color = RetroDarkGreen,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(24.dp)
+                        )
                     }
-
-                    /*games.size == 1 -> {
-                        // Single Game Centered View with Pulsing Selector Arrow
-                        val game = games.first()
-                        Column(
-                            modifier = Modifier.fillMaxSize(),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            // Bouncing 8-Bit Arrow
-                            androidx.compose.foundation.Canvas(
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .offset(y = arrowOffset.dp)
-                            ) {
-                                val path = Path().apply {
-                                    moveTo(size.width / 2f, size.height)
-                                    lineTo(0f, 0f)
-                                    lineTo(size.width, 0f)
-                                    close()
-                                }
-                                drawPath(path, color = RetroLcdGreen)
-                            }
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            Box(
-                                modifier = Modifier
-                                    .size(200.dp)
-                                    .rippleLift(ripple, coverShape)
-                                    .combinedClickable(
-                                        onClick = { launchGameWithAnimation(game) },
-                                        onLongClick = { onGameLongClick(game) }
-                                    )
-                            ) {
-                                LemuroidGameImage(
-                                    game = game,
-                                    modifier = Modifier.fillMaxSize(),
-                                    applyAspectRatio = false,
-                                    contentScale = ContentScale.Crop
-                                )
-                            }
-                        }
-                    }*/
-
-                    else -> {
-                        // Regular 3-Column Grid
-                        LazyVerticalGrid(
-                            state = gridState,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .onSizeChanged { gridSize = it }
-                                .onGloballyPositioned { ripple.origin = it.positionInRoot() },
-                            columns = GridCells.Fixed(3),
-                            contentPadding = PaddingValues(3.dp),
-                            horizontalArrangement = Arrangement.spacedBy(3.dp),
-                            verticalArrangement = Arrangement.spacedBy(3.dp)
-                        ) {
-                            items(games, key = { it.id }) { game ->
-                                GameGridItem(
-                                    game = game,
-                                    ripple = ripple,
-                                    shape = coverShape,
-                                    onClick = { launchGameWithAnimation(game) },
-                                    onLongClick = { onGameLongClick(game) }
-                                )
-                            }
+                } else {
+                    // Regular 3-Column Grid
+                    LazyVerticalGrid(
+                        state = gridState,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .onSizeChanged { gridSize = it }
+                            .onGloballyPositioned { ripple.origin = it.positionInRoot() },
+                        columns = GridCells.Fixed(3),
+                        contentPadding = PaddingValues(3.dp),
+                        horizontalArrangement = Arrangement.spacedBy(3.dp),
+                        verticalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        items(games, key = { it.id }) { game ->
+                            GameGridItem(
+                                game = game,
+                                ripple = ripple,
+                                shape = coverShape,
+                                onClick = { launchGameWithAnimation(game) },
+                                onLongClick = { onGameLongClick(game) }
+                            )
                         }
                     }
                 }
