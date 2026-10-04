@@ -4,13 +4,20 @@ import android.graphics.Bitmap
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.EaseInOutSine
 import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Box
@@ -24,6 +31,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PageSize
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Settings
@@ -46,13 +54,16 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -194,12 +205,10 @@ private fun SystemPage(
         games[gamePagerState.currentPage % games.size]
     } else null
 
-    // Default vibrant fallback color (e.g. bright cyan/accent) instead of semi-transparent white
     val fallbackAccentColor = MaterialTheme.colorScheme.primary
 
     var accentColor by remember { mutableStateOf(fallbackAccentColor) }
 
-    // Key on currentGame id to guarantee update on every carousel page change
     LaunchedEffect(currentGame?.id, currentGame?.coverFrontUrl) {
         val coverUrl = currentGame?.coverFrontUrl
         if (!coverUrl.isNullOrEmpty()) {
@@ -208,7 +217,7 @@ private fun SystemPage(
                     val loader = ImageLoader(context)
                     val request = ImageRequest.Builder(context)
                         .data(coverUrl)
-                        .allowHardware(false) // Palette extraction needs CPU bitmap
+                        .allowHardware(false)
                         .build()
 
                     val result = loader.execute(request)
@@ -216,7 +225,6 @@ private fun SystemPage(
                         val bitmap = result.drawable.toBitmap()
                         val palette = Palette.from(bitmap).generate()
 
-                        // Calculate contrast against pure dark background (0.45 black scrim over dark background)
                         val compositeDarkBg = 0xFF121212.toInt()
 
                         val candidateSwatches = listOfNotNull(
@@ -231,7 +239,7 @@ private fun SystemPage(
                             .map { Color(it.rgb) }
                             .firstOrNull { candidate ->
                                 val contrast = ColorUtils.calculateContrast(candidate.toArgb(), compositeDarkBg)
-                                contrast >= 2.5 // Contrast ratio threshold for dark background readability
+                                contrast >= 2.5
                             } ?: fallbackAccentColor
 
                         withContext(Dispatchers.Main) {
@@ -255,11 +263,23 @@ private fun SystemPage(
         label = "AccentColorCrossfade"
     )
 
+    // Subdued Idle Floating Motion for Focused Cartridge
+    val infiniteTransition = rememberInfiniteTransition(label = "CartridgeFloatTransition")
+    val idleFloatDp by infiniteTransition.animateFloat(
+        initialValue = -1.5f,
+        targetValue = 1.5f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 3000, easing = EaseInOutSine),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "dyFloat"
+    )
+
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.BottomCenter
     ) {
-        // 1. Fullscreen Dynamic Crossfading Blurred Cover Art Background
+        // Fullscreen Blurred Background
         Crossfade(
             targetState = currentGame?.coverFrontUrl,
             animationSpec = tween(durationMillis = 600),
@@ -283,7 +303,6 @@ private fun SystemPage(
                                 scaleY = 1.2f
                             }
                     )
-                    // Dark scrim overlay for legibility and smooth contrast
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -304,11 +323,19 @@ private fun SystemPage(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .statusBarsPadding()
-                    .padding(top = 16.dp)
+                    .padding(top = 12.dp)
                     .fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Main Game Title in "Press Start 2P"
+                ScrubberTrack(
+                    pagerState = gamePagerState,
+                    itemCount = games.size,
+                    accentColor = animatedAccentColor,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 48.dp, vertical = 8.dp)
+                )
+
                 Text(
                     text = titleParts[0],
                     fontFamily = PressStart2PFontFamily,
@@ -338,7 +365,7 @@ private fun SystemPage(
                     Text(
                         text = listOfNotNull(publisher.takeIf { it.isNotEmpty() }, year.takeIf { it.isNotEmpty() }).joinToString(" | "),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = animatedAccentColor, // Dynamic accent color applied
+                        color = animatedAccentColor,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.padding(top = 8.dp)
                     )
@@ -349,7 +376,6 @@ private fun SystemPage(
         // Middle Games Carousel
         if (games.isNotEmpty()) {
             val cartridgeWidth = 300.dp
-
             val screenWidth = LocalConfiguration.current.screenWidthDp.dp
             val dynamicPadding = ((screenWidth - cartridgeWidth) / 2).coerceAtLeast(0.dp)
 
@@ -368,6 +394,14 @@ private fun SystemPage(
                 val offsetY = remember(refreshCount, page) { Animatable(0f) }
                 var locked by remember(refreshCount, page) { mutableStateOf(false) }
 
+                // Float applies only when focused, stationary (offsetY == 0), and unlocked
+                val density = LocalDensity.current
+                val activeFloatOffset = if (isFocused && offsetY.value == 0f && !locked) {
+                    with(density) { idleFloatDp.dp.toPx() }
+                } else {
+                    0f
+                }
+
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -377,6 +411,9 @@ private fun SystemPage(
                             scaleX = scale
                             scaleY = scale
                             alpha = if (locked) 1f else lerp(start = 0.5f, stop = 1f, fraction = 1f - pageOffset.coerceIn(0f, 1f))
+
+                            // Apply subtle floating translation Y to focused item
+                            translationY = activeFloatOffset
                         }
                         .padding(8.dp),
                     contentAlignment = Alignment.Center
@@ -429,7 +466,7 @@ private fun SystemPage(
 
                     PullDownTriangleIndicator(
                         isVisible = isVisible,
-                        color = animatedAccentColor, // Dynamic accent color applied
+                        color = animatedAccentColor,
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .offset(y = 28.dp)
@@ -450,7 +487,7 @@ private fun SystemPage(
             SystemForegroundView(systemId = library.systemId, modifier = Modifier.fillMaxSize())
         }
 
-        // Top Floating System / Settings Menu Button
+        // Top Settings Button
         IconButton(
             onClick = onOpenSettings,
             modifier = Modifier
@@ -462,6 +499,96 @@ private fun SystemPage(
                 imageVector = Icons.Outlined.Settings,
                 contentDescription = "System Menu",
                 tint = Color.White.copy(alpha = 0.85f)
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun ScrubberTrack(
+    pagerState: PagerState,
+    itemCount: Int,
+    accentColor: Color,
+    modifier: Modifier = Modifier
+) {
+    if (itemCount <= 0) return
+
+    val coroutineScope = rememberCoroutineScope()
+
+    Box(
+        modifier = modifier
+            .height(28.dp)
+            .pointerInput(itemCount, pagerState) {
+                fun updatePosition(xPx: Float) {
+                    if (itemCount <= 1 || size.width <= 0) return
+                    val fraction = (xPx / size.width.toFloat()).coerceIn(0f, 1f)
+                    val targetIndexWithinList = (fraction * (itemCount - 1)).roundToInt()
+
+                    val currentListIndex = pagerState.currentPage % itemCount
+                    val delta = targetIndexWithinList - currentListIndex
+                    val targetPage = pagerState.currentPage + delta
+
+                    coroutineScope.launch {
+                        pagerState.scrollToPage(targetPage)
+                    }
+                }
+
+                detectTapGestures { offset ->
+                    updatePosition(offset.x)
+                }
+            }
+            .pointerInput(itemCount, pagerState) {
+                detectDragGestures { change, _ ->
+                    change.consume()
+                    if (itemCount <= 1 || size.width <= 0) return@detectDragGestures
+                    val fraction = (change.position.x / size.width.toFloat()).coerceIn(0f, 1f)
+                    val targetIndexWithinList = (fraction * (itemCount - 1)).roundToInt()
+
+                    val currentListIndex = pagerState.currentPage % itemCount
+                    val delta = targetIndexWithinList - currentListIndex
+                    val targetPage = pagerState.currentPage + delta
+
+                    coroutineScope.launch {
+                        pagerState.scrollToPage(targetPage)
+                    }
+                }
+            }
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val trackHeightPx = 2.dp.toPx()
+            val cy = size.height / 2f
+
+            drawLine(
+                color = Color.White.copy(alpha = 0.25f),
+                start = Offset(0f, cy),
+                end = Offset(size.width, cy),
+                strokeWidth = trackHeightPx
+            )
+
+            val fraction = if (itemCount <= 1) {
+                0.5f
+            } else {
+                val currentModuloIndex = pagerState.currentPage % itemCount
+                val rawIndex = currentModuloIndex + pagerState.currentPageOffsetFraction
+                val normalizedIndex = (rawIndex % itemCount + itemCount) % itemCount
+                (normalizedIndex / (itemCount - 1)).coerceIn(0f, 1f)
+            }
+
+            val diamondX = size.width * fraction
+            val diamondRadiusPx = 6.dp.toPx()
+
+            val diamondPath = Path().apply {
+                moveTo(diamondX, cy - diamondRadiusPx)
+                lineTo(diamondX + diamondRadiusPx, cy)
+                lineTo(diamondX, cy + diamondRadiusPx)
+                lineTo(diamondX - diamondRadiusPx, cy)
+                close()
+            }
+
+            drawPath(
+                path = diamondPath,
+                color = accentColor
             )
         }
     }
