@@ -1,21 +1,19 @@
 package com.swordfish.lemuroid.app.mobile.feature.games
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.SortByAlpha
-import androidx.compose.material.icons.filled.Update
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,45 +22,61 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
-import com.swordfish.lemuroid.app.mobile.shared.compose.ui.LemuroidEmptyView
+import com.swordfish.lemuroid.R
 import com.swordfish.lemuroid.app.mobile.shared.compose.ui.LemuroidGameImage
 import com.swordfish.lemuroid.lib.library.db.entity.Game
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.exp
 import kotlin.math.hypot
 import kotlin.random.Random
 
-/**
- * A highlight band that travels outward from the grid's top-left corner.
- * All distances are in "cover widths", so it scales with any column count or screen size.
- */
+// retro colors
+private val RetroLcdGreen = Color(0xFF9EA83B)
+private val RetroDarkGreen = Color(0xFF1B3B1B)
+private val RetroRedExit = Color(0xFFD32F2F)
+
+val pressStart2PFontFamily = FontFamily(
+    Font(R.font.press_start_2p, FontWeight.Normal)
+)
+
 @Stable
 class GridRipple(
-    private val speed: Float = 3f,        // cover widths per second
-    private val bandWidth: Float = 1f,    // leading edge width, in cover widths
-    private val tailFactor: Float = 2f,      // trailing side factor
-    private val strength: Float = 0.7f,     // max opacity/effect strength
+    private val speed: Float = 3f,
+    private val bandWidth: Float = 1f,
+    private val tailFactor: Float = 2f,
+    private val strength: Float = 0.7f,
 ) {
     var origin by mutableStateOf(Offset.Zero)
     var coverWidthPx by mutableFloatStateOf(1f)
 
     private val front = Animatable(INACTIVE)
     private var maxDist = 0f
+
+    val isRunning: Boolean
+        get() = front.value != INACTIVE
 
     suspend fun run(gridSize: IntSize) {
         if (coverWidthPx <= 0f) return
@@ -76,7 +90,6 @@ class GridRipple(
         }
     }
 
-    /** Returns 0..strength for a cover at distance [d] (in cover widths) from the origin. */
     fun intensity(d: Float): Float {
         val f = front.value
         if (f == INACTIVE) return 0f
@@ -90,7 +103,6 @@ class GridRipple(
     private companion object { const val INACTIVE = -1000f }
 }
 
-/** Lift-only look: scale up to +7% and a white overlay up to 40%, both multiplied by intensity. */
 @Composable
 fun Modifier.rippleLift(ripple: GridRipple, shape: Shape): Modifier {
     var center by remember { mutableStateOf(Offset.Zero) }
@@ -110,7 +122,7 @@ fun Modifier.rippleLift(ripple: GridRipple, shape: Shape): Modifier {
                 ripple.coverWidthPx = c.size.width.toFloat()
             }
         }
-        .zIndex(if (kVal > 0.01f) 1f else 0f) // Keep expanding items on top of neighbors
+        .zIndex(if (kVal > 0.01f) 1f else 0f)
         .graphicsLayer {
             val s = 1f + 0.02f * kVal
             scaleX = s
@@ -126,26 +138,32 @@ fun Modifier.rippleLift(ripple: GridRipple, shape: Shape): Modifier {
         }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun GamesScreen(
     modifier: Modifier = Modifier,
     viewModel: GamesViewModel,
     onGameClick: (Game) -> Unit,
     onGameLongClick: (Game) -> Unit,
+    onExitClick: () -> Unit,
     @Suppress("UNUSED_PARAMETER") onGameFavoriteToggle: (Game, Boolean) -> Unit,
     rippleIntervalMs: Long = 6_000L,
 ) {
     val games by viewModel.games.collectAsState()
     val query by viewModel.searchQuery.collectAsState()
-    val showAll by viewModel.showAllSystems.collectAsState()
     val sortMode by viewModel.sortMode.collectAsState()
 
     val ripple = remember { GridRipple() }
     var gridSize by remember { mutableStateOf(IntSize.Zero) }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val coverShape = remember { RoundedCornerShape(4.dp) }
+    val coroutineScope = rememberCoroutineScope()
 
-    // Periodically trigger the ripple when grid is populated and lifecycle is RESUMED
+    // Transition animation state when tapping a cover
+    var animatingGame by remember { mutableStateOf<Game?>(null) }
+    val animProgress = remember { Animatable(0f) }
+
+    // Periodically trigger the ripple
     LaunchedEffect(gridSize, games.size) {
         if (gridSize == IntSize.Zero || games.isEmpty()) return@LaunchedEffect
         lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
@@ -157,101 +175,320 @@ fun GamesScreen(
         }
     }
 
-    Column(modifier = modifier.fillMaxSize()) {
-        // --- TOP BAR: SEARCH & FILTERS ---
-        Surface(
-            tonalElevation = 4.dp,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                OutlinedTextField(
-                    value = query,
-                    onValueChange = { viewModel.updateSearchQuery(it) },
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Search Title or Metadata...") },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                    trailingIcon = if (query.isNotEmpty()) {
-                        {
-                            IconButton(onClick = { viewModel.updateSearchQuery("") }) {
-                                Icon(Icons.Default.Close, contentDescription = null)
+    // Single game pulse arrow animation
+    val infiniteTransition = rememberInfiniteTransition(label = "ArrowPulse")
+    val arrowOffset by infiniteTransition.animateFloat(
+        initialValue = -12f,
+        targetValue = 12f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(600, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "ArrowOffset"
+    )
+
+    val launchGameWithAnimation: (Game) -> Unit = { game ->
+        coroutineScope.launch {
+            animatingGame = game
+            animProgress.snapTo(0f)
+            animProgress.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(durationMillis = 1200, easing = LinearOutSlowInEasing)
+            )
+            onGameClick(game)
+            animatingGame = null
+        }
+    }
+
+    Box(modifier = modifier.fillMaxSize().background(Color.Black)) {
+        Column(modifier = Modifier.fillMaxSize()) {
+
+            // --- TOP HEADER: RETRO LCD SEARCH & RED EXIT BUTTON ---
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // LCD Green Search Input
+                Surface(
+                    color = RetroLcdGreen,
+                    shape = RoundedCornerShape(6.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Search",
+                            tint = RetroDarkGreen,
+                            modifier = Modifier.size(26.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        TextField(
+                            value = query,
+                            onValueChange = { viewModel.updateSearchQuery(it) },
+                            placeholder = {
+                                Text(
+                                    "SEARCH...",
+                                    fontFamily = pressStart2PFontFamily,
+                                    fontSize = 14.sp,
+                                    color = RetroDarkGreen.copy(alpha = 0.6f)
+                                )
+                            },
+                            textStyle = androidx.compose.ui.text.TextStyle(
+                                fontFamily = pressStart2PFontFamily,
+                                fontSize = 14.sp,
+                                color = RetroDarkGreen
+                            ),
+                            singleLine = true,
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = Color.Transparent,
+                                unfocusedContainerColor = Color.Transparent,
+                                disabledContainerColor = Color.Transparent,
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent
+                            ),
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (query.isNotEmpty()) {
+                            IconButton(
+                                onClick = { viewModel.updateSearchQuery("") },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Clear",
+                                    tint = RetroDarkGreen
+                                )
                             }
                         }
-                    } else null,
-                    singleLine = true,
-                    shape = MaterialTheme.shapes.medium
+                    }
+                }
+
+                // Circular Red Exit Button
+                Surface(
+                    color = RetroRedExit,
+                    shape = CircleShape,
+                    modifier = Modifier
+                        .size(40.dp)
+                        .combinedClickable(onClick = onExitClick)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Exit Screen",
+                            tint = Color.White,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                }
+            }
+
+            // --- FILTER SELECTORS ROW ---
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val sortOptions = listOf(
+                    GamesViewModel.SortMode.ALPHABETICAL to "A-Z",
+                    GamesViewModel.SortMode.RECENTS to "LAST PLAYED",
+                    GamesViewModel.SortMode.RELEASE to "RELEASE"
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    FilterChip(
-                        selected = !showAll,
-                        onClick = { viewModel.toggleShowAllSystems(false) },
-                        label = { Text(viewModel.currentMetaSystem.name) }
-                    )
-
-                    FilterChip(
-                        selected = showAll,
-                        onClick = { viewModel.toggleShowAllSystems(true) },
-                        label = { Text("All") }
-                    )
-
-                    Spacer(modifier = Modifier.weight(1f))
-
-                    IconButton(
-                        onClick = { viewModel.updateSortMode(GamesViewModel.SortMode.RECENTS) },
-                        colors = if (sortMode == GamesViewModel.SortMode.RECENTS)
-                            IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.primary)
-                        else IconButtonDefaults.iconButtonColors()
+                sortOptions.forEach { (mode, label) ->
+                    val isSelected = sortMode == mode
+                    TextButton(
+                        onClick = { viewModel.updateSortMode(mode) }
                     ) {
-                        Icon(Icons.Default.Update, contentDescription = "Recents")
+                        Text(
+                            text = label,
+                            fontFamily = pressStart2PFontFamily,
+                            fontSize = 10.sp,
+                            color = if (isSelected) RetroLcdGreen else Color.Gray
+                        )
+                    }
+                }
+            }
+
+            // --- MAIN GRID / CONTENT AREA ---
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .pointerInput(Unit) {
+                        detectHorizontalDragGestures { change, dragAmount ->
+                            change.consume()
+                            if (dragAmount > 50) {
+                                viewModel.switchToPreviousSystem()
+                            } else if (dragAmount < -50) {
+                                viewModel.switchToNextSystem()
+                            }
+                        }
+                    }
+            ) {
+                when {
+                    games.isEmpty() -> {
+                        // Empty State
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "NO GAMES FOUND",
+                                fontFamily = pressStart2PFontFamily,
+                                fontSize = 12.sp,
+                                color = RetroDarkGreen,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(24.dp)
+                            )
+                        }
                     }
 
-                    IconButton(
-                        onClick = { viewModel.updateSortMode(GamesViewModel.SortMode.ALPHABETICAL) },
-                        colors = if (sortMode == GamesViewModel.SortMode.ALPHABETICAL)
-                            IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.primary)
-                        else IconButtonDefaults.iconButtonColors()
-                    ) {
-                        Icon(Icons.Default.SortByAlpha, contentDescription = "A-Z")
+                    games.size == 1 -> {
+                        // Single Game Centered View with Pulsing Selector Arrow
+                        val game = games.first()
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            // Bouncing 8-Bit Arrow
+                            androidx.compose.foundation.Canvas(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .offset(y = arrowOffset.dp)
+                            ) {
+                                val path = Path().apply {
+                                    moveTo(size.width / 2f, size.height)
+                                    lineTo(0f, 0f)
+                                    lineTo(size.width, 0f)
+                                    close()
+                                }
+                                drawPath(path, color = RetroLcdGreen)
+                            }
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Box(
+                                modifier = Modifier
+                                    .size(200.dp)
+                                    .rippleLift(ripple, coverShape)
+                                    .combinedClickable(
+                                        onClick = { launchGameWithAnimation(game) },
+                                        onLongClick = { onGameLongClick(game) }
+                                    )
+                            ) {
+                                LemuroidGameImage(
+                                    game = game,
+                                    modifier = Modifier.fillMaxSize(),
+                                    applyAspectRatio = false,
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
+                        }
                     }
 
-                    IconButton(
-                        onClick = { viewModel.updateSortMode(GamesViewModel.SortMode.RELEASE) },
-                        colors = if (sortMode == GamesViewModel.SortMode.RELEASE)
-                            IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.primary)
-                        else IconButtonDefaults.iconButtonColors()
+                    else -> {
+                        // Regular 3-Column Grid
+                        LazyVerticalGrid(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .onSizeChanged { gridSize = it }
+                                .onGloballyPositioned { ripple.origin = it.positionInRoot() },
+                            columns = GridCells.Fixed(3),
+                            contentPadding = PaddingValues(3.dp),
+                            horizontalArrangement = Arrangement.spacedBy(3.dp),
+                            verticalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            items(games, key = { it.id }) { game ->
+                                GameGridItem(
+                                    game = game,
+                                    ripple = ripple,
+                                    shape = coverShape,
+                                    onClick = { launchGameWithAnimation(game) },
+                                    onLongClick = { onGameLongClick(game) }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // --- RIPPLE SIDE INDICATOR ARROWS ---
+                if (ripple.isRunning) {
+                    val arrowAlpha by animateFloatAsState(
+                        targetValue = if (ripple.isRunning) 0.6f else 0f,
+                        animationSpec = tween(400)
+                    )
+
+                    // Left Triangle
+                    androidx.compose.foundation.Canvas(
+                        modifier = Modifier
+                            .align(Alignment.CenterStart)
+                            .padding(start = 8.dp)
+                            .size(24.dp)
+                            .graphicsLayer { alpha = arrowAlpha }
                     ) {
-                        Icon(Icons.Default.CalendarToday, contentDescription = "Release Date")
+                        val path = Path().apply {
+                            moveTo(0f, size.height / 2f)
+                            lineTo(size.width, 0f)
+                            lineTo(size.width, size.height)
+                            close()
+                        }
+                        drawPath(path, color = RetroLcdGreen)
+                    }
+
+                    // Right Triangle
+                    androidx.compose.foundation.Canvas(
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .padding(end = 8.dp)
+                            .size(24.dp)
+                            .graphicsLayer { alpha = arrowAlpha }
+                    ) {
+                        val path = Path().apply {
+                            moveTo(size.width, size.height / 2f)
+                            lineTo(0f, 0f)
+                            lineTo(0f, size.height)
+                            close()
+                        }
+                        drawPath(path, color = RetroLcdGreen)
                     }
                 }
             }
         }
 
-        if (games.isEmpty()) {
-            LemuroidEmptyView()
-        } else {
-            LazyVerticalGrid(
+        // --- TAP COVER FULL-SCREEN LAUNCH ANIMATION OVERLAY ---
+        animatingGame?.let { game ->
+            val p = animProgress.value
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .onSizeChanged { gridSize = it }
-                    .onGloballyPositioned { ripple.origin = it.positionInRoot() },
-                columns = GridCells.Fixed(3),
-                contentPadding = PaddingValues(3.dp),
-                horizontalArrangement = Arrangement.spacedBy(3.dp),
-                verticalArrangement = Arrangement.spacedBy(3.dp)
+                    .background(Color.Black.copy(alpha = p.coerceIn(0f, 1f)))
+                    .zIndex(100f),
+                contentAlignment = Alignment.Center
             ) {
-                items(games, key = { it.id }) { game ->
-                    GameGridItem(
+                Box(
+                    modifier = Modifier
+                        .size((180 + p * 160).dp)
+                        .graphicsLayer {
+                            rotationZ = p * 360f
+                            alpha = (1f - p * 0.8f).coerceIn(0f, 1f)
+                        }
+                        .clip(coverShape)
+                ) {
+                    LemuroidGameImage(
                         game = game,
-                        ripple = ripple,
-                        shape = coverShape,
-                        onClick = { onGameClick(game) },
-                        onLongClick = { onGameLongClick(game) }
+                        modifier = Modifier.fillMaxSize(),
+                        applyAspectRatio = false,
+                        contentScale = ContentScale.Crop
                     )
                 }
             }

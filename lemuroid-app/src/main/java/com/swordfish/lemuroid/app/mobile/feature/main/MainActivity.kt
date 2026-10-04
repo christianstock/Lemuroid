@@ -204,7 +204,7 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
 
             Scaffold(
                 topBar = {
-                    if (currentRoute != MainRoute.HOME) {
+                    if (currentRoute != MainRoute.HOME && currentRoute != MainRoute.SYSTEM_GAMES) {
                         MainTopBar(
                             currentRoute = currentRoute,
                             navController = navController,
@@ -280,7 +280,7 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
                     composable(MainRoute.SYSTEM_GAMES) { entry ->
                         val metaSystemId = entry.arguments?.getString("metaSystemId")
                         GamesScreen(
-                            modifier = Modifier.padding(padding),
+                            modifier = Modifier.fillMaxSize(),
                             viewModel =
                                 viewModel(
                                     factory =
@@ -291,6 +291,7 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
                                 ),
                             onGameClick = onGameClick,
                             onGameLongClick = onGameLongClick,
+                            onExitClick = { navController.popBackStack() },
                             onGameFavoriteToggle = onGameFavoriteToggle,
                         )
                     }

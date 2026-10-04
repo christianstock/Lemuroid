@@ -29,19 +29,21 @@ class GamesViewModel(
     private val _sortMode = MutableStateFlow(SortMode.RECENTS)
     val sortMode: StateFlow<SortMode> = _sortMode
 
-    val currentMetaSystem = initialMetaSystem
+    private val _currentMetaSystem = MutableStateFlow(initialMetaSystem)
+    val currentMetaSystem: StateFlow<MetaSystemID> = _currentMetaSystem
 
     val games: StateFlow<List<Game>> = combine(
         retrogradeDb.gameDao().selectAllFlow(),
         _searchQuery,
         _showAllSystems,
-        _sortMode
-    ) { allGames, query, showAll, sort ->
+        _sortMode,
+        _currentMetaSystem,
+    ) { allGames, query, showAll, sort, metaSystem ->
         var filtered = allGames
         
         // 1. System Filter
         if (!showAll) {
-            val dbNames = initialMetaSystem.systemIDs.map { it.dbname }
+            val dbNames = metaSystem.systemIDs.map { it.dbname }
             filtered = filtered.filter { dbNames.contains(it.systemId) }
         }
 
@@ -61,6 +63,24 @@ class GamesViewModel(
             SortMode.RELEASE -> filtered.sortedByDescending { it.releaseDate ?: "" }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun switchToPreviousSystem() {
+        val entries = MetaSystemID.entries
+        val currentIndex = entries.indexOf(_currentMetaSystem.value)
+        if (currentIndex != -1) {
+            val prevIndex = (currentIndex - 1 + entries.size) % entries.size
+            _currentMetaSystem.value = entries[prevIndex]
+        }
+    }
+
+    fun switchToNextSystem() {
+        val entries = MetaSystemID.entries
+        val currentIndex = entries.indexOf(_currentMetaSystem.value)
+        if (currentIndex != -1) {
+            val nextIndex = (currentIndex + 1) % entries.size
+            _currentMetaSystem.value = entries[nextIndex]
+        }
+    }
 
     fun updateSearchQuery(query: String) {
         _searchQuery.value = query
