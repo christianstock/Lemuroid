@@ -9,8 +9,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
@@ -158,6 +160,7 @@ fun GamesScreen(
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val coverShape = remember { RoundedCornerShape(4.dp) }
     val coroutineScope = rememberCoroutineScope()
+    val gridState = rememberLazyGridState()
 
     // Transition animation state when tapping a cover
     var animatingGame by remember { mutableStateOf<Game?>(null) }
@@ -187,6 +190,27 @@ fun GamesScreen(
         label = "ArrowOffset"
     )
 
+    // Side arrows pulsing animations (scale & opacity)
+    val sideArrowScale by infiniteTransition.animateFloat(
+        initialValue = 0.8f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(500, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "SideArrowScale"
+    )
+
+    val sideArrowAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.4f,
+        targetValue = 0.8f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(500, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "SideArrowAlpha"
+    )
+
     val launchGameWithAnimation: (Game) -> Unit = { game ->
         coroutineScope.launch {
             animatingGame = game
@@ -208,57 +232,63 @@ fun GamesScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
-                    .padding(12.dp),
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // LCD Green Search Input
                 Surface(
                     color = RetroLcdGreen,
-                    shape = RoundedCornerShape(6.dp),
-                    modifier = Modifier.weight(1f)
+                    shape = RoundedCornerShape(32.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(42.dp) // Strictly 42dp height
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        modifier = Modifier.padding(horizontal = 12.dp), // Controlled side padding, NO fillMaxSize()
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
                             imageVector = Icons.Default.Search,
                             contentDescription = "Search",
                             tint = RetroDarkGreen,
-                            modifier = Modifier.size(26.dp)
+                            modifier = Modifier.size(20.dp)
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        TextField(
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        // BasicTextField takes no extra vertical space and won't clip text
+                        BasicTextField(
                             value = query,
                             onValueChange = { viewModel.updateSearchQuery(it) },
-                            placeholder = {
-                                Text(
-                                    "SEARCH...",
-                                    fontFamily = pressStart2PFontFamily,
-                                    fontSize = 14.sp,
-                                    color = RetroDarkGreen.copy(alpha = 0.6f)
-                                )
-                            },
+                            singleLine = true,
                             textStyle = androidx.compose.ui.text.TextStyle(
                                 fontFamily = pressStart2PFontFamily,
-                                fontSize = 14.sp,
+                                fontSize = 12.sp,
                                 color = RetroDarkGreen
                             ),
-                            singleLine = true,
-                            colors = TextFieldDefaults.colors(
-                                focusedContainerColor = Color.Transparent,
-                                unfocusedContainerColor = Color.Transparent,
-                                disabledContainerColor = Color.Transparent,
-                                focusedIndicatorColor = Color.Transparent,
-                                unfocusedIndicatorColor = Color.Transparent
-                            ),
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
+                            decorationBox = { innerTextField ->
+                                Box(
+                                    contentAlignment = Alignment.CenterStart
+                                ) {
+                                    if (query.isEmpty()) {
+                                        Text(
+                                            text = "SEARCH...",
+                                            fontFamily = pressStart2PFontFamily,
+                                            fontSize = 12.sp,
+                                            color = RetroDarkGreen.copy(alpha = 0.6f)
+                                        )
+                                    }
+                                    innerTextField()
+                                }
+                            }
                         )
+
                         if (query.isNotEmpty()) {
                             IconButton(
                                 onClick = { viewModel.updateSearchQuery("") },
-                                modifier = Modifier.size(24.dp)
+                                modifier = Modifier.size(20.dp)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Close,
@@ -275,7 +305,7 @@ fun GamesScreen(
                     color = RetroRedExit,
                     shape = CircleShape,
                     modifier = Modifier
-                        .size(40.dp)
+                        .size(38.dp)
                         .combinedClickable(onClick = onExitClick)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
@@ -283,7 +313,7 @@ fun GamesScreen(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Exit Screen",
                             tint = Color.White,
-                            modifier = Modifier.size(22.dp)
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }
@@ -306,7 +336,12 @@ fun GamesScreen(
                 sortOptions.forEach { (mode, label) ->
                     val isSelected = sortMode == mode
                     TextButton(
-                        onClick = { viewModel.updateSortMode(mode) }
+                        onClick = {
+                            viewModel.updateSortMode(mode)
+                            coroutineScope.launch {
+                                gridState.scrollToItem(0)
+                            }
+                        }
                     ) {
                         Text(
                             text = label,
@@ -352,7 +387,7 @@ fun GamesScreen(
                         }
                     }
 
-                    games.size == 1 -> {
+                    /*games.size == 1 -> {
                         // Single Game Centered View with Pulsing Selector Arrow
                         val game = games.first()
                         Column(
@@ -394,11 +429,12 @@ fun GamesScreen(
                                 )
                             }
                         }
-                    }
+                    }*/
 
                     else -> {
                         // Regular 3-Column Grid
                         LazyVerticalGrid(
+                            state = gridState,
                             modifier = Modifier
                                 .fillMaxSize()
                                 .onSizeChanged { gridSize = it }
@@ -423,18 +459,18 @@ fun GamesScreen(
 
                 // --- RIPPLE SIDE INDICATOR ARROWS ---
                 if (ripple.isRunning) {
-                    val arrowAlpha by animateFloatAsState(
-                        targetValue = if (ripple.isRunning) 0.6f else 0f,
-                        animationSpec = tween(400)
-                    )
-
-                    // Left Triangle
+                    // Left White Pulsing Triangle
                     androidx.compose.foundation.Canvas(
                         modifier = Modifier
                             .align(Alignment.CenterStart)
-                            .padding(start = 8.dp)
-                            .size(24.dp)
-                            .graphicsLayer { alpha = arrowAlpha }
+                            .padding(start = 12.dp)
+                            .width(14.dp)
+                            .height(24.dp)
+                            .graphicsLayer {
+                                scaleX = sideArrowScale
+                                scaleY = sideArrowScale
+                                alpha = sideArrowAlpha
+                            }
                     ) {
                         val path = Path().apply {
                             moveTo(0f, size.height / 2f)
@@ -442,16 +478,21 @@ fun GamesScreen(
                             lineTo(size.width, size.height)
                             close()
                         }
-                        drawPath(path, color = RetroLcdGreen)
+                        drawPath(path, color = Color.White)
                     }
 
-                    // Right Triangle
+                    // Right White Pulsing Triangle
                     androidx.compose.foundation.Canvas(
                         modifier = Modifier
                             .align(Alignment.CenterEnd)
-                            .padding(end = 8.dp)
-                            .size(24.dp)
-                            .graphicsLayer { alpha = arrowAlpha }
+                            .padding(end = 12.dp)
+                            .width(14.dp)
+                            .height(24.dp)
+                            .graphicsLayer {
+                                scaleX = sideArrowScale
+                                scaleY = sideArrowScale
+                                alpha = sideArrowAlpha
+                            }
                     ) {
                         val path = Path().apply {
                             moveTo(size.width, size.height / 2f)
@@ -459,7 +500,7 @@ fun GamesScreen(
                             lineTo(0f, size.height)
                             close()
                         }
-                        drawPath(path, color = RetroLcdGreen)
+                        drawPath(path, color = Color.White)
                     }
                 }
             }

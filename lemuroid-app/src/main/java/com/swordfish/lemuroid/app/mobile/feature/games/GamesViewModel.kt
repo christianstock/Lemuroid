@@ -64,21 +64,27 @@ class GamesViewModel(
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    private val allowedSystems = listOf(MetaSystemID.GB, MetaSystemID.GBC, MetaSystemID.GBA)
+
     fun switchToPreviousSystem() {
-        val entries = MetaSystemID.entries
+        val entries = allowedSystems
         val currentIndex = entries.indexOf(_currentMetaSystem.value)
         if (currentIndex != -1) {
             val prevIndex = (currentIndex - 1 + entries.size) % entries.size
             _currentMetaSystem.value = entries[prevIndex]
+        } else {
+            _currentMetaSystem.value = entries.last()
         }
     }
 
     fun switchToNextSystem() {
-        val entries = MetaSystemID.entries
+        val entries = allowedSystems
         val currentIndex = entries.indexOf(_currentMetaSystem.value)
         if (currentIndex != -1) {
             val nextIndex = (currentIndex + 1) % entries.size
             _currentMetaSystem.value = entries[nextIndex]
+        } else {
+            _currentMetaSystem.value = entries.first()
         }
     }
 
