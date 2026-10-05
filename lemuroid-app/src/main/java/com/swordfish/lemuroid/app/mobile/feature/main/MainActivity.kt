@@ -204,7 +204,7 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
 
             Scaffold(
                 topBar = {
-                    if (currentRoute != MainRoute.HOME && currentRoute != MainRoute.SYSTEM_GAMES) {
+                    if (currentRoute != MainRoute.HOME && currentRoute != MainRoute.SYSTEM_GAMES && currentRoute != MainRoute.GAME_INFO) {
                         MainTopBar(
                             currentRoute = currentRoute,
                             navController = navController,
@@ -421,7 +421,7 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
                                     startActivity(intent)
                                 }
                             },
-                            modifier = Modifier.padding(padding),
+                            modifier = Modifier.fillMaxSize(),
                             onBack = { navController.popBackStack() }
                         )
                     }
