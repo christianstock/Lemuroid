@@ -185,7 +185,7 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
                                     fullScreenPosition.value = it.boundsInRoot()
                                 },
                         factory = { ctx ->
-                            viewModel.createRetroView(ctx, lifecycle)!!
+                            viewModel.createRetroView(ctx, lifecycle) ?: android.view.View(ctx)
                         },
                     )
                 }
@@ -196,15 +196,20 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
 
             LaunchedEffect(fullPos, viewPos) {
                 val gameView = viewModel.retroGameView.retroGameViewFlow()
-                if (fullPos == null || viewPos == null) return@LaunchedEffect
+                if (fullPos == null || viewPos == null || fullPos.width <= 0f || fullPos.height <= 0f) {
+                    val defaultViewport = RectF(0f, 0f, 1f, 1f)
+                    gameView.viewport = defaultViewport
+                    viewModel.retroGameView.currentViewport = defaultViewport
+                    return@LaunchedEffect
+                }
 
                 // Calculate normalized viewport coordinates relative to full screen
                 val viewport =
                     RectF(
-                        (viewPos.left - fullPos.left) / fullPos.width,
-                        (viewPos.top - fullPos.top) / fullPos.height,
-                        (viewPos.right - fullPos.left) / fullPos.width,
-                        (viewPos.bottom - fullPos.top) / fullPos.height,
+                        ((viewPos.left - fullPos.left) / fullPos.width).coerceIn(0f, 1f),
+                        ((viewPos.top - fullPos.top) / fullPos.height).coerceIn(0f, 1f),
+                        ((viewPos.right - fullPos.left) / fullPos.width).coerceIn(0f, 1f),
+                        ((viewPos.bottom - fullPos.top) / fullPos.height).coerceIn(0f, 1f),
                     )
                 gameView.viewport = viewport
                 viewModel.retroGameView.currentViewport = viewport

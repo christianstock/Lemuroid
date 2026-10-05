@@ -5,29 +5,37 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.EaseInOutSine
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PageSize
@@ -53,8 +61,11 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
@@ -73,8 +84,8 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.lerp
-import androidx.core.graphics.drawable.toBitmap
 import androidx.core.graphics.ColorUtils
+import androidx.core.graphics.drawable.toBitmap
 import androidx.palette.graphics.Palette
 import coil.ImageLoader
 import coil.compose.AsyncImage
@@ -86,12 +97,12 @@ import com.swordfish.lemuroid.app.shared.game.skins.GbaSkinManager
 import com.swordfish.lemuroid.app.shared.game.skins.GbcSkinManager
 import com.swordfish.lemuroid.lib.library.db.entity.Game
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
 
-// Font Family Definition (Ensure press_start_2p.ttf is inside res/font)
 val PressStart2PFontFamily = FontFamily(
     Font(R.font.press_start_2p, FontWeight.Normal)
 )
@@ -125,7 +136,6 @@ fun HomeCarousel(
         initialPage = initialSystemIndex + currentSystemInternalIndex
     ) { Int.MAX_VALUE }
 
-    // Sync state back when system page changes
     LaunchedEffect(systemPagerState.currentPage) {
         val currentSystemId = systemLibraries[systemPagerState.currentPage % systemsCount].systemId
         if (!currentSystemId.equals(selectedSystemId, ignoreCase = true)) {
@@ -133,7 +143,6 @@ fun HomeCarousel(
         }
     }
 
-    // Sync pager when selected system changes externally
     LaunchedEffect(selectedSystemId) {
         if (selectedSystemId != null) {
             val targetIndex = systemLibraries.indexOfFirst { it.systemId.equals(selectedSystemId, ignoreCase = true) }
@@ -206,7 +215,6 @@ private fun SystemPage(
     } else null
 
     val fallbackAccentColor = MaterialTheme.colorScheme.primary
-
     var accentColor by remember { mutableStateOf(fallbackAccentColor) }
 
     LaunchedEffect(currentGame?.id, currentGame?.coverFrontUrl) {
@@ -224,7 +232,6 @@ private fun SystemPage(
                     if (result is SuccessResult) {
                         val bitmap = result.drawable.toBitmap()
                         val palette = Palette.from(bitmap).generate()
-
                         val compositeDarkBg = 0xFF121212.toInt()
 
                         val candidateSwatches = listOfNotNull(
@@ -263,7 +270,6 @@ private fun SystemPage(
         label = "AccentColorCrossfade"
     )
 
-    // Subdued Idle Floating Motion for Focused Cartridge
     val infiniteTransition = rememberInfiniteTransition(label = "CartridgeFloatTransition")
     val idleFloatDp by infiniteTransition.animateFloat(
         initialValue = -1.5f,
@@ -275,11 +281,19 @@ private fun SystemPage(
         label = "dyFloat"
     )
 
+    val hintAlphaAnim = remember { Animatable(0f) }
+    LaunchedEffect(library.systemId) {
+        hintAlphaAnim.snapTo(0f)
+        hintAlphaAnim.animateTo(0.85f, animationSpec = tween(600))
+        delay(3500)
+        hintAlphaAnim.animateTo(0f, animationSpec = tween(800))
+    }
+
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.BottomCenter
     ) {
-        // Fullscreen Blurred Background
+        // Fullscreen Blurred Background with Vignette Gradient Fade to Black
         Crossfade(
             targetState = currentGame?.coverFrontUrl,
             animationSpec = tween(durationMillis = 600),
@@ -303,15 +317,44 @@ private fun SystemPage(
                                 scaleY = 1.2f
                             }
                     )
+                    // Radial Vignette Gradient: Semi-transparent in center, deep black towards edges
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
                             .drawWithContent {
-                                drawRect(Color.Black.copy(alpha = 0.45f))
                                 drawContent()
+                                drawRect(Color.Black.copy(alpha = 0.25f))
+                                drawRect(
+                                    brush = Brush.radialGradient(
+                                        colors = listOf(
+                                            Color.Transparent,
+                                            Color.Black.copy(alpha = 0.5f),
+                                            Color.Black.copy(alpha = 0.95f)
+                                        ),
+                                        center = center,
+                                        radius = size.maxDimension * 0.7f
+                                    )
+                                )
                             }
                     )
                 }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .drawWithContent {
+                            drawRect(
+                                brush = Brush.radialGradient(
+                                    colors = listOf(
+                                        Color(0xFF1E1E24),
+                                        Color.Black
+                                    ),
+                                    center = center,
+                                    radius = size.maxDimension * 0.75f
+                                )
+                            )
+                        }
+                )
             }
         }
 
@@ -363,7 +406,9 @@ private fun SystemPage(
 
                 if (publisher.isNotEmpty() || year.isNotEmpty()) {
                     Text(
-                        text = listOfNotNull(publisher.takeIf { it.isNotEmpty() }, year.takeIf { it.isNotEmpty() }).joinToString(" | "),
+                        text = listOfNotNull(
+                            publisher.takeIf { it.isNotEmpty() },
+                            year.takeIf { it.isNotEmpty() }).joinToString(" | "),
                         style = MaterialTheme.typography.bodyMedium,
                         color = animatedAccentColor,
                         textAlign = TextAlign.Center,
@@ -394,7 +439,6 @@ private fun SystemPage(
                 val offsetY = remember(refreshCount, page) { Animatable(0f) }
                 var locked by remember(refreshCount, page) { mutableStateOf(false) }
 
-                // Float applies only when focused, stationary (offsetY == 0), and unlocked
                 val density = LocalDensity.current
                 val activeFloatOffset = if (isFocused && offsetY.value == 0f && !locked) {
                     with(density) { idleFloatDp.dp.toPx() }
@@ -402,17 +446,46 @@ private fun SystemPage(
                     0f
                 }
 
+                val interactionSource = remember { MutableInteractionSource() }
+                var isPressed by remember { mutableStateOf(false) }
+                var pressOffset by remember { mutableStateOf(Offset.Unspecified) }
+
+                LaunchedEffect(interactionSource) {
+                    interactionSource.interactions.collect { interaction ->
+                        when (interaction) {
+                            is PressInteraction.Press -> {
+                                pressOffset = interaction.pressPosition
+                                isPressed = true
+                            }
+
+                            is PressInteraction.Release, is PressInteraction.Cancel -> {
+                                isPressed = false
+                            }
+                        }
+                    }
+                }
+
+                val holdProgress by animateFloatAsState(
+                    targetValue = if (isPressed && isFocused) 1f else 0f,
+                    animationSpec = tween(durationMillis = 500, easing = LinearOutSlowInEasing),
+                    label = "ConcentricCircleHoldAnim"
+                )
+
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .graphicsLayer {
-                            val pageOffset = ((gamePagerState.currentPage - page) + gamePagerState.currentPageOffsetFraction).absoluteValue
+                            val pageOffset =
+                                ((gamePagerState.currentPage - page) + gamePagerState.currentPageOffsetFraction).absoluteValue
                             val scale = lerp(start = 0.8f, stop = 1.0f, fraction = 1f - pageOffset.coerceIn(0f, 1f))
                             scaleX = scale
                             scaleY = scale
-                            alpha = if (locked) 1f else lerp(start = 0.5f, stop = 1f, fraction = 1f - pageOffset.coerceIn(0f, 1f))
+                            alpha = if (locked) 1f else lerp(
+                                start = 0.5f,
+                                stop = 1f,
+                                fraction = 1f - pageOffset.coerceIn(0f, 1f)
+                            )
 
-                            // Apply subtle floating translation Y to focused item
                             translationY = activeFloatOffset
                         }
                         .padding(8.dp),
@@ -425,7 +498,14 @@ private fun SystemPage(
                             .draggable(
                                 state = rememberDraggableState { delta ->
                                     if (isFocused && !locked) {
-                                        coroutineScope.launch { offsetY.snapTo((offsetY.value + delta).coerceIn(0f, 500f)) }
+                                        coroutineScope.launch {
+                                            offsetY.snapTo(
+                                                (offsetY.value + delta).coerceIn(
+                                                    0f,
+                                                    750f
+                                                )
+                                            )
+                                        }
                                     }
                                 },
                                 orientation = Orientation.Vertical,
@@ -442,6 +522,8 @@ private fun SystemPage(
                                 }
                             )
                             .combinedClickable(
+                                interactionSource = interactionSource,
+                                indication = null,
                                 enabled = !locked,
                                 onClick = { if (isFocused) onShowContextMenu(game) },
                                 onLongClick = { if (isFocused) onNavigateToList(game) }
@@ -449,9 +531,52 @@ private fun SystemPage(
                         contentAlignment = Alignment.Center
                     ) {
                         GameCartridge(game = game, modifier = Modifier.fillMaxSize())
+
+                        // Concentric Rings Touch Gesture Overlay
+                        if (isPressed && isFocused) {
+                            Canvas(modifier = Modifier.fillMaxSize()) {
+                                val centerPx = if (pressOffset != Offset.Unspecified) pressOffset else Offset(
+                                    size.width / 2f,
+                                    size.height / 2f
+                                )
+
+                                val innerRadius = 24.dp.toPx()
+                                val outerRadius = 40.dp.toPx()
+
+                                // Inner thin circle
+                                drawCircle(
+                                    color = Color.White.copy(alpha = 0.65f),
+                                    radius = innerRadius,
+                                    center = centerPx,
+                                    style = Stroke(width = 1.25.dp.toPx())
+                                )
+
+                                // Outer thin guide circle
+                                drawCircle(
+                                    color = Color.White.copy(alpha = 0.25f),
+                                    radius = outerRadius,
+                                    center = centerPx,
+                                    style = Stroke(width = 1.25.dp.toPx())
+                                )
+
+                                // Thicker animated hold progress arc (4.dp)
+                                if (holdProgress > 0f) {
+                                    drawArc(
+                                        color = animatedAccentColor,
+                                        startAngle = -90f,
+                                        sweepAngle = 360f * holdProgress,
+                                        useCenter = false,
+                                        topLeft = Offset(centerPx.x - outerRadius, centerPx.y - outerRadius),
+                                        size = Size(outerRadius * 2, outerRadius * 2),
+                                        style = Stroke(width = 4.dp.toPx(), cap = StrokeCap.Round)
+                                    )
+                                }
+                            }
+                        }
                     }
 
-                    val isSwiping = gamePagerState.isScrollInProgress || gamePagerState.currentPageOffsetFraction.absoluteValue > 0.001f
+                    val isSwiping =
+                        gamePagerState.isScrollInProgress || gamePagerState.currentPageOffsetFraction.absoluteValue > 0.001f
                     val isVisible = !isSwiping && isFocused && !locked
                     val swipeAlpha by animateFloatAsState(
                         targetValue = if (isVisible) 1f else 0f,
@@ -464,14 +589,32 @@ private fun SystemPage(
                     val dragAlpha = (1f - (offsetY.value / 120f)).coerceIn(0f, 1f)
                     val totalAlpha = (swipeAlpha * dragAlpha).coerceIn(0f, 1f)
 
-                    PullDownTriangleIndicator(
-                        isVisible = isVisible,
-                        color = animatedAccentColor,
+                    // Bottom Area: Inline Opacity-Only Pulsating Gesture Hints + Down Arrow
+                    Box(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
-                            .offset(y = 28.dp)
-                            .graphicsLayer { alpha = totalAlpha }
-                    )
+                            .offset(y = -50.dp)
+                            .fillMaxWidth()
+                            .graphicsLayer { alpha = totalAlpha },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth(0.9f)
+                                .graphicsLayer { alpha = hintAlphaAnim.value },
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            MinimalInlineTapHint(label = "INFO")
+                            MinimalInlineHoldHint(label = "LIST", accentColor = animatedAccentColor)
+                        }
+
+                        // Center Animated Down Arrow
+                        PullDownTriangleIndicator(
+                            isVisible = isVisible,
+                            color = animatedAccentColor
+                        )
+                    }
                 }
             }
         }
@@ -479,32 +622,148 @@ private fun SystemPage(
         // Bottom Console Overlay
         Box(
             modifier = Modifier
-                .fillMaxWidth(if (library.systemId.lowercase() in listOf("gba", "psp")) 1.0f else 0.8f)
-                .height(160.dp)
+                .fillMaxWidth(if (library.systemId.lowercase() in listOf("gba", "psp")) 1.0f else 1.0f)
+                .height(250.dp)
                 .align(Alignment.BottomCenter),
             contentAlignment = Alignment.BottomCenter
         ) {
-            SystemForegroundView(systemId = library.systemId, modifier = Modifier.fillMaxSize())
-        }
-
-        // Top Settings Button
-        IconButton(
-            onClick = onOpenSettings,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .statusBarsPadding()
-                .padding(16.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Settings,
-                contentDescription = "System Menu",
-                tint = Color.White.copy(alpha = 0.85f)
+            SystemForegroundView(
+                systemId = library.systemId,
+                onOpenSettings = onOpenSettings,
+                modifier = Modifier.fillMaxSize()
             )
         }
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+/**
+ * Minimalist inline TAP / INFO hint with opacity-only pulsing (size remains fixed).
+ */
+@Composable
+private fun MinimalInlineTapHint(
+    label: String,
+    modifier: Modifier = Modifier
+) {
+    val pulseTransition = rememberInfiniteTransition(label = "TapOpacityPulse")
+    val pulseAlpha by pulseTransition.animateFloat(
+        initialValue = 0.05f,
+        targetValue = 0.25f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1100, easing = EaseInOutSine),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "PulseAlpha"
+    )
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = modifier.graphicsLayer { alpha = pulseAlpha }
+    ) {
+        Canvas(modifier = Modifier.size(18.dp)) {
+            val centerPx = Offset(size.width / 2f, size.height / 2f)
+            drawCircle(
+                color = Color.White,
+                radius = size.width / 2f,
+                style = Stroke(width = 1.25.dp.toPx())
+            )
+            drawCircle(
+                color = Color.White,
+                radius = size.width / 3.5f,
+                style = Stroke(width = 1.25.dp.toPx())
+            )
+        }
+        Text(
+            text = label,
+            fontFamily = PressStart2PFontFamily,
+            fontSize = 11.sp,
+            color = Color.White
+        )
+    }
+}
+
+/**
+ * Minimalist inline HOLD / LIST hint with opacity-only pulsing (size remains fixed).
+ */
+@Composable
+private fun MinimalInlineHoldHint(
+    label: String,
+    accentColor: Color,
+    modifier: Modifier = Modifier
+) {
+    val durationMs = 5000 // Matches the overall hint visibility window
+
+    val transition = rememberInfiniteTransition(label = "SingleHoldWindupTransition")
+
+    // Synchronized opacity: Fades in, holds, then fades out smoothly over the single duration
+    val pulseTransition = rememberInfiniteTransition(label = "TapOpacityPulse")
+    val pulseAlpha by pulseTransition.animateFloat(
+        initialValue = 0.05f,
+        targetValue = 0.25f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1100, easing = EaseInOutSine),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "PulseAlpha"
+    )
+
+    // Exactly ONE 360° rotation over the full time span
+    val sweepAngle by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                durationMillis = durationMs,
+                easing = LinearEasing
+            ),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "Single360Windup"
+    )
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = modifier.graphicsLayer { alpha = pulseAlpha }
+    ) {
+        Canvas(modifier = Modifier.size(18.dp)) {
+            val centerPx = Offset(size.width / 2f, size.height / 2f)
+            val innerRadius = size.width / 3.5f
+            val outerRadius = size.width / 2f
+
+            // Inner guide circle
+            drawCircle(
+                color = Color.White,
+                radius = innerRadius,
+                center = centerPx,
+                style = Stroke(width = 1.25.dp.toPx())
+            )
+
+            // Outer arc executing one full 360° windup
+            if (sweepAngle > 0f) {
+                drawArc(
+                    color = accentColor,
+                    startAngle = -90f,
+                    sweepAngle = sweepAngle,
+                    useCenter = false,
+                    topLeft = Offset(centerPx.x - outerRadius, centerPx.y - outerRadius),
+                    size = Size(outerRadius * 2, outerRadius * 2),
+                    style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round)
+                )
+            }
+        }
+        Text(
+            text = label,
+            fontFamily = PressStart2PFontFamily,
+            fontSize = 11.sp,
+            color = Color.White
+        )
+    }
+}
+
+/**
+ * Adaptive Scrubber Track: Renders small dots for items with active selection always shown as a diamond.
+ */
 @Composable
 private fun ScrubberTrack(
     pagerState: PagerState,
@@ -515,6 +774,11 @@ private fun ScrubberTrack(
     if (itemCount <= 0) return
 
     val coroutineScope = rememberCoroutineScope()
+    val density = LocalDensity.current
+
+    val minDotSpacingPx = with(density) { 8.dp.toPx() }
+    val smallDotRadiusPx = with(density) { 2.dp.toPx() }
+    val diamondRadiusPx = with(density) { 5.5.dp.toPx() }
 
     Box(
         modifier = modifier
@@ -534,9 +798,7 @@ private fun ScrubberTrack(
                     }
                 }
 
-                detectTapGestures { offset ->
-                    updatePosition(offset.x)
-                }
+                detectTapGestures { offset -> updatePosition(offset.x) }
             }
             .pointerInput(itemCount, pagerState) {
                 detectDragGestures { change, _ ->
@@ -556,40 +818,66 @@ private fun ScrubberTrack(
             }
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
-            val trackHeightPx = 2.dp.toPx()
+            val width = size.width
             val cy = size.height / 2f
 
-            drawLine(
-                color = Color.White.copy(alpha = 0.25f),
-                start = Offset(0f, cy),
-                end = Offset(size.width, cy),
-                strokeWidth = trackHeightPx
-            )
+            val currentModuloIndex = pagerState.currentPage % itemCount
+            val rawIndex = currentModuloIndex + pagerState.currentPageOffsetFraction
+            val normalizedIndex = (rawIndex % itemCount + itemCount) % itemCount
 
-            val fraction = if (itemCount <= 1) {
-                0.5f
+            val requiredWidth = itemCount * minDotSpacingPx
+            val renderDots = itemCount in 2..50 && requiredWidth <= width
+
+            if (renderDots) {
+                val step = if (itemCount > 1) width / (itemCount - 1) else 0f
+
+                for (i in 0 until itemCount) {
+                    val cx = i * step
+                    val distToActive = (i - normalizedIndex).absoluteValue
+                    val isSelected = distToActive < 0.5f
+
+                    if (isSelected) {
+                        val diamondPath = Path().apply {
+                            moveTo(cx, cy - diamondRadiusPx)
+                            lineTo(cx + diamondRadiusPx, cy)
+                            lineTo(cx, cy + diamondRadiusPx)
+                            lineTo(cx - diamondRadiusPx, cy)
+                            close()
+                        }
+                        drawPath(path = diamondPath, color = accentColor)
+                    } else {
+                        drawCircle(
+                            color = Color.White.copy(alpha = 0.3f),
+                            radius = smallDotRadiusPx,
+                            center = Offset(cx, cy)
+                        )
+                    }
+                }
             } else {
-                val currentModuloIndex = pagerState.currentPage % itemCount
-                val rawIndex = currentModuloIndex + pagerState.currentPageOffsetFraction
-                val normalizedIndex = (rawIndex % itemCount + itemCount) % itemCount
-                (normalizedIndex / (itemCount - 1)).coerceIn(0f, 1f)
+                val trackHeightPx = 2.dp.toPx()
+                drawLine(
+                    color = Color.White.copy(alpha = 0.25f),
+                    start = Offset(0f, cy),
+                    end = Offset(width, cy),
+                    strokeWidth = trackHeightPx
+                )
+
+                val fraction = if (itemCount <= 1) 0.5f else (normalizedIndex / (itemCount - 1)).coerceIn(0f, 1f)
+                val diamondX = width * fraction
+
+                val diamondPath = Path().apply {
+                    moveTo(diamondX, cy - diamondRadiusPx)
+                    lineTo(diamondX + diamondRadiusPx, cy)
+                    lineTo(diamondX, cy + diamondRadiusPx)
+                    lineTo(diamondX - diamondRadiusPx, cy)
+                    close()
+                }
+
+                drawPath(
+                    path = diamondPath,
+                    color = accentColor
+                )
             }
-
-            val diamondX = size.width * fraction
-            val diamondRadiusPx = 6.dp.toPx()
-
-            val diamondPath = Path().apply {
-                moveTo(diamondX, cy - diamondRadiusPx)
-                lineTo(diamondX + diamondRadiusPx, cy)
-                lineTo(diamondX, cy + diamondRadiusPx)
-                lineTo(diamondX - diamondRadiusPx, cy)
-                close()
-            }
-
-            drawPath(
-                path = diamondPath,
-                color = accentColor
-            )
         }
     }
 }
@@ -597,35 +885,234 @@ private fun ScrubberTrack(
 @Composable
 private fun SystemForegroundView(
     systemId: String?,
+    onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val systemIdNorm = systemId?.lowercase() ?: ""
 
-    val caseColor = when (systemIdNorm) {
-        "gb" -> GbSkinManager.getInstance(context).getSelectedSkin().caseColor
-        "gbc" -> GbcSkinManager.getInstance(context).getSelectedSkin().caseColor
-        "gba" -> GbaSkinManager.getInstance(context).getSelectedSkin().caseColor
-        "psp" -> Color(0xFF1A1A1A)
-        else -> Color(0xFF444448)
-    }
-
-    Canvas(modifier = modifier) {
-        val cornerPx = 8.dp.toPx()
-        val topOffset = 100.dp.toPx()
-
-        clipRect(
-            left = 0f,
-            top = topOffset,
-            right = size.width,
-            bottom = size.height
-        ) {
-            drawRoundRect(
-                color = caseColor,
-                topLeft = Offset(0f, topOffset),
-                size = Size(size.width, size.height - topOffset + cornerPx),
-                cornerRadius = CornerRadius(cornerPx, cornerPx)
-            )
+    // Safely load active skin colors with fallbacks
+    val caseColor = remember(systemIdNorm, context) {
+        when (systemIdNorm) {
+            "gb" -> runCatching { GbSkinManager.getInstance(context).getSelectedSkin().caseColor }.getOrNull()
+            "gbc" -> runCatching { GbcSkinManager.getInstance(context).getSelectedSkin().caseColor }.getOrNull()
+            "gba" -> runCatching { GbaSkinManager.getInstance(context).getSelectedSkin().caseColor }.getOrNull()
+            else -> null
+        } ?: when (systemIdNorm) {
+            "psp" -> Color(0xFF1A1A1A)
+            "gb" -> Color(0xFFC4C2B8) // Classic Game Boy DMG case color
+            "gbc" -> Color(0xFF7B2CBF) // Atomic Purple / Purple GBC
+            "gba" -> Color(0xFF5E50A1) // Indigo GBA
+            else -> Color(0xFF444448)
         }
     }
+
+    val bevelColor = remember(systemIdNorm, context) {
+        when (systemIdNorm) {
+            "gb" -> runCatching { GbSkinManager.getInstance(context).getSelectedSkin().screenLensColor }.getOrNull()
+            else -> null
+        } ?: Color(0xFF000000)
+    }
+
+    val isGbDmg = systemIdNorm == "gb"
+    val isGba = systemIdNorm == "gba"
+
+    Box(modifier = modifier) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val topOffset = 75.dp.toPx()
+            val bevelOffset = topOffset + 75.dp.toPx()
+            val caseHeight = 75.dp.toPx()
+            val arcLift = 14.dp.toPx() // Height of upward arc for GBA
+
+            clipRect(
+                left = 0f,
+                top = topOffset,
+                right = size.width,
+                bottom = size.height
+            ) {
+                // 1. Base Case Surface
+                drawRect(
+                    color = caseColor,
+                    topLeft = Offset(0f, topOffset),
+                    size = Size(size.width, caseHeight)
+                )
+
+                // Top Edge Shadow Overlays
+                drawRect(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(Color.Black.copy(alpha = 0.8f), Color.Transparent),
+                        startY = topOffset,
+                        endY = topOffset + 6.dp.toPx()
+                    ),
+                    topLeft = Offset(0f, topOffset),
+                    size = Size(size.width, 6.dp.toPx())
+                )
+                drawRect(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(Color.Black.copy(alpha = 0.3f), Color.Transparent),
+                        startY = topOffset,
+                        endY = topOffset + 16.dp.toPx()
+                    ),
+                    topLeft = Offset(0f, topOffset),
+                    size = Size(size.width, 16.dp.toPx())
+                )
+
+
+
+                // 2. Bottom Case Lip Highlight
+                if (isGba) {
+                    // Curved White Highlight Ribbon directly above GBA Bevel
+                    val curvedHighlightPath = Path().apply {
+                        moveTo(0f, bevelOffset - 8.dp.toPx())
+                        quadraticTo(
+                            size.width / 2f, (bevelOffset - arcLift) - 8.dp.toPx(),
+                            size.width, bevelOffset - 8.dp.toPx()
+                        )
+                        lineTo(size.width, bevelOffset)
+                        quadraticTo(
+                            size.width / 2f, bevelOffset - arcLift,
+                            0f, bevelOffset
+                        )
+                        close()
+                    }
+                    drawPath(
+                        path = curvedHighlightPath,
+                        brush = Brush.verticalGradient(
+                            colors = listOf(Color.Transparent, Color.White.copy(alpha = 0.3f)),
+                            startY = bevelOffset - arcLift - 8.dp.toPx(),
+                            endY = bevelOffset
+                        )
+                    )
+                } else {
+                    // Straight White Highlight
+                    drawRect(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(Color.Transparent, Color.White.copy(alpha = 0.3f)),
+                            startY = bevelOffset - 8.dp.toPx(),
+                            endY = bevelOffset
+                        ),
+                        topLeft = Offset(0f, bevelOffset - 8.dp.toPx()),
+                        size = Size(size.width, 8.dp.toPx())
+                    )
+                }
+
+                // 3. Bevel Layer & Top Drop Shadow
+                if (isGba) {
+                    val bevelPath = Path().apply {
+                        moveTo(0f, size.height)
+                        lineTo(0f, bevelOffset)
+                        quadraticTo(
+                            size.width / 2f, bevelOffset - arcLift,
+                            size.width, bevelOffset
+                        )
+                        lineTo(size.width, size.height)
+                        close()
+                    }
+                    drawPath(path = bevelPath, color = bevelColor)
+
+                    // Curved Drop Shadow onto the Bevel
+                    val shadowPath = Path().apply {
+                        moveTo(0f, bevelOffset)
+                        quadraticTo(
+                            size.width / 2f, bevelOffset - arcLift,
+                            size.width, bevelOffset
+                        )
+                        lineTo(size.width, bevelOffset + 10.dp.toPx())
+                        quadraticTo(
+                            size.width / 2f, (bevelOffset - arcLift) + 10.dp.toPx(),
+                            0f, bevelOffset + 10.dp.toPx()
+                        )
+                        close()
+                    }
+                    drawPath(
+                        path = shadowPath,
+                        brush = Brush.verticalGradient(
+                            colors = listOf(Color.Black.copy(alpha = 0.5f), Color.Transparent),
+                            startY = bevelOffset - arcLift,
+                            endY = bevelOffset + 10.dp.toPx()
+                        )
+                    )
+                } else {
+                    // Straight Bevel
+                    drawRect(
+                        color = bevelColor,
+                        topLeft = Offset(0f, bevelOffset),
+                        size = Size(size.width, size.height - bevelOffset)
+                    )
+
+                    // Straight Drop Shadow onto the Bevel
+                    drawRect(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(Color.Black.copy(alpha = 0.45f), Color.Transparent),
+                            startY = bevelOffset,
+                            endY = bevelOffset + 8.dp.toPx()
+                        ),
+                        topLeft = Offset(0f, bevelOffset),
+                        size = Size(size.width, 8.dp.toPx())
+                    )
+                }
+            }
+
+            // DMG-01 Branding Accent Lines (For Game Boy DMG)
+            if (isGbDmg) {
+                val lineY = topOffset + 120.dp.toPx()
+                val stroke = 7.dp.toPx()
+                val textPadding = 200.dp.toPx()
+                val margin = 0.dp.toPx()
+
+                // Magenta Line
+                drawLine(
+                    color = Color(0xFF930551),
+                    start = Offset(margin, lineY - 7.dp.toPx()),
+                    end = Offset(size.width - textPadding, lineY - 7.dp.toPx()),
+                    strokeWidth = stroke
+                )
+                // Blue Line
+                drawLine(
+                    color = Color(0xFF111B91),
+                    start = Offset(margin, lineY + 7.dp.toPx()),
+                    end = Offset(size.width - textPadding, lineY + 7.dp.toPx()),
+                    strokeWidth = stroke
+                )
+            }
+        }
+
+
+        // DMG-01 Branding Text Overlay
+        if (isGbDmg) {
+            Text(
+                text = "DOT MATRIX WITH STEREO SOUND",
+                fontFamily = FontFamily.SansSerif,
+                fontWeight = FontWeight.Normal,
+                fontSize = 20.sp,
+                color = Color.White.copy(alpha = 0.55f),
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 180.dp, end = 0.dp)
+                    .graphicsLayer {
+                        translationX = 180.dp.toPx()
+                    }
+            )
+        }
+
+        // Interactive SYSTEM Text Label
+        Text(
+            text = "SYSTEM",
+            fontFamily = FontFamily.SansSerif,
+            fontWeight = FontWeight.Black,
+            fontSize = 26.sp,
+            letterSpacing = 1.sp,
+            color = Color.Black.copy(alpha = 0.12f),
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 101.dp, end = 28.dp)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onOpenSettings
+                )
+        )
+    }
 }
+
+
