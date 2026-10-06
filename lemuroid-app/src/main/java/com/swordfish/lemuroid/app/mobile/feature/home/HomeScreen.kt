@@ -16,13 +16,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.swordfish.lemuroid.R
 import com.swordfish.lemuroid.app.utils.android.ComposableLifecycle
 import com.swordfish.lemuroid.common.displayDetailsSettingsScreen
@@ -39,121 +41,98 @@ fun HomeScreen(
     onOpenSettings: () -> Unit = {},
 ) {
     val context = LocalContext.current
-    val applicationContext = context.applicationContext
 
+    // Efficient lifecycle-aware state collection (avoids unnecessary recompositions)
+    val state by viewModel.getViewStates().collectAsStateWithLifecycle(initialValue = HomeViewModel.UIState())
+
+    // Defer permission updates to ON_RESUME without blocking initial composition
     ComposableLifecycle { _, event ->
-        when (event) {
-            Lifecycle.Event.ON_RESUME -> {
-                viewModel.updatePermissions(applicationContext)
-                viewModel.refresh()
-            }
-            else -> { }
+        if (event == Lifecycle.Event.ON_RESUME) {
+            viewModel.updatePermissions(context.applicationContext)
         }
     }
 
-    val permissionsLauncher =
-        rememberLauncherForActivityResult(
-            ActivityResultContracts.RequestPermission(),
-        ) { isGranted: Boolean ->
-            if (!isGranted) {
-                context.displayDetailsSettingsScreen()
-            }
+    val permissionsLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (!isGranted) {
+            context.displayDetailsSettingsScreen()
         }
+    }
 
-    val state = viewModel.getViewStates().collectAsState(HomeViewModel.UIState())
-    HomeScreen(
-        modifier = modifier,
-        viewModel = viewModel,
-        state = state.value,
-        onGameClicked = { 
-            viewModel.onGameLaunched(it)
-            onGameClick(it) 
-        },
-        onShowContextMenu = onGameLongClick,
-        onNavigateToSystemList = onNavigateToSystemList,
-        onOpenCoreSelection = onOpenCoreSelection,
-        onOpenSettings = onOpenSettings,
-        onSystemSelected = { viewModel.setSelectedSystem(it) },
-        onEnableNotificationsClicked = {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                permissionsLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-            }
-        },
-        onEnableMicrophoneClicked = { permissionsLauncher.launch(Manifest.permission.RECORD_AUDIO) },
-        onSetDirectoryClicked = { viewModel.changeLocalStorageFolder(context) },
-    )
-}
-
-@Composable
-private fun HomeScreen(
-    modifier: Modifier = Modifier,
-    viewModel: HomeViewModel,
-    state: HomeViewModel.UIState,
-    onGameClicked: (Game) -> Unit,
-    onShowContextMenu: (Game) -> Unit,
-    onNavigateToSystemList: (Game) -> Unit,
-    onOpenCoreSelection: () -> Unit,
-    onOpenSettings: () -> Unit,
-    onSystemSelected: (String) -> Unit,
-    onEnableNotificationsClicked: () -> Unit,
-    onEnableMicrophoneClicked: () -> Unit,
-    onSetDirectoryClicked: () -> Unit,
-) {
     Column(
         modifier = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        AnimatedVisibility(state.showNoNotificationPermissionCard) {
+        // Notification Banners (Only evaluated if active)
+        if (state.showNoNotificationPermissionCard) {
             HomeNotification(
                 titleId = R.string.home_notification_title,
                 messageId = R.string.home_notification_message,
                 actionId = R.string.home_notification_action,
-                onAction = onEnableNotificationsClicked,
+                onAction = {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        permissionsLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                }
             )
         }
-        AnimatedVisibility(state.showNoGamesCard) {
+
+        if (state.showNoGamesCard) {
             HomeNotification(
                 titleId = R.string.home_empty_title,
                 messageId = R.string.home_empty_message,
                 actionId = R.string.home_empty_action,
-                onAction = onSetDirectoryClicked,
-                enabled = !state.indexInProgress,
+                onAction = { viewModel.changeLocalStorageFolder(context) },
+                enabled = !state.indexInProgress
             )
         }
-        AnimatedVisibility(state.showNoMicrophonePermissionCard) {
+
+        if (state.showNoMicrophonePermissionCard) {
             HomeNotification(
                 titleId = R.string.home_microphone_title,
                 messageId = R.string.home_notification_action,
                 actionId = R.string.home_notification_action,
-                onAction = onEnableMicrophoneClicked,
+                onAction = { permissionsLauncher.launch(Manifest.permission.RECORD_AUDIO) }
             )
         }
-        AnimatedVisibility(state.showDesmumeDeprecatedCard) {
+
+        if (state.showDesmumeDeprecatedCard) {
             HomeNotification(
                 titleId = R.string.home_notification_desmume_deprecated_title,
                 messageId = R.string.home_notification_desmume_deprecated_message,
                 actionId = R.string.home_notification_desmume_deprecated_action,
-                onAction = onOpenCoreSelection,
+                onAction = onOpenCoreSelection
             )
         }
 
+        // Main Carousel or Empty State
         if (state.systemLibraries.isNotEmpty()) {
             HomeCarousel(
                 systemLibraries = state.systemLibraries,
                 selectedSystemId = state.selectedSystemId,
                 systemScrollPositions = state.systemScrollPositions,
                 refreshCount = state.refreshCount,
-                onGameClick = onGameClicked,
-                onShowContextMenu = onShowContextMenu,
+                onGameClick = { game ->
+                    viewModel.onGameLaunched(game)
+                    onGameClick(game)
+                },
+                onShowContextMenu = onGameLongClick,
                 onNavigateToList = onNavigateToSystemList,
-                onSystemSelected = onSystemSelected,
-                onSystemScroll = { systemId, pos -> viewModel.setSystemScrollPosition(systemId, pos) },
+                onSystemSelected = viewModel::setSelectedSystem,
+                onSystemScroll = viewModel::setSystemScrollPosition,
                 onOpenSettings = onOpenSettings,
                 modifier = Modifier.weight(1f)
             )
         } else if (!state.showNoGamesCard) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(text = "No games found for this system", style = MaterialTheme.typography.bodyLarge)
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "No games found for this system",
+                    style = MaterialTheme.typography.bodyLarge
+                )
             }
         }
     }
@@ -165,33 +144,31 @@ private fun HomeNotification(
     messageId: Int,
     actionId: Int,
     enabled: Boolean = true,
-    onAction: () -> Unit = { },
+    onAction: () -> Unit = {}
 ) {
     ElevatedCard(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
     ) {
         Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
                 text = stringResource(titleId),
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleMedium
             )
             Text(
                 text = stringResource(messageId),
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodyMedium
             )
             OutlinedButton(
                 modifier = Modifier.align(Alignment.End),
                 onClick = onAction,
-                enabled = enabled,
+                enabled = enabled
             ) {
                 Text(stringResource(id = actionId))
             }

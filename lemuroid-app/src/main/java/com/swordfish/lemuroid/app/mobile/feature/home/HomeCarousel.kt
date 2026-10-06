@@ -1,6 +1,5 @@
 package com.swordfish.lemuroid.app.mobile.feature.home
 
-import android.content.Context
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.EaseInOutSine
@@ -11,7 +10,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.Orientation
@@ -32,6 +30,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PageSize
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -45,12 +44,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -64,21 +59,13 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.lerp
-import androidx.core.graphics.ColorUtils
-import androidx.core.graphics.drawable.toBitmap
-import androidx.palette.graphics.Palette
-import coil.ImageLoader
-import coil.request.ImageRequest
-import coil.request.SuccessResult
 import com.swordfish.lemuroid.R
 import com.swordfish.lemuroid.app.mobile.shared.GameArtBlurBackground
 import com.swordfish.lemuroid.app.mobile.shared.HoldGestureOverlay
 import com.swordfish.lemuroid.app.mobile.shared.extractAccentColor
 import com.swordfish.lemuroid.lib.library.db.entity.Game
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
 
@@ -173,8 +160,6 @@ private fun SystemPage(
 ) {
     val games = library.games
     val gamePagerState = rememberPagerState(initialPage = scrollPage) { Int.MAX_VALUE }
-    val haptic = LocalHapticFeedback.current
-    val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
 
     LaunchedEffect(scrollPage) {
@@ -233,70 +218,24 @@ private fun SystemPage(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.BottomCenter
     ) {
-        // Fullscreen Blurred Background using GameArtBlurBackground
         GameArtBlurBackground(
             coverFrontUrl = currentGame?.coverFrontUrl,
             modifier = Modifier.fillMaxSize()
         )
 
-        // Top Game Info Header
+        // Top Header Info
         if (currentGame != null) {
-            val titleParts = currentGame.title.split(" - ", limit = 2).map { it.trim() }
-
-            Column(
+            GameHeader(
+                game = currentGame,
+                accentColor = animatedAccentColor,
+                pagerState = gamePagerState,
+                itemCount = games.size,
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .statusBarsPadding()
                     .padding(top = 12.dp)
-                    .fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                ScrubberTrack(
-                    pagerState = gamePagerState,
-                    itemCount = games.size,
-                    accentColor = animatedAccentColor,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 48.dp, vertical = 8.dp)
-                )
-
-                Text(
-                    text = titleParts[0],
-                    fontFamily = PressStart2PFontFamily,
-                    fontSize = 20.sp,
-                    lineHeight = 26.sp,
-                    color = Color.White,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 32.dp)
-                )
-                titleParts.getOrNull(1)?.let {
-                    Text(
-                        text = it,
-                        fontFamily = PressStart2PFontFamily,
-                        fontSize = 16.sp,
-                        lineHeight = 20.sp,
-                        color = Color.White.copy(alpha = 0.85f),
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier
-                            .padding(start = 32.dp, top = 8.dp, end = 32.dp)
-                    )
-                }
-
-                val year = currentGame.releaseDate?.take(4) ?: ""
-                val publisher = currentGame.publisher ?: ""
-
-                if (publisher.isNotEmpty() || year.isNotEmpty()) {
-                    Text(
-                        text = listOfNotNull(
-                            publisher.takeIf { it.isNotEmpty() },
-                            year.takeIf { it.isNotEmpty() }).joinToString(" | "),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = animatedAccentColor,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
-                }
-            }
+                    .fillMaxWidth()
+            )
         }
 
         // Middle Games Carousel
@@ -314,164 +253,29 @@ private fun SystemPage(
                     .fillMaxSize()
                     .padding(bottom = 160.dp, top = 140.dp)
             ) { page ->
-                val index = page % games.size
-                val game = games[index]
+                val game = games[page % games.size]
                 val isFocused = gamePagerState.currentPage == page
-                val offsetY = remember(refreshCount, page) { Animatable(0f) }
-                var locked by remember(refreshCount, page) { mutableStateOf(false) }
 
-                val density = LocalDensity.current
-                val activeFloatOffset = if (isFocused && offsetY.value == 0f && !locked) {
-                    with(density) { idleFloatDp.dp.toPx() }
-                } else {
-                    0f
-                }
-
-                val interactionSource = remember { MutableInteractionSource() }
-                var isPressed by remember { mutableStateOf(false) }
-                var pressOffset by remember { mutableStateOf(Offset.Unspecified) }
-
-                LaunchedEffect(interactionSource) {
-                    interactionSource.interactions.collect { interaction ->
-                        when (interaction) {
-                            is PressInteraction.Press -> {
-                                pressOffset = interaction.pressPosition
-                                isPressed = true
-                            }
-
-                            is PressInteraction.Release, is PressInteraction.Cancel -> {
-                                isPressed = false
-                            }
-                        }
-                    }
-                }
-
-                val holdProgress by animateFloatAsState(
-                    targetValue = if (isPressed && isFocused) 1f else 0f,
-                    animationSpec = tween(durationMillis = 500, easing = LinearOutSlowInEasing),
-                    label = "ConcentricCircleHoldAnim"
+                CartridgeCarouselItem(
+                    game = game,
+                    page = page,
+                    pagerState = gamePagerState,
+                    isFocused = isFocused,
+                    idleFloatDp = idleFloatDp,
+                    refreshCount = refreshCount,
+                    accentColor = animatedAccentColor,
+                    hintAlpha = hintAlphaAnim.value,
+                    onGameClick = onGameClick,
+                    onShowContextMenu = onShowContextMenu,
+                    onNavigateToList = onNavigateToList
                 )
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .graphicsLayer {
-                            val pageOffset =
-                                ((gamePagerState.currentPage - page) + gamePagerState.currentPageOffsetFraction).absoluteValue
-                            val scale = lerp(start = 0.8f, stop = 1.0f, fraction = 1f - pageOffset.coerceIn(0f, 1f))
-                            scaleX = scale
-                            scaleY = scale
-                            alpha = if (locked) 1f else lerp(
-                                start = 0.5f,
-                                stop = 1f,
-                                fraction = 1f - pageOffset.coerceIn(0f, 1f)
-                            )
-
-                            translationY = activeFloatOffset
-                        }
-                        .padding(8.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .offset { IntOffset(0, offsetY.value.roundToInt()) }
-                            .draggable(
-                                state = rememberDraggableState { delta ->
-                                    if (isFocused && !locked) {
-                                        coroutineScope.launch {
-                                            offsetY.snapTo(
-                                                (offsetY.value + delta).coerceIn(
-                                                    0f,
-                                                    750f
-                                                )
-                                            )
-                                        }
-                                    }
-                                },
-                                orientation = Orientation.Vertical,
-                                onDragStopped = {
-                                    if (isFocused && !locked) {
-                                        if (offsetY.value > 240f) {
-                                            locked = true
-                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                            onGameClick(game)
-                                        } else {
-                                            coroutineScope.launch { offsetY.animateTo(0f) }
-                                        }
-                                    }
-                                }
-                            )
-                            .combinedClickable(
-                                interactionSource = interactionSource,
-                                indication = null,
-                                enabled = !locked,
-                                onClick = { if (isFocused) onShowContextMenu(game) },
-                                onLongClick = { if (isFocused) onNavigateToList(game) }
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        GameCartridge(game = game, modifier = Modifier.fillMaxSize())
-
-                        // Concentric Rings Touch Gesture Overlay using HoldGestureOverlay
-                        if (isPressed && isFocused) {
-                            HoldGestureOverlay(
-                                pressOffset = pressOffset,
-                                holdProgress = holdProgress,
-                                tintColor = animatedAccentColor,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
-                    }
-
-                    val isSwiping =
-                        gamePagerState.isScrollInProgress || gamePagerState.currentPageOffsetFraction.absoluteValue > 0.001f
-                    val isVisible = !isSwiping && isFocused && !locked
-                    val swipeAlpha by animateFloatAsState(
-                        targetValue = if (isVisible) 1f else 0f,
-                        animationSpec = tween(
-                            durationMillis = 300,
-                            easing = LinearOutSlowInEasing
-                        ),
-                        label = "IndicatorSwipeAlpha"
-                    )
-                    val dragAlpha = (1f - (offsetY.value / 120f)).coerceIn(0f, 1f)
-                    val totalAlpha = (swipeAlpha * dragAlpha).coerceIn(0f, 1f)
-
-                    // Bottom Area: Inline Opacity-Only Pulsating Gesture Hints + Down Arrow
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .offset(y = -50.dp)
-                            .fillMaxWidth()
-                            .graphicsLayer { alpha = totalAlpha },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth(0.9f)
-                                .graphicsLayer { alpha = hintAlphaAnim.value },
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            InlineTapHint(label = "INFO")
-                            InlineHoldHint(label = "LIST", accentColor = animatedAccentColor)
-                        }
-
-                        // Center Animated Down Arrow
-                        PullDownTriangleIndicator(
-                            isVisible = isVisible,
-                            color = animatedAccentColor
-                        )
-                    }
-                }
             }
         }
 
         // Bottom Console Overlay
         Box(
             modifier = Modifier
-                .fillMaxWidth(if (library.systemId.lowercase() in listOf("gba", "psp")) 1.0f else 1.0f)
+                .fillMaxWidth()
                 .height(250.dp)
                 .align(Alignment.BottomCenter),
             contentAlignment = Alignment.BottomCenter
@@ -485,3 +289,244 @@ private fun SystemPage(
     }
 }
 
+/**
+ * Top title and scrubber track header component.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun GameHeader(
+    game: Game,
+    accentColor: Color,
+    pagerState: PagerState,
+    itemCount: Int,
+    modifier: Modifier = Modifier
+) {
+    val titleParts = remember(game.title) {
+        game.title.split(" - ", limit = 2).map { it.trim() }
+    }
+
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        ScrubberTrack(
+            pagerState = pagerState,
+            itemCount = itemCount,
+            accentColor = accentColor,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 48.dp, vertical = 8.dp)
+        )
+
+        Text(
+            text = titleParts[0].uppercase(),
+            fontFamily = PressStart2PFontFamily,
+            fontSize = 20.sp,
+            lineHeight = 26.sp,
+            color = Color.White,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 32.dp)
+        )
+
+        titleParts.getOrNull(1)?.let { subtitle ->
+            Text(
+                text = subtitle.uppercase(),
+                fontFamily = PressStart2PFontFamily,
+                fontSize = 16.sp,
+                lineHeight = 20.sp,
+                color = Color.White.copy(alpha = 0.85f),
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(start = 32.dp, top = 8.dp, end = 32.dp)
+            )
+        }
+
+        val year = game.releaseDate?.take(4) ?: ""
+        val publisher = game.publisher ?: ""
+
+        if (publisher.isNotEmpty() || year.isNotEmpty()) {
+            Text(
+                text = listOfNotNull(
+                    publisher.takeIf { it.isNotEmpty() },
+                    year.takeIf { it.isNotEmpty() }
+                ).joinToString(" | "),
+                style = MaterialTheme.typography.bodyMedium,
+                color = accentColor,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        }
+    }
+}
+
+/**
+ * Handles cartridge scaling, drag gesture offsets, and touch feedback.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun CartridgeCarouselItem(
+    game: Game,
+    page: Int,
+    pagerState: PagerState,
+    isFocused: Boolean,
+    idleFloatDp: Float,
+    refreshCount: Int,
+    accentColor: Color,
+    hintAlpha: Float,
+    onGameClick: (Game) -> Unit,
+    onShowContextMenu: (Game) -> Unit,
+    onNavigateToList: (Game) -> Unit
+) {
+    val coroutineScope = rememberCoroutineScope()
+    val haptic = LocalHapticFeedback.current
+    val density = LocalDensity.current
+
+    val offsetY = remember(refreshCount, page) { Animatable(0f) }
+    var locked by remember(refreshCount, page) { mutableStateOf(false) }
+
+    val activeFloatOffset = if (isFocused && offsetY.value == 0f && !locked) {
+        with(density) { idleFloatDp.dp.toPx() }
+    } else {
+        0f
+    }
+
+    val interactionSource = remember { MutableInteractionSource() }
+    var isPressed by remember { mutableStateOf(false) }
+    var pressOffset by remember { mutableStateOf(Offset.Unspecified) }
+
+    LaunchedEffect(interactionSource) {
+        interactionSource.interactions.collect { interaction ->
+            when (interaction) {
+                is PressInteraction.Press -> {
+                    pressOffset = interaction.pressPosition
+                    isPressed = true
+                }
+                is PressInteraction.Release, is PressInteraction.Cancel -> {
+                    isPressed = false
+                }
+            }
+        }
+    }
+
+    val holdProgress by animateFloatAsState(
+        targetValue = if (isPressed && isFocused) 1f else 0f,
+        animationSpec = tween(durationMillis = 500, easing = LinearOutSlowInEasing),
+        label = "ConcentricCircleHoldAnim"
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .graphicsLayer {
+                val pageOffset = ((pagerState.currentPage - page) + pagerState.currentPageOffsetFraction).absoluteValue
+                val scale = lerp(start = 0.8f, stop = 1.0f, fraction = 1f - pageOffset.coerceIn(0f, 1f))
+                scaleX = scale
+                scaleY = scale
+                alpha = if (locked) 1f else lerp(start = 0.5f, stop = 1f, fraction = 1f - pageOffset.coerceIn(0f, 1f))
+                translationY = activeFloatOffset
+            }
+            .padding(8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .offset { IntOffset(0, offsetY.value.roundToInt()) }
+                .draggable(
+                    state = rememberDraggableState { delta ->
+                        if (isFocused && !locked) {
+                            coroutineScope.launch {
+                                offsetY.snapTo((offsetY.value + delta).coerceIn(0f, 750f))
+                            }
+                        }
+                    },
+                    orientation = Orientation.Vertical,
+                    onDragStopped = {
+                        if (isFocused && !locked) {
+                            if (offsetY.value > 240f) {
+                                locked = true
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onGameClick(game)
+                            } else {
+                                coroutineScope.launch { offsetY.animateTo(0f) }
+                            }
+                        }
+                    }
+                )
+                .combinedClickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                    enabled = !locked,
+                    onClick = { if (isFocused) onShowContextMenu(game) },
+                    onLongClick = { if (isFocused) onNavigateToList(game) }
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            GameCartridge(game = game, modifier = Modifier.fillMaxSize())
+
+            if (isPressed && isFocused) {
+                HoldGestureOverlay(
+                    pressOffset = pressOffset,
+                    holdProgress = holdProgress,
+                    tintColor = accentColor,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        }
+
+        // Indicator & Hints overlay
+        val isSwiping = pagerState.isScrollInProgress || pagerState.currentPageOffsetFraction.absoluteValue > 0.001f
+        val isVisible = !isSwiping && isFocused && !locked
+
+        val swipeAlpha by animateFloatAsState(
+            targetValue = if (isVisible) 1f else 0f,
+            animationSpec = tween(durationMillis = 300, easing = LinearOutSlowInEasing),
+            label = "IndicatorSwipeAlpha"
+        )
+        val dragAlpha = (1f - (offsetY.value / 120f)).coerceIn(0f, 1f)
+        val totalAlpha = (swipeAlpha * dragAlpha).coerceIn(0f, 1f)
+
+        CarouselGestureHints(
+            isVisible = isVisible,
+            totalAlpha = totalAlpha,
+            hintAlpha = hintAlpha,
+            accentColor = accentColor,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .offset(y = (-50).dp)
+                .fillMaxWidth()
+        )
+    }
+}
+
+/**
+ * Bottom inline gesture hints + animated pull-down indicator.
+ */
+@Composable
+private fun CarouselGestureHints(
+    isVisible: Boolean,
+    totalAlpha: Float,
+    hintAlpha: Float,
+    accentColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier.graphicsLayer { alpha = totalAlpha },
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth(0.9f)
+                .graphicsLayer { alpha = hintAlpha },
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            InlineTapHint(label = "INFO")
+            InlineHoldHint(label = "LIST", accentColor = accentColor)
+        }
+
+        PullDownTriangleIndicator(
+            isVisible = isVisible,
+            color = accentColor
+        )
+    }
+}

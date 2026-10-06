@@ -142,7 +142,6 @@ fun GameInfoScreen(
                                 fontFamily = PressStart2PFont,
                                 fontSize = 20.sp,
                                 lineHeight = 26.sp,
-                                fontWeight = FontWeight.Bold,
                                 color = Color.White,
                                 textAlign = TextAlign.Center
                             )
