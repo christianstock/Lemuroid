@@ -63,6 +63,7 @@ import kotlin.random.Random
 private val RetroLcdGreen = Color(0xFF9EA83B)
 private val RetroDarkGreen = Color(0xFF1B3B1B)
 private val RetroRedExit = Color(0xFFD32F2F)
+private val GameBoyMagenta = Color(0xFFFF1493)  // Game Boy Pocket magenta
 
 // Arcade / Retro CRT Glow Palette extracted dynamically based on active collection
 private val RetroAmbientPalette = listOf(
@@ -365,9 +366,9 @@ fun GamesScreen(
                     }
                 }
 
-                // Circular Red Exit Button
+                // Game Boy Magenta Exit Button
                 Surface(
-                    color = RetroRedExit,
+                    color = GameBoyMagenta,
                     shape = CircleShape,
                     modifier = Modifier
                         .size(38.dp)

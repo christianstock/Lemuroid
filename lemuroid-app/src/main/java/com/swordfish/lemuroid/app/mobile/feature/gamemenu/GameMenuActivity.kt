@@ -169,34 +169,38 @@ class GameMenuActivity : RetrogradeComponentActivity() {
                     .fillMaxSize()
                     .windowInsetsPadding(WindowInsets.displayCutout)
             ) {
+                val hideHeader = currentRoute == GameMenuRoute.MANUAL || currentRoute == GameMenuRoute.CHEATS
+
                 Column(modifier = Modifier.fillMaxSize()) {
-                    TopAppBar(
-                        title = { Text(stringResource(currentRoute.titleId)) },
-                        windowInsets = WindowInsets(0.dp),
-                        navigationIcon = {
-                            AnimatedContent(targetState = currentRoute.canGoBack() && !isDirectAccess, label = "Back") { canGoBack ->
-                                if (canGoBack) {
-                                    IconButton(onClick = { 
-                                        android.util.Log.d("GameMenuActivity", "Back button pressed, route=$currentRoute")
-                                        onBackPressed()
-                                    }) {
-                                        Icon(
-                                            Icons.AutoMirrored.Filled.ArrowBack,
-                                            stringResource(R.string.back),
-                                        )
-                                    }
-                                } else {
-                                    IconButton(onClick = { onResult { } }) {
-                                        Icon(
-                                            Icons.Filled.Close,
-                                            stringResource(R.string.close),
-                                        )
+                    if (!hideHeader) {
+                        TopAppBar(
+                            title = { Text(stringResource(currentRoute.titleId)) },
+                            windowInsets = WindowInsets(0.dp),
+                            navigationIcon = {
+                                AnimatedContent(targetState = currentRoute.canGoBack() && !isDirectAccess, label = "Back") { canGoBack ->
+                                    if (canGoBack) {
+                                        IconButton(onClick = { 
+                                            android.util.Log.d("GameMenuActivity", "Back button pressed, route=$currentRoute")
+                                            onBackPressed()
+                                        }) {
+                                            Icon(
+                                                Icons.AutoMirrored.Filled.ArrowBack,
+                                                stringResource(R.string.back),
+                                            )
+                                        }
+                                    } else {
+                                        IconButton(onClick = { onResult { } }) {
+                                            Icon(
+                                                Icons.Filled.Close,
+                                                stringResource(R.string.close),
+                                            )
+                                        }
                                     }
                                 }
-                            }
-                        },
-                    )
-                    Divider(modifier = Modifier.fillMaxWidth())
+                            },
+                        )
+                        Divider(modifier = Modifier.fillMaxWidth())
+                    }
                     NavHost(
                         modifier = Modifier.fillMaxSize(),
                         navController = navController,
