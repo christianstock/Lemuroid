@@ -1,24 +1,32 @@
-# Lemuroid to Flutter Migration Plan: Index & Guide
+# GameGrl Migration Plan: Index & Guide
 
 ## Overview
 
-This directory contains a comprehensive, implementation-ready clean-room migration plan for transitioning the **Lemuroid** Android emulation application from its existing Kotlin/Android Jetpack architecture to a modern, feature-first **Flutter and Dart** cross-platform codebase.
+This directory contains a comprehensive, implementation-ready clean-room migration plan for building **GameGrl**—a modern, custom-designed Flutter/Dart handheld emulator for Android, built on top of the **mGBA** (`mgba`) Libretro core and **RetroAchievements.org**.
 
-Rather than performing a mechanical 1:1 translation of existing Kotlin packages and Android views, this plan presents a clean-room reimplementation strategy tailored to a refined product scope.
+Rather than performing a mechanical 1:1 translation of existing Kotlin packages or retaining standard Android Material Design tiles, **GameGrl** features a completely custom, bespoke handheld UI designed specifically for retro gaming enthusiasts.
 
 ---
 
-## Refined Product Scope & Vision
+## GameGrl Vision & Product Features
 
-Based on updated requirements, the Flutter reimplementation adopts the following focused product scope:
+### 1. App Identity & Custom Handheld UI
+- **Branding**: **GameGrl**
+- **Non-Material Custom Aesthetic**: Scraps standard Google Material Design tiles. Features a custom-built handheld interface including an interactive **Game Carousel / Coverflow**, bespoke **Game Info Details Cards**, and a custom **Games View**.
+- **Custom Theme Engine**: GameGrl color themes, Game Boy LCD palette switchers (e.g. DMG Green, Pocket Gray, Light Blue, Atomic Purple), and dark OLED skins.
 
-1. **Target Systems (Core Focus)**:
-   - **Game Boy (GB)**, **Game Boy Color (GBC)**, and **Game Boy Advance (GBA)** using the **mGBA** (`mgba`) Libretro core.
-   - *Future Expansion Roadmap*: Game & Watch (`gw`) and Nintendo DS / 3DS (`melonds` / `citra`). All other legacy systems (PSX, N64, PSP, Arcade, Atari, etc.) are explicitly dropped.
-2. **RetroAchievements Integration**:
-   - Full support for [RetroAchievements.org](https://retroachievements.org/) login, achievement progress tracking, unlock popups/overlays, hardcode mode, and badge image caching.
-3. **Mobile & Handheld Focus (No TV)**:
-   - **Android TV support is dropped entirely**. The UI is built specifically for mobile smartphones, tablets, and Android handheld gaming consoles (e.g., Retroid Pocket, Ayn Odin, Anbernic) with touch skins and physical controller mapping.
+### 2. Core Emulation Focus (mGBA & Game Boy Line)
+- **Primary Core**: **mGBA** (`mgba`) delivering gold-standard emulation for **Game Boy (GB)**, **Game Boy Color (GBC)**, and **Game Boy Advance (GBA)**.
+- **Future Expansion Roadmap**: Game & Watch (`gw`) and Nintendo DS / 3DS (`melonds` / `citra`). All other legacy systems are explicitly removed.
+- **Pure Mobile & Handheld Scope**: Android TV codebase deleted. Engineered specifically for smartphones, tablets, and dedicated Android handhelds (e.g., Retroid, Odin, Anbernic).
+
+### 3. Comprehensive Emulator Feature Set
+- **RetroAchievements Integration**: Full support for RetroAchievements.org user authentication, hardcode mode, achievement lists, in-game unlock toast overlays, and badge caching.
+- **Rewind Engine**: Real-time mGBA frame rewind allowing users to rewind gameplay up to 30 seconds with a single button press.
+- **PDF Game Manuals**: Built-in zoomable PDF game manual viewer (`PdfManualProcessor.kt`).
+- **Front & Back Box Art**: Dual-sided 3D box art flipper displaying both front cover and back box art scans.
+- **In-Game Pause & Overlay**: Pause menu with quick save, quick load, state slot management, and reset capabilities.
+- **LCD & CRT Display Shaders**: Authentic LCD grid, LCD dot matrix, bilinear filtering, and CRT scanline shader modes (`ShaderChooser.kt`).
 
 ---
 
@@ -26,21 +34,12 @@ Based on updated requirements, the Flutter reimplementation adopts the following
 
 | Document | Description |
 | :--- | :--- |
-| **[01. Executive Overview](./01-executive-overview.md)** | Summary of strategic objectives, mGBA core focus, RetroAchievements integration, TV removal, and roadmap. |
-| **[02. Existing Application Inventory](./02-existing-application-inventory.md)** | Audit of existing modules, domain models, database schemas, and native dependencies with updated migration dispositions. |
-| **[03. Target Architecture](./03-target-architecture.md)** | Feature-first codebase structure (`lib/features/*`), dependency governance rules, Riverpod state management, native mGBA JNI interop, RetroAchievements domain, and Drift persistence. |
-| **[04. Feature Migration Map](./04-feature-migration-map.md)** | Traceability matrix mapping legacy Kotlin source packages and classes to Dart features, packages, and native plugins. |
-| **[05. Phased Implementation Roadmap](./05-phased-implementation-roadmap.md)** | Incremental, dependency-aware implementation phases (Phase 0 through Phase 5) with relative effort estimates, prerequisites, and acceptance criteria. |
-| **[06. Risk Register and Technical Spikes](./06-risk-register-and-technical-spikes.md)** | Prioritized technical, performance, and RetroAchievements API risks alongside targeted proof-of-concept spikes and go/no-go gates. |
-| **[07. Testing and Compatibility Strategy](./07-testing-and-compatibility-strategy.md)** | Multi-tier automated testing strategy, RetroAchievements mock API tests, mGBA save-state compatibility validation, and frame latency benchmarking. |
-| **[08. Architecture Decision Records (ADRs)](./08-architecture-decision-records.md)** | Formal decision records for major architectural choices (State Management, mGBA Core Focus, RetroAchievements Integration, TV Removal, Database Persistence). |
-| **[09. Master Task Backlog](./09-master-task-backlog.md)** | Actionable, dependency-linked task backlog with stable identifiers (`TASK-001` through `TASK-050`) ready for tracking and execution. |
-
----
-
-## Key Strategic Principles
-
-1. **Focused Emulation Boundary (`mGBA`)**: Emulation is streamlined around the highly optimized `mgba` core for GB, GBC, and GBA games.
-2. **RetroAchievements Native Binding**: Native `rcheevos` C library calls and HTTP API hooks integrated with Flutter overlay notifications.
-3. **Data & Save Compatibility**: Strict adherence to existing SRAM (`.srm`) and Libretro `.state` formats to guarantee zero save loss.
-4. **Pure Handheld Experience**: Dedicated mobile and gaming handheld UI without bloated TV navigation code.
+| **[01. Executive Overview](./01-executive-overview.md)** | Strategic vision for GameGrl, custom UI aesthetic, mGBA core focus, RetroAchievements, and feature matrix. |
+| **[02. Existing Application Inventory](./02-existing-application-inventory.md)** | Audit of existing modules (`lemuroid-app`, `retrograde-app-shared`), mapping manuals, shaders, covers, and rewind. |
+| **[03. Target Architecture](./03-target-architecture.md)** | Feature-first repository layout (`lib/features/*`), Riverpod state management, Drift persistence, custom GameGrl UI components, and native mGBA bridge. |
+| **[04. Feature Migration Map](./04-feature-migration-map.md)** | Traceability matrix mapping legacy Kotlin classes to target GameGrl Dart modules and native JNI channels. |
+| **[05. Phased Implementation Roadmap](./05-phased-implementation-roadmap.md)** | Incremental phases (Phase 0 through Phase 5) with relative effort estimates, prerequisites, and acceptance criteria. |
+| **[06. Risk Register and Technical Spikes](./06-risk-register-and-technical-spikes.md)** | Prioritized technical, mGBA rewind buffer memory, and RetroAchievements risks alongside targeted proof-of-concept spikes. |
+| **[07. Testing and Compatibility Strategy](./07-testing-and-compatibility-strategy.md)** | Automated testing strategy, PDF manual viewer tests, LCD shader pipeline benchmarks, and save-state compatibility. |
+| **[08. Architecture Decision Records (ADRs)](./08-architecture-decision-records.md)** | Formal ADRs (ADR-001 to ADR-005) covering Custom Handheld UI, State Management, mGBA Focus, RetroAchievements, and Rewind/LCD Shaders. |
+| **[09. Master Task Backlog](./09-master-task-backlog.md)** | Actionable task checklist (`TASK-001` through `TASK-050`) with dependencies, effort ratings, and acceptance criteria. |

@@ -2,9 +2,7 @@
 
 ## Overview & Tracking
 
-This document contains a prioritized, dependency-linked checklist of implementation tasks for executing the Lemuroid Flutter clean-room migration focused on **Game Boy (GB, GBC, GBA via mGBA)** and **RetroAchievements integration**, with **Android TV removed**.
-
-Each task has a stable identifier (`TASK-001` onwards), explicit dependencies, relative effort estimate (XS–XL), and verifiable acceptance criteria.
+This document contains a prioritized, dependency-linked checklist of implementation tasks for executing the **GameGrl** clean-room migration focused on **mGBA (GB, GBC, GBA)**, **Custom Handheld UI (Carousel, Box Art Flipper, PDF Manuals)**, **RetroAchievements**, **Real-Time Rewind**, and **LCD Shaders**.
 
 ---
 
@@ -12,10 +10,10 @@ Each task has a stable identifier (`TASK-001` onwards), explicit dependencies, r
 
 ```
 Phase 0: Spikes (TASK-001 -> TASK-003)
-  └── Phase 1: Foundation (TASK-004 -> TASK-010)
-        ├── Phase 2: mGBA Emulation Kernel (TASK-011 -> TASK-020)
-        ├── Phase 3: GB/GBC/GBA Library & SAF (TASK-021 -> TASK-030)
-        ├── Phase 4: RetroAchievements, Saves & Cheats (TASK-031 -> TASK-040)
+  └── Phase 1: Foundation & Theme (TASK-004 -> TASK-010)
+        ├── Phase 2: mGBA, Rewind & Shaders (TASK-011 -> TASK-020)
+        ├── Phase 3: Custom UI, Carousel & Manuals (TASK-021 -> TASK-030)
+        ├── Phase 4: RetroAchievements, Pause & Cheats (TASK-031 -> TASK-040)
         └── Phase 5: Handheld Controls & Release (TASK-041 -> TASK-050)
 ```
 
@@ -31,7 +29,7 @@ Phase 0: Spikes (TASK-001 -> TASK-003)
 - **Dependencies**: None
 - **Effort**: **M**
 - **Description**: Build minimal Flutter proof-of-concept app embedding `GLRetroView` with native `mgba.so` core inside an `AndroidView` platform view factory to verify 60 FPS rendering.
-- **Acceptance Criteria**: Test GBA ROM renders at 60 FPS without black screens or memory leaks on Activity pause/resume.
+- **Acceptance Criteria**: Test GBA ROM renders at 60 FPS without black screens or memory leaks.
 
 #### `TASK-002`: RetroAchievements `rcheevos` C Memory Inspection Spike
 - **Phase**: Phase 0
@@ -39,34 +37,34 @@ Phase 0: Spikes (TASK-001 -> TASK-003)
 - **Dependencies**: None
 - **Effort**: **M**
 - **Description**: Verify that `rcheevos` C library can inspect mGBA RAM addresses without degrading frame pacing.
-- **Acceptance Criteria**: Native callback triggers event channel call when specific mGBA RAM address changes value.
+- **Acceptance Criteria**: Native callback triggers event channel call when RAM value changes.
 
-#### `TASK-003`: SAF Bulk GBA Directory Scan Spike
+#### `TASK-003`: mGBA Real-Time Frame Rewind Buffer Spike
 - **Phase**: Phase 0
-- **Feature**: `game_library`
+- **Feature**: `emulation_session`
 - **Dependencies**: None
-- **Effort**: **S**
-- **Description**: Benchmarks native Android batch tree content querying vs Dart SAF reading for 500+ GBA ROMs.
-- **Acceptance Criteria**: Native Kotlin SAF worker returns file array payload across platform channel in < 3 seconds.
+- **Effort**: **M**
+- **Description**: Test native JNI allocation of 30-second mGBA frame rewind ring buffer and execution of `rewindStep` calls.
+- **Acceptance Criteria**: Holding rewind button smoothly reverses mGBA gameplay state backward in real-time.
 
 ---
 
-### Phase 1: Core Foundation & Architecture Shell
+### Phase 1: Core Foundation & GameGrl Custom Theme Engine
 
-#### `TASK-004`: Initialize Flutter Application Structure & Theme
+#### `TASK-004`: Initialize GameGrl Flutter Application Shell
 - **Phase**: Phase 1
 - **Feature**: `shared`
 - **Dependencies**: `TASK-001`
 - **Effort**: **S**
-- **Description**: Set up target Flutter project, directory tree, Material 3 dark theme, and Riverpod `ProviderScope`.
-- **Acceptance Criteria**: App compiles cleanly (`flutter analyze`) and launches shell.
+- **Description**: Set up target Flutter project, directory tree, Riverpod `ProviderScope`, and GameGrl dark handheld theme.
+- **Acceptance Criteria**: App compiles cleanly (`flutter analyze`) and launches GameGrl shell.
 
-#### `TASK-005`: Configure go_router Navigation Stack
+#### `TASK-005`: Configure GameGrouter Navigation Stack
 - **Phase**: Phase 1
 - **Feature**: `shared`
 - **Dependencies**: `TASK-004`
 - **Effort**: **S**
-- **Description**: Implement route map (`/`, `/library`, `/emulation_session`, `/retro_achievements`, `/settings`).
+- **Description**: Implement route map (`/`, `/carousel`, `/games`, `/emulation_session`, `/manual_viewer`, `/retro_achievements`, `/settings`).
 - **Acceptance Criteria**: Route navigation functions cleanly with back-stack support.
 
 #### `TASK-006`: Implement Drift SQLite Database Schema
@@ -74,7 +72,7 @@ Phase 0: Spikes (TASK-001 -> TASK-003)
 - **Feature**: `shared/database`
 - **Dependencies**: `TASK-004`
 - **Effort**: **M**
-- **Description**: Create Drift tables (`games`, `data_files`, `game_cheats`, `achievements`) mirroring legacy Room `RetrogradeDatabase`.
+- **Description**: Create Drift tables (`games`, `data_files`, `game_cheats`, `achievements`) with support for `backCoverUrl` and `manualUrl`.
 - **Acceptance Criteria**: Drift code generation creates type-safe DAOs; database initializes successfully.
 
 #### `TASK-007`: Implement Room Database Migration Handler
@@ -101,17 +99,17 @@ Phase 0: Spikes (TASK-001 -> TASK-003)
 - **Description**: Create `SharedPreferencesWithCache` wrapper for settings (screen filter, low-latency audio, RetroAchievements login).
 - **Acceptance Criteria**: Preference state persists across app restarts.
 
-#### `TASK-010`: Set Up ARB Localizations (`l10n`)
+#### `TASK-010`: Implement Game Boy LCD Palette Engine
 - **Phase**: Phase 1
-- **Feature**: `shared`
+- **Feature**: `theme_engine`
 - **Dependencies**: `TASK-004`
 - **Effort**: **S**
-- **Description**: Port existing Android `strings.xml` resources into `app_en.arb` and `app_es.arb`.
-- **Acceptance Criteria**: Strings correctly localized using `AppLocalizations.of(context)`.
+- **Description**: Theme provider allowing users to pick Game Boy LCD color palette presets (DMG Green, Pocket Gray, Light Blue, Atomic Purple).
+- **Acceptance Criteria**: Changing palette preset updates UI accent styling and mGBA palette shader.
 
 ---
 
-### Phase 2: mGBA Emulation Kernel & Touch Skins
+### Phase 2: mGBA Emulation Kernel, Rewind & Display Shaders
 
 #### `TASK-011`: Build Native GLRetroView mGBA Platform View Factory
 - **Phase**: Phase 2
@@ -129,21 +127,21 @@ Phase 0: Spikes (TASK-001 -> TASK-003)
 - **Description**: Implement `MethodChannel` for `initializeCoreAndGame`, `pauseEmulation`, `resumeEmulation`, and `unloadGame`.
 - **Acceptance Criteria**: Dart calls trigger corresponding native mGBA C++ actions.
 
-#### `TASK-013`: Implement Emulation EventStream Channel
+#### `TASK-013`: Implement Real-Time Frame Rewind Controller
 - **Phase**: Phase 2
 - **Feature**: `emulation_session`
-- **Dependencies**: `TASK-012`
-- **Effort**: **S**
-- **Description**: Stream native events (`onFrameRendered`, `onCoreError`, `onRumble`) to Dart subscribers.
-- **Acceptance Criteria**: Dart receives live frame events and native errors asynchronously.
-
-#### `TASK-014`: Build EmulationSessionNotifier Riverpod Controller
-- **Phase**: Phase 2
-- **Feature**: `emulation_session`
-- **Dependencies**: `TASK-012`, `TASK-013`
+- **Dependencies**: `TASK-003`, `TASK-012`
 - **Effort**: **M**
-- **Description**: Create state notifier managing session lifecycle (`Uninitialized` -> `Loading` -> `Running` -> `Paused`).
-- **Acceptance Criteria**: UI updates seamlessly based on emulation session state.
+- **Description**: JNI channel bridge allocating 30-second native rewind ring buffer and executing `rewindStep` calls.
+- **Acceptance Criteria**: Holding rewind button smoothly reverses gameplay state backward in real-time.
+
+#### `TASK-014`: Implement EGL LCD & CRT Display Shader Selector
+- **Phase**: Phase 2
+- **Feature**: `shader_engine`
+- **Dependencies**: `TASK-011`
+- **Effort**: **M**
+- **Description**: EGL GLSL shader selector applying LCD Grid, LCD Dot Matrix, or CRT scanline filtering to mGBA render surface.
+- **Acceptance Criteria**: Selecting LCD shader preset updates mGBA display surface immediately.
 
 #### `TASK-015`: Build GB, GBC & GBA CustomPainter Touch Skins
 - **Phase**: Phase 2
@@ -153,12 +151,12 @@ Phase 0: Spikes (TASK-001 -> TASK-003)
 - **Description**: Reimplement virtual DPAD, A/B buttons, and L/R shoulder triggers using Flutter `CustomPainter`.
 - **Acceptance Criteria**: Multi-touch input sends correct Libretro bitmasks to mGBA core.
 
-#### `TASK-016`: Build Touch Control Aspect Ratio & Skin Engine
+#### `TASK-016`: Build Touch Control Skin Aspect Ratio Engine
 - **Phase**: Phase 2
 - **Feature**: `controller_input`
 - **Dependencies**: `TASK-015`
 - **Effort**: **M**
-- **Description**: Port system-specific layouts for GB (1:1 aspect ratio), GBC, and GBA (3:2 aspect ratio).
+- **Description**: Port system-specific touch skins for GB (1:1 aspect ratio), GBC, and GBA (3:2 aspect ratio).
 - **Acceptance Criteria**: Touch overlays scale dynamically to screen orientation and system configuration.
 
 #### `TASK-017`: Implement Physical Gamepad Input Manager
@@ -169,13 +167,13 @@ Phase 0: Spikes (TASK-001 -> TASK-003)
 - **Description**: Intercept physical gamepad `KeyEvent` and `MotionEvent` inputs and route to mGBA `retro_set_input_state`.
 - **Acceptance Criteria**: Connected Bluetooth or handheld controller buttons navigate and play instantly.
 
-#### `TASK-018`: Implement In-Game Overlay Menu
+#### `TASK-018`: Implement In-Game Pause Menu
 - **Phase**: Phase 2
 - **Feature**: `emulation_session`
 - **Dependencies**: `TASK-014`
 - **Effort**: **M**
-- **Description**: Build floating menu with Pause, Fast-Forward, Reset, Save State, and Exit actions.
-- **Acceptance Criteria**: In-game menu pauses mGBA emulation smoothly without frame corruption.
+- **Description**: Floating pause overlay menu with Pause, Quick-Save, Quick-Load, State Slot Picker, Reset, and Exit actions.
+- **Acceptance Criteria**: In-game menu freezes mGBA emulation smoothly without frame corruption.
 
 #### `TASK-019`: Implement Hardware Motion/Tilt Bridge
 - **Phase**: Phase 2
@@ -195,7 +193,7 @@ Phase 0: Spikes (TASK-001 -> TASK-003)
 
 ---
 
-### Phase 3: GB/GBC/GBA Game Library & Storage Engine
+### Phase 3: GameGrl Custom Handheld UI, Carousel & Manuals
 
 #### `TASK-021`: Implement Native SAF Fast Directory Reader
 - **Phase**: Phase 3
@@ -237,37 +235,37 @@ Phase 0: Spikes (TASK-001 -> TASK-003)
 - **Description**: Build repository supplying streams for Recent Games, Favorites, and System Categories (GB, GBC, GBA).
 - **Acceptance Criteria**: Reactive streams reflect live database updates immediately.
 
-#### `TASK-026`: Implement Library Home Screen UI
+#### `TASK-026`: Implement Custom 3D Coverflow Game Carousel View
 - **Phase**: Phase 3
 - **Feature**: `game_library`
 - **Dependencies**: `TASK-025`
-- **Effort**: **M**
-- **Description**: Build Material 3 tabbed library screen with system filter pills (GB, GBC, GBA) and responsive grid.
-- **Acceptance Criteria**: Displays cover art tiles with title and system indicators.
+- **Effort**: **L**
+- **Description**: Build custom-designed, non-Material 3D Coverflow carousel UI for browsing game cards.
+- **Acceptance Criteria**: Smooth 3D carousel scroll animation displaying game artwork cards.
 
-#### `TASK-027`: Implement Game Cover Image Loader & Cache
+#### `TASK-027`: Implement 3D Front & Back Box Art Flipper Widget
 - **Phase**: Phase 3
-- **Feature**: `shared`
+- **Feature**: `game_library`
 - **Dependencies**: `TASK-026`
-- **Effort**: **S**
-- **Description**: Build image loader using `cached_network_image` with local placeholder fallback.
-- **Acceptance Criteria**: Smooth scrolling grid without memory jank during cover art loading.
-
-#### `TASK-028`: Implement Game Search & Filter Bar
-- **Phase**: Phase 3
-- **Feature**: `game_library`
-- **Dependencies**: `TASK-025`
-- **Effort**: **S**
-- **Description**: Build live search input bar filtering game list by title or system ID.
-- **Acceptance Criteria**: Search updates catalog view dynamically with debounced query state.
-
-#### `TASK-029`: Implement Game Details Dialog & Launcher Sheet
-- **Phase**: Phase 3
-- **Feature**: `game_library`
-- **Dependencies**: `TASK-026`, `TASK-014`
 - **Effort**: **M**
-- **Description**: Build modal sheet showing game cover, system name, favorite toggle, and Launch button.
-- **Acceptance Criteria**: Tapping Launch transitions smoothly to `emulation_session` route.
+- **Description**: Interactive 3D matrix transform card allowing users to tap or swipe to flip between front cover and back box art.
+- **Acceptance Criteria**: Card flips smoothly with 3D animation showing front and back artwork scans.
+
+#### `TASK-028`: Implement Embedded PDF Game Manual Viewer Screen
+- **Phase**: Phase 3
+- **Feature**: `game_manuals`
+- **Dependencies**: `TASK-025`
+- **Effort**: **M**
+- **Description**: Build zoomable PDF game manual viewer with page thumbnails and bookmark navigation.
+- **Acceptance Criteria**: Opens PDF game manuals cleanly with pinch-zoom gestures.
+
+#### `TASK-029`: Implement Custom Game Info Card View
+- **Phase**: Phase 3
+- **Feature**: `game_library`
+- **Dependencies**: `TASK-027`, `TASK-028`
+- **Effort**: **M**
+- **Description**: Custom Game Info Details Card displaying 3D Box Art, game description, developer, stats, and Manual button.
+- **Acceptance Criteria**: Displays complete game info card; tapping Manual button opens PDF manual screen.
 
 #### `TASK-030`: Implement Storage Directory Picker Sheet
 - **Phase**: Phase 3
@@ -279,7 +277,7 @@ Phase 0: Spikes (TASK-001 -> TASK-003)
 
 ---
 
-### Phase 4: RetroAchievements, Saves & Cheats
+### Phase 4: RetroAchievements, Pause Menu & Cheats
 
 #### `TASK-031`: Implement RetroAchievements API Client & Authenticator
 - **Phase**: Phase 4
@@ -386,7 +384,7 @@ Phase 0: Spikes (TASK-001 -> TASK-003)
 - **Feature**: `settings`
 - **Dependencies**: `TASK-009`
 - **Effort**: **M**
-- **Description**: Settings tiles for screen filters, low-latency audio, RetroAchievements account settings, and theme selection.
+- **Description**: Settings tiles for LCD shader presets, low-latency audio, RetroAchievements account settings, and GameGrl theme selection.
 - **Acceptance Criteria**: Modifying settings updates app configuration immediately.
 
 #### `TASK-044`: Implement Background Task Worker for Rescan
@@ -402,8 +400,8 @@ Phase 0: Spikes (TASK-001 -> TASK-003)
 - **Feature**: `core`
 - **Dependencies**: All Phase 0–4 tasks
 - **Effort**: **M**
-- **Description**: Measure FPS, frame render latency, input latency, and battery draw during active GBA gameplay.
-- **Acceptance Criteria**: Sustained 60 FPS output across target GBA games; touch input latency < 8 ms.
+- **Description**: Measure FPS, frame render latency, rewind buffer memory allocation, and battery draw during active GBA gameplay.
+- **Acceptance Criteria**: Sustained 60 FPS output across target GBA games with LCD shaders; touch latency < 8 ms.
 
 #### `TASK-046`: Execute RetroAchievements Integration Test Suite
 - **Phase**: Phase 5
@@ -437,10 +435,10 @@ Phase 0: Spikes (TASK-001 -> TASK-003)
 - **Description**: Verify inclusion of optimized `mgba.so` binaries for `arm64-v8a`, `armeabi-v7a`, and `x86_64` ABIs.
 - **Acceptance Criteria**: All target ABIs execute mGBA core flawlessly.
 
-#### `TASK-050`: Build & Sign Production Release Candidate APK
+#### `TASK-050`: Build & Sign Production GameGrl Release Candidate APK
 - **Phase**: Phase 5
 - **Feature**: `core`
 - **Dependencies**: `TASK-045`, `TASK-046`, `TASK-047`, `TASK-048`, `TASK-049`
 - **Effort**: **S**
 - **Description**: Generate signed production release APK and verify installation on physical Android handheld hardware.
-- **Acceptance Criteria**: Release APK compiles, installs, and executes error-free.
+- **Acceptance Criteria**: Release APK compiles, installs, and executes GameGrl error-free.

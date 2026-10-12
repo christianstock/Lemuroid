@@ -4,83 +4,76 @@
 
 - **[ADR-001]: State Management Selection (Flutter Riverpod)**
 - **[ADR-002]: Local Database Engine (Drift SQLite)**
-- **[ADR-003]: mGBA Core Focus & Native JNI Boundary**
-- **[ADR-004]: RetroAchievements Architecture (`rcheevos` C Library)**
-- **[ADR-005]: Complete Removal of Android TV Support**
+- **[ADR-003]: Custom GameGrl Handheld UI (Scrapping Material Design)**
+- **[ADR-004]: Real-Time Frame Rewind & EGL LCD/CRT Shaders**
+- **[ADR-005]: mGBA Core Focus & RetroAchievements Integration**
 
 ---
 
 ## ADR-001: State Management Selection (Flutter Riverpod)
 
 ### Context & Problem Statement
-Lemuroid requires complex state management across multiple lifecycle scopes: persistent app settings, asynchronous local SQLite database streams, real-time mGBA emulation session states, and RetroAchievements user login/unlock notifications.
+GameGrl requires robust state management across multiple UI and emulation scopes: custom 3D carousel indices, PDF manual viewer zoom levels, mGBA real-time frame rewind states, EGL display shader presets, and RetroAchievements user login/unlock notifications.
 
 ### Decision
 Adopt **`flutter_riverpod` (v2.x with code generation)** as the universal state management and dependency injection solution.
 
-### Alternatives Considered
-1. **flutter_bloc**: Strong pattern enforcement, but introduces significant event/state boilerplate.
-2. **Provider**: Lacks compile-time safety against `ProviderNotFoundException`.
-
 ### Positive Consequences
 - **Compile-Time Safety**: Prevents runtime provider lookup failures.
-- **Clean Architecture Fit**: Decouples business logic (`Notifier`) cleanly from UI Presentation widgets.
+- **Clean Architecture Fit**: Decouples business logic (`Notifier`) cleanly from custom UI Presentation widgets.
 
 ---
 
 ## ADR-002: Local Database Selection (Drift SQLite)
 
 ### Context & Problem Statement
-Existing Lemuroid installations store game catalogs, file checksums, cover URLs, and cheat lists in a Room SQLite database named `retrograde.db`. The target solution must maintain 100% schema migration compatibility to prevent data loss upon upgrade.
+Existing Lemuroid installations store game catalogs, file checksums, cover URLs, and cheat lists in a Room SQLite database named `retrograde.db`. GameGrl must maintain 100% schema migration compatibility while expanding table columns to support back box art and PDF manual files.
 
 ### Decision
 Adopt **`drift` (type-safe SQLite for Dart)** as the primary persistence engine.
 
 ### Positive Consequences
-- **100% Schema Mirroring**: Directly maps to existing Room tables (`games`, `data_files`, `game_cheats`) while adding an `achievements` cache table.
+- **100% Schema Mirroring & Migration**: Directly maps to existing Room tables (`games`, `data_files`, `game_cheats`) while adding `backCoverUrl` and `manualUrl` columns.
 - **Reactive Streams**: Emits live updates to UI widgets when library records change.
 
 ---
 
-## ADR-003: mGBA Core Focus & Native JNI Boundary
+## ADR-003: Custom GameGrl Handheld UI (Scrapping Material Design)
 
 ### Context & Problem Statement
-The product scope focuses strictly on Game Boy (GB), Game Boy Color (GBC), and Game Boy Advance (GBA) games. Reimplementing emulator cores in Dart is technically unfeasible due to frame timing constraints.
+Standard Google Material Design cards and lists feel out of place for a dedicated handheld retro gaming app. GameGrl aims to deliver a premium, custom retro aesthetic tailored specifically for gaming handhelds and smartphones.
 
 ### Decision
-**Retain the native mGBA core binary (`mgba.so`) and `LibretroDroid` JNI engine**, embedding the OpenGL surface in Flutter using `AndroidView` (Hybrid Composition).
-
-### Alternatives Considered
-1. **Bundling 20+ Cores**: Keep PSX, N64, PSP, Arcade, etc.
-   * *Rejected*: Dropped per user requirement to eliminate code bloat and streamline handheld mGBA performance.
+**Scrap Material Design UI tiles**. Implement a custom-designed handheld UI featuring a **3D Coverflow Game Carousel**, interactive **Game Info Cards**, a **3D Front & Back Box Art Flipper**, an embedded **PDF Game Manual Viewer**, and a **Game Boy LCD Palette Engine**.
 
 ### Positive Consequences
-- **Maximum Performance**: mGBA core renders GBA games at a solid 60 FPS with minimal battery drain and sub-8ms touch latency.
+- **Bespoke Retro Aesthetic**: Provides a unique, highly polished gaming experience distinct from conventional CRUD apps.
+- **Optimized for Handhelds**: Layouts are designed specifically for touchscreens and handheld physical button navigation.
 
 ---
 
-## ADR-004: RetroAchievements Architecture (`rcheevos` C Library)
+## ADR-004: Real-Time Frame Rewind & EGL LCD/CRT Display Shaders
 
 ### Context & Problem Statement
-Integrating RetroAchievements requires authenticating users via HTTP APIs, computing game MD5 hashes, downloading achievement definitions, and inspecting live mGBA RAM addresses in real-time during gameplay.
+Retro gamers expect modern quality-of-life features such as instant frame rewind (to undo mistakes) and authentic display shaders (mimicking Game Boy LCD grids and CRT scanlines).
 
 ### Decision
-Integrate the native **`rcheevos` C library** directly into the JNI bridge layer to observe mGBA RAM addresses, and use a Dart `RetroAchievementsApiClient` to handle user login and badge thumbnail downloads.
+Allocate a **30-second native C++ ring buffer in `LibretroDroid`** for real-time state rewind, and integrate **EGL GLSL display shaders** (`lcd-grid.glsl`, `lcd-dot-matrix.glsl`, `crt-easymode.glsl`) into the `GLRetroView` surface rendering pipeline.
 
 ### Positive Consequences
-- **Zero Frame Stutter**: RAM condition checks execute in native C code without pausing mGBA's `retro_run()` loop.
-- **In-Game Overlay**: Unlocking achievements emits an event channel payload that renders a Flutter toast overlay on top of active gameplay.
+- **Instant Rewind**: Users can hold a rewind button to reverse mGBA gameplay state seamlessly.
+- **Authentic Visuals**: Authentic Game Boy LCD grid and CRT scanlines render without frame rate drops.
 
 ---
 
-## ADR-005: Complete Removal of Android TV Support
+## ADR-005: mGBA Core Focus & RetroAchievements Integration
 
 ### Context & Problem Statement
-The legacy codebase maintained a separate Android TV codebase using Leanback Fragments (`com.swordfish.lemuroid.app.tv`), creating duplicate maintenance overhead.
+Supporting 20+ disparate emulator cores introduces massive binary bloat and maintenance overhead. The user scope centers on Game Boy (GB, GBC, GBA) emulation and achievement tracking.
 
 ### Decision
-**Completely remove Android TV support** from the migration scope. The Flutter UI is engineered exclusively for touchscreen smartphones, tablets, and dedicated Android handheld consoles (e.g., Retroid, Odin).
+Focus strictly on the gold-standard **mGBA** (`mgba.so`) Libretro core and integrate the **`rcheevos` C memory observer** directly into the JNI bridge layer to evaluate RetroAchievements RAM triggers in real-time.
 
 ### Positive Consequences
-- **60% Code Reduction**: Deletes TV activities, TV search providers, TV folder pickers, and Leanback channel broadcasters.
-- **Focused Handheld UX**: Engineering efforts concentrate on physical gamepad remapping and GB/GBC/GBA touch skins.
+- **Streamlined Footprint**: Significantly reduces APK size while delivering solid 60 FPS GBA emulation.
+- **RetroAchievements Integration**: Real-time memory polling emits event channel calls that display non-intrusive Flutter unlock banners during gameplay.
