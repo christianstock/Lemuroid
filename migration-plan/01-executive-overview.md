@@ -2,89 +2,100 @@
 
 ## 1. Project Context & Objectives
 
-**Lemuroid** is an open-source Android emulator front-end built on top of [Libretro](https://www.libretro.com/) and [LibretroDroid](https://github.com/Swordfish90/LibretroDroid). It currently supports over 20 gaming systems (from Atari 2600 to Nintendo 3DS and PSP).
+**Lemuroid** is an open-source Android emulator front-end built on top of [Libretro](https://www.libretro.com/) and [LibretroDroid](https://github.com/Swordfish90/LibretroDroid).
 
-The current Kotlin/Java codebase, while functional, suffers from historical architectural coupling across its Gradle submodules (`lemuroid-app`, `retrograde-app-shared`, `lemuroid-touchinput`, `lemuroid-metadata-libretro-db`, `retrograde-util`). Code is primarily organized by technical layer or legacy package structures rather than feature domain boundaries. Furthermore, managing dual UI systems (Jetpack Compose for phone/tablet and Android Leanback Fragments for Android TV) creates duplication and maintenance overhead.
+While the original application supported over 20 gaming systems and included complex dual UI codebases for both Android smartphones and Android TV, this **Clean-Room Migration Plan** re-architects the application in **Flutter and Dart** around a **streamlined, handheld-first product vision**:
 
-This document details an implementation-ready **Clean-Room Migration Plan** to rebuild the application in **Flutter and Dart**.
+1. **Focused Core Ecosystem**:
+   - Primary support for **Game Boy (GB)**, **Game Boy Color (GBC)**, and **Game Boy Advance (GBA)** powered exclusively by the gold-standard **mGBA** (`mgba`) Libretro core.
+   - *Future Expansion Roadmap*: Game & Watch (`gw`) and Nintendo DS / 3DS (`melonds` / `citra`). All other legacy systems (PSX, N64, PSP, Arcade, Atari, PCE, etc.) are explicitly dropped to eliminate code bloat and maintenance overhead.
+2. **RetroAchievements Integration**:
+   - Native integration with [RetroAchievements.org](https://retroachievements.org/), enabling user login, achievement progress tracking, in-game unlock popups, badge image caching, and Hardcore Mode enforcement via `rcheevos`.
+3. **Pure Mobile & Handheld Scope (Android TV Removed)**:
+   - **Android TV support is completely removed**. UI engineering efforts focus entirely on touchscreen smartphones, tablets, and dedicated Android handheld gaming devices (e.g., Retroid Pocket, Ayn Odin, Anbernic) with customizable touch controls and physical controller mapping.
 
 ---
 
 ## 2. Recommended Strategic Direction
 
 ### Clean-Room Reimplementation, Not Mechanical Porting
-Rather than converting Kotlin classes into Dart line-by-line, this strategy:
-1. **Treats existing source code as functional specification**: Replaces legacy indirection and Dagger/Hilt/Kapt boilerplates with modern, idiomatic Flutter/Dart constructs.
-2. **Adopts a Feature-First Architecture**: Reorganizes the codebase into cohesive feature domains (e.g., `emulation_session`, `game_library`, `controller_input`, `save_states`, `game_cheats`, `settings`, `tv_mode`).
-3. **Establishes a Strict Native Retention Boundary**: Retains native performance-critical C/C++ emulator cores and the OpenGL ES rendering loop via `LibretroDroid`. The native surface is rendered in Flutter via an `AndroidView` (or `TextureRegistry`) hybrid composition, while high-frequency input and commands flow through low-latency Method/Event Channels.
+Rather than converting legacy Kotlin/Compose and Leanback Java classes line-by-line, this clean-room strategy:
+1. **Adopts a Feature-First Architecture**: Reorganizes the codebase into autonomous feature domains (`emulation_session`, `game_library`, `controller_input`, `save_states`, `retro_achievements`, `game_cheats`, `settings`).
+2. **Establishes a Strict Native Retention Boundary**: Retains native C/C++ `mgba` emulator core binaries and `LibretroDroid` JNI bridges. The OpenGL ES frame rendering loop is embedded in Flutter via an `AndroidView` platform view.
+3. **Native RetroAchievements Integration**: Connects Libretro core memory addresses to `rcheevos` native C callbacks and async RetroAchievements HTTP APIs, rendering non-intrusive Flutter achievement unlock banners during active gameplay.
 
 ```
-+-----------------------------------------------------------------------+
-|                            FLUTTER LAYER                              |
-|                                                                       |
-|  [Game Library]  [Save States]  [Input Mapping]  [Settings]  [TV UI]    |
-|        |               |               |             |          |     |
-|        +---------------+-------+-------+-------------+----------+     |
-|                                |                                      |
-|                    [Emulation Session Controller]                     |
-+--------------------------------|--------------------------------------+
++-------------------------------------------------------------------------------+
+|                               FLUTTER LAYER                                   |
+|                                                                               |
+|  [Game Library]  [Save States]  [RetroAchievements]  [Touch Skins]  [Settings]|
+|        |               |               |                   |             |    |
+|        +---------------+---------------+-------------------+-------------+    |
+|                                |                                              |
+|                    [Emulation Session Controller]                             |
++--------------------------------|----------------------------------------------+
                                  | Platform Channels (Commands/Events)
-+--------------------------------v--------------------------------------+
-|                         NATIVE ANDROID LAYER                          |
-|                                                                       |
-|  [LibretroDroid Platform View (GLRetroView / AndroidView)]            |
-|  [Native JNI Core Loader] <---> [Libretro Core (.so C/C++ Libraries)] |
-|  [Audio Track / OpenSL ES]      [Native Sensor / Gamepad Handler]     |
-+-----------------------------------------------------------------------+
++--------------------------------v----------------------------------------------+
+|                         NATIVE ANDROID LAYER                                  |
+|                                                                               |
+|  [GLRetroView Platform View (AndroidView)]                                    |
+|  [Native JNI Bridge] <---> [mGBA Libretro Core (`mgba.so` C/C++)]            |
+|  [rcheevos C Library] <---> [RetroAchievements HTTP API & Memory Polling]     |
+|  [Audio Track Stream]       [Native Gamepad & Sensor Listener]                |
++-------------------------------------------------------------------------------+
 ```
 
 ---
 
 ## 3. Retained Native Components (`Retain` & `Wrap`)
 
-The following subsystems will **NOT** be rewritten in Dart, as doing so would cause prohibitive performance degradation or necessitate reinventing complex JNI bridge logic:
+The following native C/C++ and Java components will be **retained or wrapped**:
 
-1. **Libretro Core Binaries (`.so`)**: C/C++ emulator cores (e.g., Snes9x, PCSX-ReARMed, PPSSPP, DeSmuME, Citra) loaded dynamically via `dlopen`.
-2. **`LibretroDroid` Native Wrapper**: The JNI C++ layer managing retro_run(), frame callback rendering to OpenGL textures, audio PCM buffer queuing, and save state byte-stream serialization.
-3. **Native Android Platform Surface View (`GLRetroView`)**: Android SurfaceView / GLSurfaceView configured with OpenGL ES 2.0/3.0 context for rendering Libretro video frames without copying pixels through Flutter Dart memory.
-4. **Hardware Sensor & Gamepad Event Pipeline**: Low-level Android `InputDevice` and `SensorManager` listeners attached to the native activity view to ensure minimum input latency before hitting Libretro's `input_poll` callback.
+1. **mGBA Libretro Core (`mgba.so`)**: Performance-critical C emulator core for GB, GBC, and GBA emulation loaded dynamically via `dlopen`.
+2. **`LibretroDroid` Native Engine**: C++ JNI bridge managing `retro_run()`, OpenGL frame buffer drawing, PCM audio queuing, and state serialization.
+3. **`rcheevos` C Library Wrapper**: C-library parsing RetroAchievements trigger strings and calculating in-memory achievement unlocks.
+4. **`GLRetroView` Platform Surface View**: Android SurfaceView / GLSurfaceView configured with OpenGL ES 2.0/3.0 for zero-copy rendering inside Flutter `AndroidView`.
 
 ---
 
 ## 4. Reimplemented Flutter/Dart Subsystems (`Reimplement` & `Replace`)
 
-The following subsystems will be rebuilt in Dart:
-
-1. **User Interface & Navigation**: Unified Flutter UI serving both Mobile/Tablet touch devices and Android TV / Gamepad D-pad navigation, using `go_router` and responsive design policies.
-2. **Game Library Indexer & Scanner**: Asynchronous document hierarchy scanning (via Storage Access Framework or native directory listing), checksum extraction (CRC32, MD5), and Libretro DB matching.
-3. **Database & Metadata Persistence**: Replaced Room SQLite with `drift` (type-safe SQLite for Dart) or `isar`, using exact schema migrations to ensure 100% backward compatibility with existing `retrograde.db` databases.
-4. **Touch Input Overlays & Skins**: Flexible Flutter custom painters and touch gesture detectors replacing `lemuroid-touchinput` and XML vector-based controller layouts.
-5. **Save State & Cheat Managers**: Dart state controllers managing save state previews, slot selection, and INI `.cht` / CwCheat file parsing.
+1. **Game Library & Scanner**: Asynchronous document hierarchy scanner, header serial parser (extracting GBA/GBC game IDs), and Libretro DB matching for GB/GBC/GBA titles.
+2. **RetroAchievements Flutter Domain**: User login, achievement catalog browsing, progress tracking, unlock notification banners, and badge caching.
+3. **Database Persistence (Drift SQLite)**: Replaces Room SQLite with `drift`, keeping exact schema compatibility for `retrograde.db` tables (`games`, `data_files`, `game_cheats`, `achievements`).
+4. **Touch Skins & Physical Gamepad Mapping**: Touch overlays for Game Boy, Game Boy Color, and Game Boy Advance with customizable button layout editing.
 
 ---
 
-## 5. Strategic Benefits
+## 5. Explicitly Removed Subsystems (`Remove`)
 
-- **Unified UI Codebase**: Eliminates separate Android TV Leanback XML layout trees in favor of focusable Flutter widgets.
-- **Improved Maintainability**: Clear domain isolation prevents cross-module leakage and simplifies unit and widget testing.
-- **Enhanced Developer Experience**: Faster iteration with Flutter Hot Reload and concise Dart state management (Riverpod / BLoC).
-- **Reduced Binary Overhead**: Replaces heavy AndroidX dependencies, Compose BOM, and Dagger annotation processing with lightweight Dart packages.
+1. **Android TV Codebase**: Deleted all Leanback Fragment activities, TV search providers, TV folder pickers, and Leanback launcher channel broadcasters.
+2. **Non-Target System Cores**: Dropped 17+ non-GBA/GB/GBC core libraries (e.g., PCSX-ReARMed, Mupen64Plus, DeSmuME, Stella, ProSystem, PPSSPP) to streamline binary size and app complexity.
 
 ---
 
-## 6. Critical Risk Summary
+## 6. Strategic Benefits
 
-1. **Rendering Performance & Latency**: Flutter `AndroidView` overhead must be minimized using Hybrid Composition or SurfaceTexture integration to maintain 60 FPS / 60 Hz frame pacing.
-2. **Storage Access Framework (SAF) Performance**: Document File tree iteration in Android SAF can be slow; Dart must interface with native Kotlin channels for bulk directory operations.
-3. **Save File Coherency**: Incorrect path resolution or thread synchronization could corrupt SRAM (`.srm`) or state (`.state`) files during autosave or application destruction.
+- **Focused Developer Velocity**: Eliminating 17+ core variants and TV code cuts maintenance complexity by over 60%.
+- **Delightful RetroAchievements Feature Set**: Direct achievement unlocks and progress badges increase user engagement.
+- **Superior Handheld Performance**: Deeply tuned mGBA core integration delivers solid 60 FPS output with sub-8ms input response.
+- **Cleaner App Binary Size**: Reduced native `.so` payload significantly shrinks APK footprint.
 
 ---
 
-## 7. Phased Roadmap Summary
+## 7. Critical Risk Summary
 
-- **Phase 0: Discovery & Spikes** (Spikes on `GLRetroView` embedding, input latency, SAF scanning).
-- **Phase 1: Foundation & Shell** (Flutter project structure, Riverpod setup, Drift database schema, navigation).
-- **Phase 2: Core Emulation & Input Boundary** (Native plugin wrapper, `AndroidView` integration, gamepad & touch mapping).
-- **Phase 3: Game Library & Storage Engine** (ROM scanner, Libretro DB matching, cover art caching).
-- **Phase 4: Saves, Cheats & Session Features** (Save state slots, cheat engine, core variables, rumble/motion).
-- **Phase 5: TV Experience & Final Polish** (Gamepad focus navigation, Leanback channels, performance tuning).
+1. **`rcheevos` Native Memory Interop**: Ensuring that real-time RAM inspection by `rcheevos` does not lock or slow down the mGBA `retro_run()` loop.
+2. **Platform View Frame Latency**: Maintaining 60 FPS output inside Flutter `AndroidView` on lower-end Android devices.
+3. **Storage Access Framework Speed**: Fast SAF content URI scanning for large GBA ROM sets.
+
+---
+
+## 8. Phased Roadmap Summary
+
+- **Phase 0: Discovery & Spikes** (GLRetroView embedding, SAF scanning, RetroAchievements `rcheevos` C-library spike).
+- **Phase 1: Foundation & Shell** (Flutter architecture, Drift DB, RetroAchievements state, go_router).
+- **Phase 2: Emulation Kernel & Touch Skins** (Native mGBA bridge, `AndroidView`, GB/GBC/GBA touch skins).
+- **Phase 3: Game Library & Storage Engine** (ROM scanner, serial extractor, cover art loader).
+- **Phase 4: Saves, Cheats & RetroAchievements** (Save state slots, cheat engine, live achievement unlock overlay).
+- **Phase 5: Polish & Release Candidate** (Physical handheld gamepad mapping, performance benchmarks, release build).

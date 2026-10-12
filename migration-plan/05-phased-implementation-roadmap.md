@@ -2,15 +2,13 @@
 
 ## 1. Roadmap Overview & Milestones
 
-The migration is organized into **six incremental phases (Phase 0 through Phase 5)**.
-
-Each phase produces a verifiable, working milestone. Rather than attempting a big-bang rewrite, this vertical-slice approach delivers a runnable application early, progressively replacing mock components with full native capabilities.
+The migration is organized into **six incremental phases (Phase 0 through Phase 5)** focused on a handheld-first Game Boy (GB, GBC, GBA via mGBA) emulator with RetroAchievements support.
 
 ```
 +-------------------------------------------------------------------------------+
 | Phase 0: Discovery & Technical Spikes                                         |
 |  - PoC: GLRetroView inside AndroidView                                        |
-|  - PoC: SAF Fast Directory Reader Channel                                     |
+|  - PoC: rcheevos Native Memory Observer & RetroAchievements Spike             |
 +-------------------------------------------------------------------------------+
                                        |
                                        v
@@ -22,32 +20,32 @@ Each phase produces a verifiable, working milestone. Rather than attempting a bi
                                        |
                                        v
 +-------------------------------------------------------------------------------+
-| Phase 2: Native Emulation Bridge & Gameplay Kernel                            |
-|  - Platform View (AndroidView) + MethodChannel JNI Commands                   |
-|  - Touch Overlay Controls & Gamepad Event Routing                             |
-|  * RUNNABLE MILESTONE: Launch raw ROM into active emulation session           |
+| Phase 2: mGBA Emulation Kernel & Touch Skins                                  |
+|  - mGBA Platform View (`mgba.so`) + MethodChannel Commands                    |
+|  - GB, GBC & GBA Touch Overlay Skins                                          |
+|  * RUNNABLE MILESTONE: Launch raw GBA ROM into active mGBA session            |
 +-------------------------------------------------------------------------------+
                                        |
                                        v
 +-------------------------------------------------------------------------------+
-| Phase 3: Game Library, Storage Engine & Metadata                              |
-|  - SAF Directory Scanner & Libretro DB Parser                                 |
+| Phase 3: GB/GBC/GBA Game Library & Storage Engine                             |
+|  - SAF Directory Scanner & Serial Extractor                                   |
 |  - Library Home Screen, Cover Loader & Search                                 |
 |  * RUNNABLE MILESTONE: Full ROM discovery, indexing & launch workflow        |
 +-------------------------------------------------------------------------------+
                                        |
                                        v
 +-------------------------------------------------------------------------------+
-| Phase 4: Save States, Cheats & Core Configuration                             |
+| Phase 4: RetroAchievements, Saves & Cheats                                    |
+|  - RetroAchievements Auth, Game Hash & In-Game Unlock Banners                 |
 |  - Save State Slots (0-9) & Preview Screenshot Store                          |
-|  - Cheat Downloader, Parser & Live Toggling                                   |
-|  - Core Variables & Bios Validator                                            |
+|  - GameShark / ActionReplay Cheat Parser & Toggling                           |
 +-------------------------------------------------------------------------------+
                                        |
                                        v
 +-------------------------------------------------------------------------------+
-| Phase 5: Android TV, Polish & Release Candidate                               |
-|  - D-Pad Focus Navigation & TV Channels                                       |
+| Phase 5: Handheld Controls, Benchmarking & Release Candidate                  |
+|  - Physical Gamepad Mapping & Touch Layout Customizer                         |
 |  - Performance Benchmarking (60 FPS verification)                             |
 |  * RELEASE CANDIDATE MILESTONE: Production-ready APK                          |
 +-------------------------------------------------------------------------------+
@@ -60,108 +58,94 @@ Each phase produces a verifiable, working milestone. Rather than attempting a bi
 ### Phase 0: Discovery & Risk Reduction (Technical Spikes)
 
 #### Work Item 0.1: GLRetroView AndroidView Embedding Spike
-- **Objective**: Prove that `GLRetroView` can render Libretro OpenGL ES frames inside a Flutter `AndroidView` with 60 FPS performance and zero black-screen deadlocks.
-- **Prerequisites**: Android SDK, Flutter SDK setup.
-- **Implementation Steps**:
-  1. Create minimal Flutter app with native Android platform view factory for `GLRetroView`.
-  2. Embed a test static core (e.g., Gambatte or Snes9x) and launch a test ROM.
-  3. Measure frame rendering rate and memory overhead using Android Profiler.
+- **Objective**: Prove that `GLRetroView` renders mGBA (`mgba.so`) frames inside Flutter `AndroidView` at 60 FPS without memory leaks.
 - **Effort Estimate**: **M** (Confidence: High)
-- **Acceptance Criteria**: Test ROM runs continuously at 60 FPS in Flutter `AndroidView` with touch input response.
+- **Acceptance Criteria**: Test GBA ROM runs continuously at 60 FPS in Flutter `AndroidView`.
 
-#### Work Item 0.2: Storage Access Framework (SAF) Performance Spike
-- **Objective**: Compare Dart SAF tree reading against native Kotlin `DocumentFile` batch querying to determine SAF channel requirements.
-- **Effort Estimate**: **S** (Confidence: High)
-- **Acceptance Criteria**: Benchmarked URI query rate exceeding 100 ROM files/second.
+#### Work Item 0.2: RetroAchievements `rcheevos` C Memory Spike
+- **Objective**: Verify that `rcheevos` C library can inspect mGBA RAM addresses without degrading frame pacing.
+- **Effort Estimate**: **M** (Confidence: High)
+- **Acceptance Criteria**: Native callback triggers when specific mGBA RAM address changes value.
 
 ---
 
-### Phase 1: Core Foundation & Architecture Shell
+### Phase 1: Core Foundation & Shell App
 
-#### Work Item 1.1: Flutter Repository Setup & Core Contracts
-- **Objective**: Establish Flutter project structure, Riverpod dependency graph, Material 3 theme, and `go_router` paths.
-- **New Components**: `lib/main.dart`, `lib/app.dart`, `lib/core/logger.dart`, `lib/shared/theme/app_theme.dart`.
+#### Work Item 1.1: Flutter Repository Setup & Core Shell
+- **Objective**: Establish Flutter project structure, Riverpod dependency graph, Material 3 dark theme, and `go_router` paths.
 - **Effort Estimate**: **S** (Confidence: High)
-- **Acceptance Criteria**: Clean compilation with `flutter analyze` passing and basic shell navigation operating.
+- **Acceptance Criteria**: Clean compilation (`flutter analyze`) and basic shell navigation operating.
 
-#### Work Item 1.2: Database Layer & Room Schema Migration
-- **Objective**: Implement Drift SQLite schema mirroring legacy Room `RetrogradeDatabase` tables (`games`, `data_files`, `game_cheats`).
-- **Existing Files**: `RetrogradeDatabase.kt`, `GameDao.kt`, `Migrations.kt`.
-- **New Components**: `lib/shared/database/app_database.dart`, `lib/shared/database/database_migrations.dart`.
+#### Work Item 1.2: Drift Database Layer & Room Schema Migration
+- **Objective**: Implement Drift SQLite schema mirroring legacy Room `RetrogradeDatabase` tables (`games`, `data_files`, `game_cheats`, `achievements`).
 - **Effort Estimate**: **M** (Confidence: High)
-- **Acceptance Criteria**: Successful SQLite database initialization and schema migration test verifying zero data loss from existing `retrograde.db` files.
+- **Acceptance Criteria**: Database initializes; legacy `retrograde.db` opens without data loss.
 
 ---
 
-### Phase 2: Native Emulation Bridge & Gameplay Kernel
+### Phase 2: mGBA Emulation Kernel & Touch Skins
 
-#### Work Item 2.1: Native MethodChannel & EventChannel Bridge
-- **Objective**: Build JNI bridge between Dart `EmulationSessionNotifier` and native `LibretroDroid`.
-- **Existing Files**: `GameViewModelRetroGameView.kt`, `LibretroDroid.java`.
-- **New Components**:
-  - `android/.../channels/EmulationCommandChannel.kt`
-  - `lib/features/emulation_session/data/native_emulation_bridge.dart`
-- **Effort Estimate**: **L** (Confidence: Medium)
-- **Acceptance Criteria**: Reliable execution of `loadGame`, `pauseEmulation`, `resumeEmulation`, and `unloadGame` over platform channels.
+#### Work Item 2.1: Native mGBA MethodChannel & EventChannel Bridge
+- **Objective**: Build JNI bridge between Dart `EmulationSessionNotifier` and native `LibretroDroid` loading `mgba.so`.
+- **Effort Estimate**: **M** (Confidence: High)
+- **Acceptance Criteria**: Reliable execution of `loadGame`, `pauseEmulation`, `resumeEmulation`, and `unloadGame`.
 
-#### Work Item 2.2: On-Screen Touch Controller Overlay & Skins
-- **Objective**: Rebuild virtual touch overlays (DPAD, analog sticks, action buttons) in Flutter using `CustomPainter`.
-- **Existing Files**: `lemuroid-touchinput/` submodule, `PspLandscapeSkin.kt`, `GameBoyAdvancePortraitSkin.kt`.
-- **New Components**: `lib/features/controller_input/presentation/touch_controller_overlay.dart`.
+#### Work Item 2.2: Game Boy, GBC & GBA Touch Overlay Skins
+- **Objective**: Build virtual touch controls for GB, GBC, and GBA layouts using Flutter `CustomPainter`.
+- **Effort Estimate**: **M** (Confidence: High)
+- **Acceptance Criteria**: Touch gestures transmit Libretro input bits accurately to mGBA core.
+
+---
+
+### Phase 3: GB/GBC/GBA Game Library & Storage Engine
+
+#### Work Item 3.1: GB/GBC/GBA Directory Scanner & Serial Extractor
+- **Objective**: Scan local folders and SAF directories, extract GBA/GBC header serials, and query Libretro `.rdb` files.
 - **Effort Estimate**: **L** (Confidence: High)
-- **Acceptance Criteria**: Touch gestures correctly transmit Libretro input bits to native JNI engine with low latency.
+- **Acceptance Criteria**: Scanner indexes 500+ GB/GBC/GBA ROMs with title and cover matching.
+
+#### Work Item 3.2: Game Library UI Home Screen
+- **Objective**: Build responsive game catalog UI showing recent games, system pills (GB, GBC, GBA), search, and cover artwork.
+- **Effort Estimate**: **M** (Confidence: High)
+- **Acceptance Criteria**: Smooth grid rendering; tapping game launches mGBA emulation session.
 
 ---
 
-### Phase 3: Game Library, Storage Engine & Metadata
+### Phase 4: RetroAchievements, Saves & Cheats
 
-#### Work Item 3.1: ROM Directory Scanner & Libretro DB Parser
-- **Objective**: Recursively scan local directories and SAF trees, parse header serials, and query Libretro `.rdb` binary database files.
-- **Existing Files**: `LemuroidLibrary.kt`, `LocalStorageProvider.kt`, `LibretroDbParser.kt`.
-- **New Components**: `lib/features/game_library/data/scanner/storage_scanner.dart`, `lib/features/game_library/data/scanner/libretro_db_parser.dart`.
-- **Effort Estimate**: **L** (Confidence: High)
-- **Acceptance Criteria**: Scanner indexes 500+ ROMs into Drift SQLite database with correct title, system ID, and serial matching.
-
-#### Work Item 3.2: Library UI Home Screen & Cover Art Loader
-- **Objective**: Construct responsive game catalog UI featuring recent games, system filtering, search, and cover thumbnail caching.
-- **Existing Files**: Compose library views in `lemuroid-app/src/main/java/.../mobile/feature/library/`.
-- **New Components**: `lib/features/game_library/presentation/library_home_screen.dart`, `lib/shared/widgets/game_cover_image.dart`.
+#### Work Item 4.1: RetroAchievements Authentication & Game Hash Engine
+- **Objective**: Authenticate user with RetroAchievements Web API, compute MD5 game hash, and fetch achievement list.
 - **Effort Estimate**: **M** (Confidence: High)
-- **Acceptance Criteria**: Smooth scrolling grid displaying cover art; tapping game launches active emulation session.
+- **Acceptance Criteria**: User logs in; game achievement list downloads and displays locked/unlocked statuses.
+
+#### Work Item 4.2: In-Game Achievement Unlock Banner Overlay
+- **Objective**: Listen to native `onAchievementUnlocked` event channel events and render animated unlock toast banners over active mGBA gameplay.
+- **Effort Estimate**: **M** (Confidence: High)
+- **Acceptance Criteria**: Unlocking achievement displays banner with title, points, and badge icon.
+
+#### Work Item 4.3: Save State Manager & Preview Store
+- **Objective**: Manage 10 save slots (0–9) for mGBA, auto-save state generator, and preview screenshots.
+- **Effort Estimate**: **M** (Confidence: High)
+- **Acceptance Criteria**: States saved/restored reliably; preview screenshots display in slot sheet.
+
+#### Work Item 4.4: GameShark / ActionReplay Cheat Engine
+- **Objective**: Parse `.cht` files and GameShark codes, allowing live toggling via mGBA core.
+- **Effort Estimate**: **M** (Confidence: High)
+- **Acceptance Criteria**: Toggling cheat updates memory without freezing mGBA core.
 
 ---
 
-### Phase 4: Save States, Cheats & Advanced Features
+### Phase 5: Handheld Controls, Benchmarking & Release Candidate
 
-#### Work Item 4.1: Save State Manager & Screenshot Preview Store
-- **Objective**: Manage 10 save slots (0–9) per game, trigger auto-saves on app pause, and capture state preview screenshots.
-- **Existing Files**: `SavesManager.kt`, `StatesManager.kt`, `StatesPreviewManager.kt`.
-- **New Components**: `lib/features/save_states/data/save_states_repository.dart`, `lib/features/save_states/presentation/save_slot_picker_sheet.dart`.
+#### Work Item 5.1: Physical Gamepad Mapping & Layout Customizer
+- **Objective**: Bind physical handheld controller buttons (Retroid/Odin/Anbernic) and build drag-and-drop touch control layout editor.
 - **Effort Estimate**: **M** (Confidence: High)
-- **Acceptance Criteria**: States saved and restored reliably; save previews displayed in slot picker sheet; verified cross-compatibility with legacy `.state` files.
+- **Acceptance Criteria**: Physical buttons control gameplay; customized touch button positions persist.
 
-#### Work Item 4.2: Cheat Engine & CwCheat Parser
-- **Objective**: Download Libretro cheat archives, parse `.cht` and CwCheat format strings, and allow toggling cheats in-game.
-- **Existing Files**: `CheatManager.kt`, `CwCheatParser.kt`.
-- **New Components**: `lib/features/game_cheats/data/cheat_repository.dart`, `lib/features/game_cheats/presentation/cheat_manager_sheet.dart`.
-- **Effort Estimate**: **M** (Confidence: High)
-- **Acceptance Criteria**: In-game cheat sheet allows toggling codes; native JNI updates memory values without crashing.
-
----
-
-### Phase 5: Android TV, Polish & Release Candidate
-
-#### Work Item 5.1: Android TV D-Pad Focus Navigation & TV Channels
-- **Objective**: Ensure entire Flutter UI can be navigated using a hardware D-pad / gamepad without touch input; update Android TV home screen channels.
-- **Existing Files**: `MainTVActivity.kt`, `ChannelHandler.kt`.
-- **New Components**: `lib/features/tv_navigation/presentation/tv_focus_wrapper.dart`.
-- **Effort Estimate**: **M** (Confidence: High)
-- **Acceptance Criteria**: 100% of screens navigable via D-pad; focused elements clearly highlighted with TV selection glow.
-
-#### Work Item 5.2: Final Benchmarking, Regression & Release Build
-- **Objective**: Execute automated test suite, verify 60 FPS frame timing across target systems, test database migration on upgraded devices, and produce release APK.
+#### Work Item 5.2: Final Benchmarking & Production Build
+- **Objective**: Execute automated test suite, verify sustained 60 FPS output for GBA games, and produce release APK.
 - **Effort Estimate**: **S** (Confidence: High)
-- **Acceptance Criteria**: Zero regression errors; all acceptance tests passing; release build signed and verified on physical hardware.
+- **Acceptance Criteria**: 60 FPS performance confirmed; release APK signed and verified.
 
 ---
 
@@ -169,15 +153,17 @@ Each phase produces a verifiable, working milestone. Rather than attempting a bi
 
 | Phase | Work Item | Focus Area | Effort | Confidence |
 | :--- | :--- | :--- | :---: | :---: |
-| **Phase 0** | 0.1 | GLRetroView AndroidView Embedding Spike | **M** | High |
-| **Phase 0** | 0.2 | SAF Directory Reader Spike | **S** | High |
+| **Phase 0** | 0.1 | GLRetroView mGBA AndroidView Embedding Spike | **M** | High |
+| **Phase 0** | 0.2 | RetroAchievements `rcheevos` C Memory Spike | **M** | High |
 | **Phase 1** | 1.1 | Flutter Architecture & Shell Setup | **S** | High |
 | **Phase 1** | 1.2 | Drift Database Schema & Room Migration | **M** | High |
-| **Phase 2** | 2.1 | Native JNI MethodChannel Bridge | **L** | Medium |
-| **Phase 2** | 2.2 | CustomPainter Touch Overlay Controls | **L** | High |
-| **Phase 3** | 3.1 | SAF Storage Scanner & Libretro RDB Parser | **L** | High |
+| **Phase 2** | 2.1 | Native mGBA JNI MethodChannel Bridge | **M** | High |
+| **Phase 2** | 2.2 | GB/GBC/GBA CustomPainter Touch Skins | **M** | High |
+| **Phase 3** | 3.1 | SAF Storage Scanner & GBA Serial Extractor | **L** | High |
 | **Phase 3** | 3.2 | Game Library UI & Cover Image Caching | **M** | High |
-| **Phase 4** | 4.1 | Save States Slot Manager & Previews | **M** | High |
-| **Phase 4** | 4.2 | Cheat Downloader & Parser Engine | **M** | High |
-| **Phase 5** | 5.1 | Android TV D-Pad Focus Navigation | **M** | High |
+| **Phase 4** | 4.1 | RetroAchievements Auth & Hash Engine | **M** | High |
+| **Phase 4** | 4.2 | Achievement Unlock Toast Banner Overlay | **M** | High |
+| **Phase 4** | 4.3 | Save State Slot Manager & Previews | **M** | High |
+| **Phase 4** | 4.4 | GameShark / ActionReplay Cheat Engine | **M** | High |
+| **Phase 5** | 5.1 | Physical Gamepad Mapping & Touch Editor | **M** | High |
 | **Phase 5** | 5.2 | Performance Benchmarking & Release Build | **S** | High |
