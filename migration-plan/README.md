@@ -25,17 +25,15 @@ Rather than performing a mechanical 1:1 translation of existing Kotlin packages 
 - **Real-Time Frame Rewind**: Up to 30 seconds of real-time state rewind with a single button press or touch gesture.
 - **Fast-Forward Engine**: Speed toggle (1.5x, 2x, 4x, 8x) for mGBA emulation with low-latency audio pitch adjustment.
 - **Hardware Ambient Light Sensor**: Hardware light sensor (`Sensor.TYPE_LIGHT`) mapped to Libretro illuminance sensor 6 for GBA solar games (e.g., *Boktai: The Sun Is in Your Hand*). Devices lacking a light sensor simply ignore illuminance (players use solar ROM hacks).
-- **Microphone Input (`RECORD_AUDIO`)**: Hardware microphone stream for games requiring mic input.
 - **PDF Game Manuals**: Built-in zoomable PDF game manual viewer (`PdfManualProcessor.kt`).
 - **Front & Back Box Art**: Dual-sided 3D box art flipper displaying both front cover and back box art scans.
 - **In-Game Pause & Session Recovery**: Pause overlay with quick-save, quick-load, 10 save state slots, and reset capabilities.
 - **LCD & CRT Display Shaders**: Authentic LCD grid, LCD dot matrix, bilinear filtering, and CRT scanline shader modes (`ShaderChooser.kt`).
-- **Deep Linking Launcher**: Direct game launching via URI deep links (`gamegrl://launch?gameId=...`).
 - **Automated Cache Cleaner**: Background cleanup worker deleting temporary ROM extraction files and stale preview thumbnails.
 
 ---
 
-## Confirmed Architectural Decisions & Open Questions
+## Confirmed Architectural Decisions
 
 1. **RetroAchievements Hardcore Mode vs. Rewind Conflict [CONFIRMED]**:
    * *Decision*: GameGrl automatically disables the Rewind button and Save State slots whenever the user enables Hardcore Mode in RetroAchievements settings.
@@ -51,7 +49,7 @@ Rather than performing a mechanical 1:1 translation of existing Kotlin packages 
 | Document | Description |
 | :--- | :--- |
 | **[01. Executive Overview](./01-executive-overview.md)** | Strategic vision for GameGrl, custom UI aesthetic, mGBA core focus, RetroAchievements, and feature matrix. |
-| **[02. Existing Application Inventory](./02-existing-application-inventory.md)** | Audit of existing modules (`lemuroid-app`, `retrograde-app-shared`), mapping manuals, shaders, covers, rewind, sensors, and deep links. |
+| **[02. Existing Application Inventory](./02-existing-application-inventory.md)** | Audit of existing modules (`lemuroid-app`, `retrograde-app-shared`), mapping manuals, shaders, covers, rewind, and sensors. |
 | **[03. Target Architecture](./03-target-architecture.md)** | Feature-first repository layout (`lib/features/*`), Riverpod state management, Drift persistence, custom GameGrl UI, and native mGBA bridge. |
 | **[04. Feature Migration Map](./04-feature-migration-map.md)** | Traceability matrix mapping legacy Kotlin classes to target GameGrl Dart modules and native JNI channels. |
 | **[05. Phased Implementation Roadmap](./05-phased-implementation-roadmap.md)** | Incremental phases (Phase 0 through Phase 5) with relative effort estimates, prerequisites, and acceptance criteria. |

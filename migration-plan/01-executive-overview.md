@@ -44,11 +44,10 @@ Rather than retaining stock Google Material Design tiles or mechanical package t
 
 ### Pillar 2: mGBA Core Focus & Enhanced Emulation Capabilities
 - **Primary Systems**: **Game Boy (GB)**, **Game Boy Color (GBC)**, and **Game Boy Advance (GBA)** powered by the **mGBA** (`mgba.so`) Libretro core.
-- **Future Expansion Roadmap**: Game & Watch (`gw`), Nintendo DS / 3DS (`melonds` / `citra`), and **mGBA Local Wi-Fi Link Cable Multiplayer** (post-MVP). All other legacy systems are explicitly dropped.
+- **Future Expansion Roadmap**: Game & Watch (`gw`), Nintendo DS / 3DS (`melonds` / `citra`), and **mGBA Local Wi-Fi Link Cable Multiplayer** (post-MVP). All other legacy systems are explicitly removed.
 - **Real-Time Frame Rewind**: Up to 30 seconds of real-time state rewind with a single button press or dedicated touch gesture.
 - **Fast-Forward Speed Multiplier**: Variable speed accelerator (1.5x, 2x, 4x, 8x) for mGBA emulation with low-latency audio pitch adjustment.
 - **Hardware Light Sensor (`RETRO_SENSOR_ILLUMINANCE`)**: Maps ambient light sensor (`Sensor.TYPE_LIGHT`) to Libretro sensor ID 6 for GBA solar games (*Boktai*). Devices lacking a light sensor simply ignore illuminance (players use solar ROM hacks).
-- **Microphone Input (`RECORD_AUDIO`)**: Hardware microphone buffer streaming for mic-dependent ROMs.
 - **In-Game Pause & Session Recovery**: Pause overlay providing state slot selection, quick-save, quick-load, and game reset.
 - **LCD & CRT Display Shaders**: Authentic EGL display shaders (`ShaderChooser.kt`) including LCD Grid, LCD Dot Matrix, Bilinear Filtering, and CRT Scanlines.
 
@@ -93,13 +92,12 @@ Rather than retaining stock Google Material Design tiles or mechanical package t
 | **mGBA Core Binary (`mgba.so`)** | `lemuroid_core_mgba` | **`Retain`** | Native C `mgba.so` library |
 | **RetroAchievements Engine** | N/A (New feature) | **`New / Reimplement`**| Native `rcheevos` C + Dart API |
 | **Light Sensor (Boktai)** | `MotionManager.kt` | **`Reimplement`** | `Sensor.TYPE_LIGHT` -> ID 6 |
-| **Microphone Input** | `GameViewModelRetroGameView.kt` | **`Reimplement`** | `RECORD_AUDIO` audio stream |
 | **Real-Time Frame Rewind** | `LibretroDroid.java` | **`Wrap` & `Reimplement`**| mGBA rewind buffer JNI calls |
 | **Fast-Forward Speed Toggle** | `GameActivity.kt` | **`Reimplement`** | mGBA speed multiplier toggle |
-| **Deep Link Game Launcher** | `DeepLink.kt` | **`Reimplement`** | `gamegrl://launch?gameId=...` |
 | **LCD / CRT Display Shaders** | `ShaderChooser.kt` | **`Wrap`** | EGL GLSL shader pipeline |
 | **PDF Game Manual Viewer** | `PdfManualProcessor.kt` | **`Reimplement`** | Flutter PDF manual viewer |
 | **3D Front/Back Box Art** | `CoverUtils.kt` | **`Reimplement`** | Flutter 3D Box Art Flipper |
 | **Automated Cache Cleaner** | `CacheCleanerWork.kt` | **`Reimplement`** | Background cache cleanup worker |
 | **Database Storage** | `RetrogradeDatabase.kt` | **`Replace`** | Drift SQLite (`retrograde.db`) |
+| **Deep Linking & Microphone**| `DeepLink.kt` / `RECORD_AUDIO` | **`Remove`** | Omitted from GameGrl scope |
 | **mGBA Wi-Fi Link Cable** | N/A (Future Feature) | **`Defer`** | Local IP Socket Link Cable (Post-MVP) |

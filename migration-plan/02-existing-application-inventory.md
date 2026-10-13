@@ -16,9 +16,8 @@ All standard Android Material Design layouts, Compose BOM dependencies, and Andr
   - *Shader Chooser*: EGL GLSL LCD and CRT display shaders (`Wrap`).
   - *Cover Utils*: Expanded to dual-sided Front & Back 3D Box Art (`Reimplement`).
   - *Rewind Buffer*: JNI rewind frame buffer bridge (`Wrap` & `Reimplement`).
-  - *Deep Link Engine*: Reimplemented via `go_router` deep links (`Reimplement`).
   - *Cache Cleaner*: Rebuilt as background cleanup task (`Reimplement`).
-  - *mGBA Link Cable Multiplayer*: Local Wi-Fi socket link cable (`Defer`).
+  - *DeepLink.kt*: Explicitly removed (`Remove`).
 
 ---
 
@@ -30,9 +29,6 @@ All standard Android Material Design layouts, Compose BOM dependencies, and Andr
 - **Light Sensor Input**:
   - *Existing Files*: `MotionManager.kt` (`Sensor.TYPE_LIGHT` mapped to `sendSensorEvent(6, lux)`).
   - *Disposition*: **`Reimplement`** (Dart sensor listener forwarding lux levels to JNI when hardware sensor is present; ignored otherwise).
-- **Microphone Input Stream**:
-  - *Existing Files*: `GameViewModelRetroGameView.kt` (`RECORD_AUDIO`).
-  - *Disposition*: **`Reimplement`** (Audio recorder buffer passed to mGBA core).
 - **Real-Time Frame Rewind**:
   - *Existing Files*: `LibretroDroid.java` (`setRewindBuffer`, `rewindStep`).
   - *Disposition*: **`Wrap` & `Reimplement`** (Dart `RewindController`; automatically disabled in RetroAchievements Hardcore Mode).
@@ -63,15 +59,11 @@ All standard Android Material Design layouts, Compose BOM dependencies, and Andr
 
 ---
 
-### 2.3 Deep Links, Cache Management & Multiplayer
-- **Deep Link Launcher**:
-  - *Existing Files*: `DeepLink.kt`.
-  - *Disposition*: **`Reimplement`** (`gamegrl://launch?gameId=...` URI routing).
-- **Automated Cache Cleaner**:
-  - *Existing Files*: `CacheCleanerWork.kt`.
-  - *Disposition*: **`Reimplement`** (Background worker deleting temporary ROM extraction files and stale thumbnails).
-- **mGBA Local Wi-Fi Link Cable Multiplayer**:
-  - *Disposition*: **`Defer`** (Local Wi-Fi / IP sockets exchanging mGBA SIO register state for Pokemon trading; deferred to Post-MVP Phase 5.2).
+### 2.3 Removed Components & Deferred Features
+- **DeepLink.kt**: **`Remove`** (Explicitly omitted from GameGrl scope).
+- **RECORD_AUDIO Microphone Stream**: **`Remove`** (Omitted from GameGrl scope).
+- **Automated Cache Cleaner**: **`Reimplement`** (Background worker deleting temporary ROM extraction files and stale thumbnails).
+- **mGBA Local Wi-Fi Link Cable Multiplayer**: **`Defer`** (Local Wi-Fi / IP sockets exchanging mGBA SIO register state for Pokemon trading; deferred to Post-MVP Phase 5.2).
 
 ---
 
@@ -94,7 +86,6 @@ All standard Android Material Design layouts, Compose BOM dependencies, and Andr
 | :--- | :--- | :--- | :--- |
 | **mGBA Core Binary (`mgba.so`)** | `lemuroid_core_mgba` | **`Retain`** | Native C `mgba.so` library |
 | **Hardware Light Sensor** | `MotionManager.kt` | **`Reimplement`** | `Sensor.TYPE_LIGHT` -> ID 6 |
-| **Microphone Stream** | `GameViewModelRetroGameView.kt` | **`Reimplement`** | `RECORD_AUDIO` mic buffer |
 | **Real-Time Frame Rewind** | `LibretroDroid.java` | **`Wrap` & `Reimplement`**| Dart `RewindController` + JNI |
 | **Fast-Forward Speed Toggle** | `GameActivity.kt` | **`Reimplement`** | mGBA speed multiplier toggle |
 | **LCD & CRT Display Shaders** | `ShaderChooser.kt` | **`Wrap`** | EGL GLSL shader pipeline |
@@ -102,10 +93,11 @@ All standard Android Material Design layouts, Compose BOM dependencies, and Andr
 | **3D Front/Back Box Art** | `CoverUtils.kt` | **`Reimplement`** | Flutter 3D Box Art Flipper |
 | **Custom Handheld Carousel** | N/A (New UI) | **`Reimplement`** | GameGrl Custom Carousel |
 | **Game Boy Theme Palettes** | `GameBoyArt.kt` | **`Reimplement`** | GameGrl Palette Engine |
-| **Deep Link Launcher** | `DeepLink.kt` | **`Reimplement`** | `gamegrl://launch?gameId=...` |
 | **Automated Cache Cleaner** | `CacheCleanerWork.kt` | **`Reimplement`** | Background cache cleanup worker |
 | **RetroAchievements Engine** | N/A (New Feature) | **`New / Reimplement`**| Native `rcheevos` C + Dart API |
 | **Database Storage** | `RetrogradeDatabase` (Room)| **`Replace`** | `drift` SQLite database (`retrograde.db`) |
+| **Deep Link Engine** | `DeepLink.kt` | **`Remove`** | Omitted from GameGrl scope |
+| **Microphone Input** | `RECORD_AUDIO` | **`Remove`** | Omitted from GameGrl scope |
 | **mGBA Wi-Fi Link Cable** | N/A (Future Feature) | **`Defer`** | Local IP Socket Link Cable (Post-MVP) |
 | **Android TV Codebase** | `app/tv/*` | **`Remove`** | Completely deleted |
 | **Material Design UI** | Compose Material3 | **`Remove`** | Replaced with custom GameGrl UI |

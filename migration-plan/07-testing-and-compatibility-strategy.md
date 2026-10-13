@@ -12,7 +12,7 @@ Building **GameGrl** requires comprehensive testing across pure Dart logic, cust
    /    W    \   Widget & UI Tests (GameGrl Custom UI)
   /-----------\  - 3D Game Carousel, Front/Back Box Art Flipper, PDF Manual Viewer
  /      U      \  Pure Unit Tests (Dart + Mocktail)
-/---------------\ - GBA serial scanner, Light sensor bridge, Rewind buffer, Deep Link handler
+/---------------\ - GBA serial scanner, Light sensor bridge, Rewind buffer, Drift DB
 ```
 
 ---
@@ -23,10 +23,9 @@ Building **GameGrl** requires comprehensive testing across pure Dart logic, cust
 - **Key Unit Test Suites**:
   1. `retro_achievements_api_test.dart`: Validates login authentication, game hash matching, and achievement payload deserialization.
   2. `native_sensor_bridge_test.dart`: Verifies ambient light sensor (`Sensor.TYPE_LIGHT`) lux conversion to Libretro illuminance sensor ID 6.
-  3. `deep_link_handler_test.dart`: Verifies URI parsing (`gamegrl://launch?gameId=42`) and navigation routing.
-  4. `rewind_controller_test.dart`: Verifies rewind step count calculations and frame delta math.
-  5. `gba_serial_scanner_test.dart`: Verifies header serial extraction (e.g., `AGB-AXVE-USA` for *Pokemon Ruby*).
-  6. `drift_database_test.dart`: Tests SQLite CRUD queries for games, front/back cover URLs, manuals, and achievements.
+  3. `rewind_controller_test.dart`: Verifies rewind step count calculations and frame delta math.
+  4. `gba_serial_scanner_test.dart`: Verifies header serial extraction (e.g., `AGB-AXVE-USA` for *Pokemon Ruby*).
+  5. `drift_database_test.dart`: Tests SQLite CRUD queries for games, front/back cover URLs, manuals, and achievements.
 
 ### 2.2 GameGrl Custom Widget & UI Tests (`test/widgets/...`)
 - **Key Widget Test Suites**:

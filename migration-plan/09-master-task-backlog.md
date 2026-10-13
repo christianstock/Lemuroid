@@ -12,7 +12,7 @@ This document contains a prioritized, dependency-linked checklist of implementat
 Phase 0: Spikes (TASK-001 -> TASK-003)
   └── Phase 1: Foundation & Theme (TASK-004 -> TASK-010)
         ├── Phase 2: mGBA, Rewind & Sensors (TASK-011 -> TASK-020)
-        ├── Phase 3: Custom UI, Carousel, Manuals & Deep Links (TASK-021 -> TASK-030)
+        ├── Phase 3: Custom UI, Carousel, Manuals & Storage (TASK-021 -> TASK-030)
         ├── Phase 4: RetroAchievements, Pause & Cheats (TASK-031 -> TASK-040)
         └── Phase 5: Handheld Controls, Release & Post-MVP (TASK-041 -> TASK-051)
 ```
@@ -193,7 +193,7 @@ Phase 0: Spikes (TASK-001 -> TASK-003)
 
 ---
 
-### Phase 3: GameGrl Custom Handheld UI, Carousel, Manuals & Deep Links
+### Phase 3: GameGrl Custom Handheld UI, Carousel, Manuals & Storage
 
 #### `TASK-021`: Implement Native SAF Fast Directory Reader
 - **Phase**: Phase 3
@@ -267,13 +267,13 @@ Phase 0: Spikes (TASK-001 -> TASK-003)
 - **Description**: Custom Game Info Details Card displaying 3D Box Art, game description, developer, stats, and Manual button.
 - **Acceptance Criteria**: Displays complete game info card; tapping Manual button opens PDF manual screen.
 
-#### `TASK-030`: Implement Deep Link Launcher & Storage Directory Picker
+#### `TASK-030`: Implement Storage Directory Picker Sheet
 - **Phase**: Phase 3
 - **Feature**: `game_library`
 - **Dependencies**: `TASK-021`, `TASK-029`
 - **Effort**: **S**
-- **Description**: Build `gamegrl://launch?gameId=...` deep link URI launcher and directory selector sheet.
-- **Acceptance Criteria**: Deep links launch targeted game directly; directory picker updates SAF roots.
+- **Description**: Build folder selection sheet allowing users to pick GBA/GBC ROM storage directories.
+- **Acceptance Criteria**: Directory picker sheet updates SAF root folders.
 
 ---
 

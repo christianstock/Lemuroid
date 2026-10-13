@@ -2,7 +2,7 @@
 
 ## 1. Traceability Overview
 
-This map establishes direct traceability between existing Kotlin/Java/C++ components and target **GameGrl** Flutter features according to the refined product vision: **Custom Handheld UI (No Material Design)**, **mGBA core focus**, **RetroAchievements**, **Rewind**, **Fast-Forward**, **Hardware Light Sensor**, **PDF Game Manuals**, **Front/Back Box Art**, **In-Game Pause Menu**, **Custom Themes**, **LCD Shaders**, **Deep Links**, **Cache Cleaning**, and **mGBA Wi-Fi Link Cable Multiplayer (Deferred)**.
+This map establishes direct traceability between existing Kotlin/Java/C++ components and target **GameGrl** Flutter features according to the refined product vision: **Custom Handheld UI (No Material Design)**, **mGBA core focus**, **RetroAchievements**, **Rewind**, **Fast-Forward**, **Hardware Light Sensor**, **PDF Game Manuals**, **Front/Back Box Art**, **In-Game Pause Menu**, **Custom Themes**, **LCD Shaders**, **Cache Cleaning**, and **mGBA Wi-Fi Link Cable Multiplayer (Deferred)**.
 
 ---
 
@@ -12,7 +12,6 @@ This map establishes direct traceability between existing Kotlin/Java/C++ compon
 | :--- | :--- | :--- | :--- |
 | `lemuroid_core_mgba` (`mgba.so`) | `android/app/src/main/jniLibs/.../libmgba.so` | **`Retain`** | Retained as primary C/C++ core for GB, GBC, and GBA. |
 | `MotionManager.kt` (Light Sensor) | `lib/features/emulation_session/data/native_sensor_bridge.dart` | **`Reimplement`** | Maps `Sensor.TYPE_LIGHT` lux to Libretro illuminance sensor 6. |
-| `GameViewModelRetroGameView.kt` (Mic) | `lib/features/emulation_session/data/microphone_bridge.dart` | **`Reimplement`** | `RECORD_AUDIO` mic buffer stream passed to mGBA core. |
 | `LibretroDroid.java` (Rewind Buffer) | `lib/features/emulation_session/data/rewind_controller.dart` | **`Wrap` & `Reimplement`** | JNI bridge allocating rewind buffer; disabled in Hardcore Mode. |
 | `GameActivity.kt` (Fast-Forward) | `lib/features/emulation_session/data/fast_forward_controller.dart` | **`Reimplement`** | mGBA speed multiplier toggle (1.5x–8x). |
 | `ShaderChooser.kt` (GLSL Shaders) | `lib/features/shader_engine/data/shader_repository.dart` | **`Wrap`** | EGL GLSL shader selector (`lcd-grid.glsl`, `crt-easymode.glsl`). |
@@ -30,8 +29,9 @@ This map establishes direct traceability between existing Kotlin/Java/C++ compon
 | `PdfManualProcessor.kt` | `lib/features/game_manuals/presentation/pdf_manual_viewer_screen.dart` | **`Reimplement`** | Embedded PDF game manual viewer with page zoom. |
 | `GameBoyArt.kt` | `lib/features/theme_engine/domain/gameboy_palette.dart` | **`Reimplement`** | Theme engine providing Game Boy LCD color palettes. |
 | `GameMenuHelper.kt` | `lib/features/emulation_session/presentation/in_game_pause_menu.dart` | **`Reimplement`** | In-game pause menu with state slots, quick-save, and reset. |
-| `DeepLink.kt` | `lib/core/deep_link_handler.dart` | **`Reimplement`** | `gamegrl://launch?gameId=...` URI routing. |
 | `CacheCleanerWork.kt` | `lib/shared/storage/cache_cleaner.dart` | **`Reimplement`** | Background cleanup worker for temporary ROM files and thumbs. |
+| `DeepLink.kt` | N/A | **`Remove`** | Omitted from GameGrl scope. |
+| `RECORD_AUDIO` Mic Stream | N/A | **`Remove`** | Omitted from GameGrl scope. |
 
 ---
 
@@ -52,4 +52,4 @@ This map establishes direct traceability between existing Kotlin/Java/C++ compon
 | `MainTVActivity.kt` & Leanback UI | **`Remove`** | Android TV support removed from scope. |
 | Non-GB/GBC/GBA Cores (`pcsx`, `mupen`, `snes9x`, `ppsspp`) | **`Remove`** | Excluded from build configuration to minimize size. |
 | Future Cores (`gw`, `melonds`, `citra`) | **`Defer`** | Post-MVP roadmap option for Game & Watch and NDS/3DS. |
-| mGBA Wi-Fi Link Cable Multiplayer | **`Defer`** | Local IP socket link cable networking (Pokemon trading) deferred to Post-MVP Phase 5.2. |
+| mGBA Wi-Fi Link Cable Multiplayer | **`Defer`** | Local IP socket link cable networking (Pokemon trading) deferred to Post-MVP Phase 5.3. |

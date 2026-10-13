@@ -111,7 +111,6 @@ gamegrl_flutter/
 │   │   └── theme/                       # Custom GameGrl Handheld Styling
 │   │
 │   └── core/                            # CORE CONTRACTS & LOGGING
-│       ├── deep_link_handler.dart       # Deep Link URI router (gamegrl://launch)
 │       └── logger.dart
 └── test/                                # UNIT, WIDGET & INTEGRATION TESTS
 ```

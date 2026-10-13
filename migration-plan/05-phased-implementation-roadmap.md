@@ -29,10 +29,10 @@ The migration is organized into **six incremental phases (Phase 0 through Phase 
                                        |
                                        v
 +-------------------------------------------------------------------------------+
-| Phase 3: GameGrl Custom Handheld UI, Carousel, Manuals & Deep Links           |
+| Phase 3: GameGrl Custom Handheld UI, Carousel, Manuals & Cache Cleaner        |
 |  - Custom 3D Coverflow Game Carousel & Games View                             |
 |  - 3D Front & Back Box Art Flipper + PDF Game Manual Viewer                   |
-|  - Deep Link Router (gamegrl://launch) & Automated Cache Cleaner Task         |
+|  - Automated Cache Cleaner Worker                                             |
 |  * RUNNABLE MILESTONE: Full custom handheld UI catalog with manuals & box art |
 +-------------------------------------------------------------------------------+
                                        |
@@ -110,7 +110,7 @@ The migration is organized into **six incremental phases (Phase 0 through Phase 
 
 ---
 
-### Phase 3: GameGrl Custom Handheld UI, Carousel, Manuals & Deep Links
+### Phase 3: GameGrl Custom Handheld UI, Carousel, Manuals & Cache Cleaner
 
 #### Work Item 3.1: Custom 3D Coverflow Carousel & Games View
 - **Objective**: Build bespoke, non-Material 3D game carousel and custom Games View layout.
@@ -127,10 +127,10 @@ The migration is organized into **six incremental phases (Phase 0 through Phase 
 - **Effort Estimate**: **M** (Confidence: High)
 - **Acceptance Criteria**: Opens PDF manual files smoothly with zoom and page navigation.
 
-#### Work Item 3.4: Deep Link Engine & Automated Cache Cleaner Worker
-- **Objective**: Implement `gamegrl://launch?gameId=...` URI deep-link routing and background cache cleaner deleting temporary ROM extraction files.
+#### Work Item 3.4: Automated Cache Cleaner Worker
+- **Objective**: Background cache cleaner worker deleting temporary ROM extraction files and stale preview thumbnails.
 - **Effort Estimate**: **S** (Confidence: High)
-- **Acceptance Criteria**: Deep links launch game directly; background worker cleans temp cache.
+- **Acceptance Criteria**: Background worker cleans temp cache automatically.
 
 ---
 
@@ -187,7 +187,7 @@ The migration is organized into **six incremental phases (Phase 0 through Phase 
 | **Phase 3** | 3.1 | Custom 3D Coverflow Game Carousel View | **L** | High |
 | **Phase 3** | 3.2 | 3D Front & Back Box Art Flipper Widget | **M** | High |
 | **Phase 3** | 3.3 | Embedded PDF Game Manual Viewer Screen | **M** | High |
-| **Phase 3** | 3.4 | Deep Link Router & Automated Cache Cleaner | **S** | High |
+| **Phase 3** | 3.4 | Automated Cache Cleaner Worker | **S** | High |
 | **Phase 4** | 4.1 | RetroAchievements Auth & Hardcore Mode Enforcer | **L** | High |
 | **Phase 4** | 4.2 | In-Game Pause Menu & State Slot Recovery | **M** | High |
 | **Phase 4** | 4.3 | GameShark / ActionReplay Cheat Engine | **M** | High |
