@@ -18,7 +18,7 @@
   ~  along with this program.  If not, see <http://www.gnu.org/licenses/>.
   -->
 <resources>
-    <string name="gdrive_sign_in_failed">Google ile oturum açma başarısız: %s (%s)</string>
+    <string name="gdrive_sign_in_failed">Google ile oturum açma başarısız: %1$s (%2$s)</string>
     <string name="gdrive_sign_in_success">%s olarak Google\'a giriş yapıldı</string>
     <string name="gdrive_sign_out_success">Google\'dan çıkış yapıldı</string>
     <string name="gdrive_missing_play_services">Google Drive, Google Play Hizmetleri\'ne ihtiyaç duyuyor ancak cihazınız bu hizmetleri desteklemiyor. Lütfen Google Play Hizmetleri\'ni yüklemeyi veya güncellemeyi deneyin</string>

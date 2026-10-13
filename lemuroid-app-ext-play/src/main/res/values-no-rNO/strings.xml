@@ -18,7 +18,7 @@
   ~  along with this program.  If not, see <http://www.gnu.org/licenses/>.
   -->
 <resources>
-    <string name="gdrive_sign_in_failed">Google-pålogging mislyktes: %s (%s)</string>
+    <string name="gdrive_sign_in_failed">Google-pålogging mislyktes: %1$s (%2$s)</string>
     <string name="gdrive_sign_in_success">Logget inn med Google som %s</string>
     <string name="gdrive_sign_out_success">Logget ut fra Google</string>
     <string name="gdrive_missing_play_services">Google Drive krever Google Play-tjenester, som ikke støttes på enheten din</string>

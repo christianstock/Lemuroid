@@ -18,7 +18,7 @@
   ~  along with this program.  If not, see <http://www.gnu.org/licenses/>.
   -->
 <resources>
-    <string name="gdrive_sign_in_failed">Google Anmeldung fehlgeschlagen: %s (%s)</string>
+    <string name="gdrive_sign_in_failed">Google Anmeldung fehlgeschlagen: %1$s (%2$s)</string>
     <string name="gdrive_sign_in_success">Bei Google angemeldet als %s</string>
     <string name="gdrive_sign_out_success">Von Google abgemeldet</string>
     <string name="gdrive_missing_play_services">Google Drive benötigt Google Play Services, die auf Ihrem Gerät nicht unterstützt werden</string>

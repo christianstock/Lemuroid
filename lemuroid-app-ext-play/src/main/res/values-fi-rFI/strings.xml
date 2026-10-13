@@ -18,7 +18,7 @@
   ~  along with this program.  If not, see <http://www.gnu.org/licenses/>.
   -->
 <resources>
-    <string name="gdrive_sign_in_failed">Google Kirjaudu epäonnistui: %s (%s)</string>
+    <string name="gdrive_sign_in_failed">Google Kirjaudu epäonnistui: %1$s (%2$s)</string>
     <string name="gdrive_sign_in_success">Kirjautuneena Googleen nimellä %s</string>
     <string name="gdrive_sign_out_success">Kirjauduttu ulos Googlesta</string>
     <string name="gdrive_missing_play_services">Google Drive vaatii Google Play -palvelut, joita ei tueta laitteessasi</string>
