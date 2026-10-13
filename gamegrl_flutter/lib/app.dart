@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'features/theme_engine/presentation/palette_swapper_demo.dart';
+import 'core/router/game_router.dart';
 import 'features/theme_engine/state/theme_palette_notifier.dart';
 
 class GameGrlApp extends ConsumerWidget {
@@ -10,15 +10,15 @@ class GameGrlApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final themeState = ref.watch(themePaletteProvider);
 
-    return MaterialApp(
+    return MaterialApp.router(
       title: 'GameGrl',
       debugShowCheckedModeBanner: false,
+      routerConfig: gameRouter,
       theme: ThemeData(
         brightness: Brightness.dark,
         scaffoldBackgroundColor: themeState.themeData.backgroundColor,
         useMaterial3: true,
       ),
-      home: const PaletteSwapperDemoScreen(),
     );
   }
 }
