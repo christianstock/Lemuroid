@@ -10,7 +10,7 @@ Building **GameGrl** requires comprehensive testing across pure Dart logic, cust
      /  I  \    - Full GBA ROM launch, mGBA JNI rewind, Boktai solar sensor, RetroAchievements
     /-------\
    /    W    \   Widget & UI Tests (GameGrl Custom UI)
-  /-----------\  - 3D Game Carousel, Front/Back Box Art Flipper, PDF Manual Viewer, Solar Slider
+  /-----------\  - 3D Game Carousel, Front/Back Box Art Flipper, PDF Manual Viewer
  /      U      \  Pure Unit Tests (Dart + Mocktail)
 /---------------\ - GBA serial scanner, Light sensor bridge, Rewind buffer, Deep Link handler
 ```
@@ -33,8 +33,7 @@ Building **GameGrl** requires comprehensive testing across pure Dart logic, cust
   1. `gamegrl_carousel_view_test.dart`: Verifies custom 3D carousel scroll gesture handling and active item focus.
   2. `box_art_3d_flipper_test.dart`: Verifies tap-to-flip gesture animating 3D matrix transform between front cover and back box art.
   3. `pdf_manual_viewer_test.dart`: Verifies PDF document loading, page zoom, and bookmark navigation.
-  4. `solar_sensor_slider_test.dart`: Verifies manual solar intensity slider overlay sending custom lux values to JNI bridge.
-  5. `unlock_banner_overlay_test.dart`: Verifies animated entrance and dismissal of RetroAchievements unlock toast banners over mGBA gameplay surface.
+  4. `unlock_banner_overlay_test.dart`: Verifies animated entrance and dismissal of RetroAchievements unlock toast banners over mGBA gameplay surface.
 
 ### 2.3 Platform Channel Mock Testing
 - **Implementation**:
@@ -49,7 +48,6 @@ Building **GameGrl** requires comprehensive testing across pure Dart logic, cust
         }
         if (methodCall.method == 'sendSensorEvent') {
           final sensorId = methodCall.arguments['sensorId'];
-          final luxValue = methodCall.arguments['value'];
           return sensorId == 6; // Verify light sensor ID 6
         }
         if (methodCall.method == 'rewindStep') {
@@ -92,5 +90,5 @@ Building **GameGrl** requires comprehensive testing across pure Dart logic, cust
 
 1. **Touchscreen Smartphone**: Modern Android 12+ device (e.g., Google Pixel / Samsung Galaxy) testing GameGrl custom carousel, PDF manual viewer, hardware light sensor, and GBA touch skins.
 2. **Dedicated Android Handheld Consoles**:
-   - **Retroid Pocket / Ayn Odin**: Handheld consoles with built-in hardware DPAD, A/B/X/Y buttons, L/R shoulder triggers, testing mGBA 60 FPS performance with LCD shaders and manual solar slider.
+   - **Retroid Pocket / Ayn Odin**: Handheld consoles with built-in hardware DPAD, A/B/X/Y buttons, L/R shoulder triggers, testing mGBA 60 FPS performance with LCD shaders.
    - **Anbernic RG353V**: Compact handheld console testing Game Boy LCD color palettes (DMG Green, Pocket Gray) and physical button mapping.

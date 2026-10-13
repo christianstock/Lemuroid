@@ -20,11 +20,11 @@ The migration is organized into **six incremental phases (Phase 0 through Phase 
                                        |
                                        v
 +-------------------------------------------------------------------------------+
-| Phase 2: mGBA Kernel, Rewind, Solar Sensor & Shaders                          |
+| Phase 2: mGBA Kernel, Rewind, Light Sensor & Shaders                          |
 |  - mGBA Platform View + 30-Second Rewind & Fast-Forward Controllers           |
-|  - Light Sensor (Illuminance 6) & Manual Solar Slider Fallback                |
+|  - Ambient Light Sensor (Illuminance 6) for Boktai                            |
 |  - EGL LCD Grid / Dot Matrix / CRT Shader Pipeline                            |
-|  * RUNNABLE MILESTONE: Launch GBA game with active Rewind & Solar Sensor      |
+|  * RUNNABLE MILESTONE: Launch GBA game with active Rewind & Light Sensor      |
 +-------------------------------------------------------------------------------+
                                        |
                                        v
@@ -39,7 +39,7 @@ The migration is organized into **six incremental phases (Phase 0 through Phase 
                                        v
 +-------------------------------------------------------------------------------+
 | Phase 4: RetroAchievements, In-Game Pause Menu & Cheats                       |
-|  - RetroAchievements Auth, Game Hash & Unlock Toast Banners                   |
+|  - RetroAchievements Auth, Hardcore Mode Enforcer & Unlock Toast Banners      |
 |  - In-Game Pause Overlay (State Slots, Quick-Save, Quick-Load, Reset)          |
 |  - GameShark / ActionReplay Cheat Engine                                      |
 +-------------------------------------------------------------------------------+
@@ -49,6 +49,7 @@ The migration is organized into **six incremental phases (Phase 0 through Phase 
 | Phase 5: Handheld Controls, Benchmarking & Release Candidate                  |
 |  - Physical Handheld Gamepad Mapping & Touch Layout Customizer                |
 |  - Performance Benchmarking (Sustained 60 FPS mGBA execution)                 |
+|  - Post-MVP Roadmap: mGBA Wi-Fi / IP Socket Link Cable Multiplayer            |
 |  * RELEASE CANDIDATE MILESTONE: Production-ready GameGrl APK                  |
 +-------------------------------------------------------------------------------+
 ```
@@ -90,17 +91,17 @@ The migration is organized into **six incremental phases (Phase 0 through Phase 
 
 ---
 
-### Phase 2: mGBA Kernel, Rewind, Solar Sensor & LCD/CRT Shaders
+### Phase 2: mGBA Kernel, Rewind, Light Sensor & LCD/CRT Shaders
 
 #### Work Item 2.1: Native mGBA JNI & Rewind Controller Bridge
 - **Objective**: Build JNI bridge for mGBA session lifecycle, core options, fast-forward multiplier, and 30-second real-time frame rewind commands.
 - **Effort Estimate**: **L** (Confidence: High)
 - **Acceptance Criteria**: `initializeCoreAndGame`, `setFastForwardRatio`, and `rewindStep` execute smoothly.
 
-#### Work Item 2.2: Light Sensor (`Sensor.TYPE_LIGHT`) & Manual Solar Slider
-- **Objective**: Forward ambient light sensor lux levels to Libretro sensor 6 for GBA solar games (*Boktai*), and build manual solar intensity slider overlay for handheld devices lacking light sensors.
-- **Effort Estimate**: **M** (Confidence: High)
-- **Acceptance Criteria**: Hardware light sensor or manual slider adjusts in-game solar light level accurately.
+#### Work Item 2.2: Ambient Light Sensor (`Sensor.TYPE_LIGHT`) Bridge
+- **Objective**: Forward ambient light sensor lux levels to Libretro sensor 6 for GBA solar games (*Boktai*). Devices lacking a light sensor simply ignore illuminance.
+- **Effort Estimate**: **S** (Confidence: High)
+- **Acceptance Criteria**: Hardware light sensor adjusts in-game solar light level accurately.
 
 #### Work Item 2.3: EGL LCD & CRT Display Shader Pipeline
 - **Objective**: Wire EGL GLSL display shaders (`lcd-grid.glsl`, `lcd-dot-matrix.glsl`, `crt-easymode.glsl`) to mGBA render surface.
@@ -136,9 +137,9 @@ The migration is organized into **six incremental phases (Phase 0 through Phase 
 ### Phase 4: RetroAchievements, In-Game Pause Menu & Cheats
 
 #### Work Item 4.1: RetroAchievements Auth & Unlock Banner Overlay
-- **Objective**: Authenticate RetroAchievements user credentials, compute MD5 game hash, and render animated unlock toast banners over mGBA gameplay.
+- **Objective**: Authenticate RetroAchievements user credentials, compute MD5 game hash, enforce Hardcore Mode (automatically disables Rewind and Save States), and render animated unlock toast banners over mGBA gameplay.
 - **Effort Estimate**: **L** (Confidence: High)
-- **Acceptance Criteria**: User logs in; in-game achievement unlocks trigger animated toast banner.
+- **Acceptance Criteria**: User logs in; Hardcore Mode disables Rewind; achievement unlocks trigger animated toast banner.
 
 #### Work Item 4.2: In-Game Pause & Session Recovery Menu
 - **Objective**: Custom handheld pause overlay providing quick-save, quick-load, 10 save state slot pickers, and game reset.
@@ -164,6 +165,11 @@ The migration is organized into **six incremental phases (Phase 0 through Phase 
 - **Effort Estimate**: **S** (Confidence: High)
 - **Acceptance Criteria**: 60 FPS performance confirmed; signed release APK generated.
 
+#### Work Item 5.3 (Post-MVP Roadmap): mGBA Local Wi-Fi / IP Socket Link Cable Multiplayer
+- **Objective**: Implement local Wi-Fi / IP socket SIO register exchange for GBA Pokemon trading and head-to-head multiplayer.
+- **Effort Estimate**: **XL** (Confidence: Medium)
+- **Acceptance Criteria**: Two devices on local Wi-Fi trade Pokemon via virtual GBA link cable connection.
+
 ---
 
 ## 3. Relative Effort Summary Matrix
@@ -176,14 +182,15 @@ The migration is organized into **six incremental phases (Phase 0 through Phase 
 | **Phase 1** | 1.1 | GameGrl Custom Theme & Palette Engine | **S** | High |
 | **Phase 1** | 1.2 | Drift Database Schema & Room Migration | **M** | High |
 | **Phase 2** | 2.1 | Native mGBA JNI & Rewind Controller Bridge | **L** | High |
-| **Phase 2** | 2.2 | Solar Light Sensor (ID 6) & Manual Slider | **M** | High |
+| **Phase 2** | 2.2 | Ambient Light Sensor (`Sensor.TYPE_LIGHT`) | **S** | High |
 | **Phase 2** | 2.3 | EGL LCD & CRT Display Shader Pipeline | **M** | High |
 | **Phase 3** | 3.1 | Custom 3D Coverflow Game Carousel View | **L** | High |
 | **Phase 3** | 3.2 | 3D Front & Back Box Art Flipper Widget | **M** | High |
 | **Phase 3** | 3.3 | Embedded PDF Game Manual Viewer Screen | **M** | High |
 | **Phase 3** | 3.4 | Deep Link Router & Automated Cache Cleaner | **S** | High |
-| **Phase 4** | 4.1 | RetroAchievements Auth & Unlock Banner | **L** | High |
+| **Phase 4** | 4.1 | RetroAchievements Auth & Hardcore Mode Enforcer | **L** | High |
 | **Phase 4** | 4.2 | In-Game Pause Menu & State Slot Recovery | **M** | High |
 | **Phase 4** | 4.3 | GameShark / ActionReplay Cheat Engine | **M** | High |
 | **Phase 5** | 5.1 | Physical Gamepad Mapping & Touch Editor | **M** | High |
 | **Phase 5** | 5.2 | Performance Benchmarking & Release Build | **S** | High |
+| **Post-MVP**| 5.3 | mGBA Local Wi-Fi Link Cable Multiplayer | **XL** | Medium |

@@ -25,10 +25,10 @@ Rather than retaining stock Google Material Design tiles or mechanical package t
                   +-----------------v-----------------+
                   |      mGBA Core Gameplay Session   |
                   |  - Real-time Rewind & Fast-Fwd    |
-                  |  - Solar Light Sensor (Boktai)    |
+                  |  - Light Sensor (Boktai)          |
                   |  - LCD / CRT Display Shaders      |
                   |  - In-Game Pause Menu             |
-                  |  - RetroAchievements Overlays     |
+                  |  - RetroAchievements (Hardcore)   |
                   +-----------------------------------+
 ```
 
@@ -44,16 +44,17 @@ Rather than retaining stock Google Material Design tiles or mechanical package t
 
 ### Pillar 2: mGBA Core Focus & Enhanced Emulation Capabilities
 - **Primary Systems**: **Game Boy (GB)**, **Game Boy Color (GBC)**, and **Game Boy Advance (GBA)** powered by the **mGBA** (`mgba.so`) Libretro core.
-- **Future Expansion Roadmap**: Game & Watch (`gw`) and Nintendo DS / 3DS (`melonds` / `citra`). All other legacy systems are explicitly dropped.
+- **Future Expansion Roadmap**: Game & Watch (`gw`), Nintendo DS / 3DS (`melonds` / `citra`), and **mGBA Local Wi-Fi Link Cable Multiplayer** (post-MVP). All other legacy systems are explicitly dropped.
 - **Real-Time Frame Rewind**: Up to 30 seconds of real-time state rewind with a single button press or dedicated touch gesture.
 - **Fast-Forward Speed Multiplier**: Variable speed accelerator (1.5x, 2x, 4x, 8x) for mGBA emulation with low-latency audio pitch adjustment.
-- **Hardware Solar Light Sensor (`RETRO_SENSOR_ILLUMINANCE`)**: Maps ambient light sensor (`Sensor.TYPE_LIGHT`) to Libretro sensor ID 6 for GBA solar games (*Boktai*), plus a manual solar intensity slider fallback in the overlay menu for handheld devices lacking light sensors.
+- **Hardware Light Sensor (`RETRO_SENSOR_ILLUMINANCE`)**: Maps ambient light sensor (`Sensor.TYPE_LIGHT`) to Libretro sensor ID 6 for GBA solar games (*Boktai*). Devices lacking a light sensor simply ignore illuminance (players use solar ROM hacks).
 - **Microphone Input (`RECORD_AUDIO`)**: Hardware microphone buffer streaming for mic-dependent ROMs.
 - **In-Game Pause & Session Recovery**: Pause overlay providing state slot selection, quick-save, quick-load, and game reset.
 - **LCD & CRT Display Shaders**: Authentic EGL display shaders (`ShaderChooser.kt`) including LCD Grid, LCD Dot Matrix, Bilinear Filtering, and CRT Scanlines.
 
 ### Pillar 3: RetroAchievements Integration
 - **RetroAchievements.org Native Engine**: Integrated `rcheevos` C memory observer evaluating RAM conditions in real-time.
+- **Hardcore Mode Enforcer**: Hardcore Mode automatically disables Rewind and Save State loading to maintain achievement integrity.
 - **Unlock Banners & Badges**: Non-intrusive animated achievement unlock banners over gameplay and a cached badge catalog.
 
 ---
@@ -65,7 +66,7 @@ Rather than retaining stock Google Material Design tiles or mechanical package t
 |                             GAMEGRL FLUTTER LAYER                             |
 |                                                                               |
 |  [Custom Carousel]  [Game Info Card]  [PDF Manuals]  [3D Front/Back Box Art]  |
-|  [RetroAchievements]  [Rewind / Fast-Fwd]  [Solar Slider]  [Custom Themes]    |
+|  [RetroAchievements]  [Rewind / Fast-Fwd]  [Game Palettes]  [Custom Themes]     |
 |        |                  |                |                  |               |
 |        +------------------+----------------+------------------+               |
 |                                   |                                           |
@@ -91,7 +92,7 @@ Rather than retaining stock Google Material Design tiles or mechanical package t
 | :--- | :--- | :--- | :--- |
 | **mGBA Core Binary (`mgba.so`)** | `lemuroid_core_mgba` | **`Retain`** | Native C `mgba.so` library |
 | **RetroAchievements Engine** | N/A (New feature) | **`New / Reimplement`**| Native `rcheevos` C + Dart API |
-| **Solar Light Sensor (Boktai)**| `MotionManager.kt` | **`Reimplement`** | `Sensor.TYPE_LIGHT` -> ID 6 + Slider |
+| **Light Sensor (Boktai)** | `MotionManager.kt` | **`Reimplement`** | `Sensor.TYPE_LIGHT` -> ID 6 |
 | **Microphone Input** | `GameViewModelRetroGameView.kt` | **`Reimplement`** | `RECORD_AUDIO` audio stream |
 | **Real-Time Frame Rewind** | `LibretroDroid.java` | **`Wrap` & `Reimplement`**| mGBA rewind buffer JNI calls |
 | **Fast-Forward Speed Toggle** | `GameActivity.kt` | **`Reimplement`** | mGBA speed multiplier toggle |
@@ -101,11 +102,4 @@ Rather than retaining stock Google Material Design tiles or mechanical package t
 | **3D Front/Back Box Art** | `CoverUtils.kt` | **`Reimplement`** | Flutter 3D Box Art Flipper |
 | **Automated Cache Cleaner** | `CacheCleanerWork.kt` | **`Reimplement`** | Background cache cleanup worker |
 | **Database Storage** | `RetrogradeDatabase.kt` | **`Replace`** | Drift SQLite (`retrograde.db`) |
-
----
-
-## 5. Open Questions & Unresolved Decisions Before Execution
-
-1. **Hardcore Mode vs. Rewind**: RetroAchievements Hardcore Mode strictly forbids Rewind and Save States. GameGrl automatically disables Rewind when Hardcore Mode is active.
-2. **Solar Sensor Fallback UI**: On handheld consoles lacking `Sensor.TYPE_LIGHT`, GameGrl provides an in-game manual solar intensity slider overlay.
-3. **mGBA Local Link Cable**: Local wireless/IP GBA link cable networking is deferred to Phase 5.2.
+| **mGBA Wi-Fi Link Cable** | N/A (Future Feature) | **`Defer`** | Local IP Socket Link Cable (Post-MVP) |

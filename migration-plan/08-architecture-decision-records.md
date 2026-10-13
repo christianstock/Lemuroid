@@ -7,7 +7,8 @@
 - **[ADR-003]: Custom GameGrl Handheld UI (Scrapping Material Design)**
 - **[ADR-004]: Real-Time Frame Rewind & EGL LCD/CRT Shaders**
 - **[ADR-005]: mGBA Core Focus & RetroAchievements Integration**
-- **[ADR-006]: Solar Light Sensor & Manual Intensity Slider Fallback**
+- **[ADR-006]: Hardware Light Sensor Handling & ROM Hack Reliance**
+- **[ADR-007]: mGBA Local Wi-Fi Link Cable Multiplayer (Post-MVP)**
 
 ---
 
@@ -81,13 +82,26 @@ Focus strictly on the gold-standard **mGBA** (`mgba.so`) Libretro core and integ
 
 ---
 
-## ADR-006: Solar Light Sensor & Manual Intensity Slider Fallback
+## ADR-006: Hardware Light Sensor Handling & ROM Hack Reliance
 
 ### Context & Problem Statement
-Certain GBA games (e.g. *Boktai: The Sun Is in Your Hand*) feature a physical solar sensor built into the game cartridge. When playing on Android devices or handheld consoles without an ambient light sensor (`Sensor.TYPE_LIGHT`), players cannot progress through solar-dependent gameplay mechanics.
+Certain GBA games (e.g. *Boktai: The Sun Is in Your Hand*) feature a physical solar sensor built into the game cartridge. When playing on handheld consoles lacking an ambient light sensor (`Sensor.TYPE_LIGHT`), how should illuminance be handled?
 
 ### Decision
-Bind Android's hardware `Sensor.TYPE_LIGHT` lux readings directly to Libretro sensor ID 6 (`RETRO_SENSOR_ILLUMINANCE`), and provide an **in-game manual Solar Intensity slider** overlay in GameGrl to allow players to manually set the solar light level on handheld devices lacking light sensors.
+Map Android's hardware `Sensor.TYPE_LIGHT` lux readings directly to Libretro sensor ID 6 (`RETRO_SENSOR_ILLUMINANCE`) when supported by the hardware. If the device lacks a light sensor, ignore illuminance—players use widely available solar ROM hacks that patch out light requirements.
 
 ### Positive Consequences
-- **Complete Playability**: *Boktai* and other solar-sensor ROMs remain 100% playable regardless of hardware sensor presence.
+- **Zero UI Bloat**: Avoids cluttering the GameGrl in-game overlay menu with artificial brightness sliders.
+
+---
+
+## ADR-007: mGBA Local Wi-Fi Link Cable Multiplayer (Post-MVP)
+
+### Context & Problem Statement
+Players wish to engage in GBA local multiplayer (e.g. Pokemon trading and head-to-head battles).
+
+### Decision
+Implement mGBA local link cable networking by exchanging SIO register bytes over local Wi-Fi TCP/UDP sockets (similar to My Boy! and Libretro Netplay). **Defer to Post-MVP Phase 5.3** to keep v1 release focus tight.
+
+### Positive Consequences
+- **Tight v1 Scope**: Guarantees on-time v1 launch while preserving clear architectural hooks for local Wi-Fi link cable multiplayer in post-MVP.

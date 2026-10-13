@@ -10,7 +10,7 @@ This document identifies high-severity technical, performance, and memory risks 
 | **RISK-02** | **High** | **Medium** | **mGBA Rewind Ring Buffer Memory Pressure**: Allocating 20–50 MB native ring buffer for real-time frame rewind causing low-memory kills. | App process termination during extended rewind sessions. | Implement dynamically capped rewind buffers (e.g. 15s / 30s configurable) with compressed state diffing in C++. |
 | **RISK-03** | **Medium** | **Medium** | **LCD/CRT Shader GPU Overhead**: Heavy EGL GLSL display shaders (`crt-easymode.glsl`) dropping frame rate below 60 Hz. | Video stutter during active gameplay. | Provide lightweight fallback GLSL shaders (`lcd-grid.glsl`, bilinear filtering) auto-selected on lower-end GPUs. |
 | **RISK-04** | **High** | **Medium** | **RetroAchievements Hardcore Mode vs. Rewind Conflict**: RetroAchievements strictly prohibits Rewind and Save States in Hardcore Mode. | Invalidated achievement unlocks or cheating flags. | GameGrl automatically disables the Rewind button and Save State slots whenever Hardcore Mode is enabled. |
-| **RISK-05** | **Medium** | **High** | **Ambient Light Sensor Absence on Handheld Consoles**: Dedicated Android handhelds (e.g., Retroid, Odin) lacking `Sensor.TYPE_LIGHT` hardware. | Inability to progress in solar-sensor games like *Boktai*. | Provide an in-game "Solar Brightness" slider overlay in GameGrl for solar-sensor GBA games. |
+| **RISK-05** | **Medium** | **Medium** | **mGBA Wi-Fi Link Cable SIO Packet Jitter**: Network packet delay during local Wi-Fi link cable multiplayer causing GBA serial transfer desync. | Connection drop or corrupted trade data in GBA games. | Implement lockstep frame synchronization with buffer queues for local IP sockets (deferred to Phase 5.3 / Post-MVP). |
 
 ---
 
@@ -50,8 +50,8 @@ This document identifies high-severity technical, performance, and memory risks 
 
 ---
 
-### SPIKE-05: Hardware Ambient Light Sensor & Solar Slider Fallback Spike
+### SPIKE-05: mGBA Local Wi-Fi Link Cable SIO Packet Exchange Spike (Post-MVP)
 
-- **Objective**: Validate that `Sensor.TYPE_LIGHT` lux levels map cleanly to Libretro sensor ID 6, and that a manual overlay slider can override the sensor value seamlessly.
-- **Hypothesis**: JNI `sendSensorEvent(6, luxValue)` updates mGBA solar sensor state instantly in games like *Boktai*.
-- **Success Criteria**: In-game solar meter responds smoothly to ambient room light or manual slider adjustments.
+- **Objective**: Test exchanging mGBA SIO serial link bytes over local Wi-Fi TCP/UDP sockets between two Android devices.
+- **Hypothesis**: Local socket transfer latency under 5 ms enables reliable GBA Pokemon trading.
+- **Success Criteria**: Two mGBA instances maintain a stable virtual link cable handshake on local Wi-Fi.

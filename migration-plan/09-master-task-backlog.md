@@ -2,7 +2,7 @@
 
 ## Overview & Tracking
 
-This document contains a prioritized, dependency-linked checklist of implementation tasks for executing the **GameGrl** clean-room migration focused on **mGBA (GB, GBC, GBA)**, **Custom Handheld UI (Carousel, Box Art Flipper, PDF Manuals)**, **RetroAchievements**, **Real-Time Rewind**, **Fast-Forward**, **Solar Light Sensor**, and **LCD Shaders**.
+This document contains a prioritized, dependency-linked checklist of implementation tasks for executing the **GameGrl** clean-room migration focused on **mGBA (GB, GBC, GBA)**, **Custom Handheld UI (Carousel, Box Art Flipper, PDF Manuals)**, **RetroAchievements**, **Real-Time Rewind**, **Fast-Forward**, **Hardware Light Sensor**, **LCD Shaders**, and **Wi-Fi Link Cable Multiplayer (Post-MVP)**.
 
 ---
 
@@ -11,10 +11,10 @@ This document contains a prioritized, dependency-linked checklist of implementat
 ```
 Phase 0: Spikes (TASK-001 -> TASK-003)
   └── Phase 1: Foundation & Theme (TASK-004 -> TASK-010)
-        ├── Phase 2: mGBA, Rewind & Solar Sensor (TASK-011 -> TASK-020)
+        ├── Phase 2: mGBA, Rewind & Sensors (TASK-011 -> TASK-020)
         ├── Phase 3: Custom UI, Carousel, Manuals & Deep Links (TASK-021 -> TASK-030)
         ├── Phase 4: RetroAchievements, Pause & Cheats (TASK-031 -> TASK-040)
-        └── Phase 5: Handheld Controls & Release (TASK-041 -> TASK-050)
+        └── Phase 5: Handheld Controls, Release & Post-MVP (TASK-041 -> TASK-051)
 ```
 
 ---
@@ -109,7 +109,7 @@ Phase 0: Spikes (TASK-001 -> TASK-003)
 
 ---
 
-### Phase 2: mGBA Emulation Kernel, Rewind, Solar Sensor & Shaders
+### Phase 2: mGBA Emulation Kernel, Rewind, Sensors & Shaders
 
 #### `TASK-011`: Build Native GLRetroView mGBA Platform View Factory
 - **Phase**: Phase 2
@@ -175,13 +175,13 @@ Phase 0: Spikes (TASK-001 -> TASK-003)
 - **Description**: Floating pause overlay menu with Pause, Quick-Save, Quick-Load, State Slot Picker, Reset, and Exit actions.
 - **Acceptance Criteria**: In-game menu freezes mGBA emulation smoothly without frame corruption.
 
-#### `TASK-019`: Implement Hardware Light Sensor (`Sensor.TYPE_LIGHT`) & Manual Solar Slider
+#### `TASK-019`: Implement Hardware Light Sensor (`Sensor.TYPE_LIGHT`) Bridge
 - **Phase**: Phase 2
 - **Feature**: `emulation_session`
 - **Dependencies**: `TASK-012`
-- **Effort**: **M**
-- **Description**: Forward ambient light sensor lux levels to Libretro illuminance sensor ID 6 (*Boktai*), and build manual solar intensity slider fallback in overlay menu.
-- **Acceptance Criteria**: Light sensor or manual slider adjusts in-game solar light level accurately.
+- **Effort**: **S**
+- **Description**: Forward ambient light sensor lux levels to Libretro illuminance sensor ID 6 (*Boktai*). Handheld devices lacking light sensors ignore illuminance (solar ROM hacks used).
+- **Acceptance Criteria**: Hardware light sensor adjusts in-game solar light level accurately.
 
 #### `TASK-020`: Implement Fast-Forward Speed Controller
 - **Phase**: Phase 2
@@ -300,7 +300,7 @@ Phase 0: Spikes (TASK-001 -> TASK-003)
 - **Feature**: `retro_achievements`
 - **Dependencies**: `TASK-002`, `TASK-032`
 - **Effort**: **L**
-- **Description**: Wire native `rcheevos` C library to inspect mGBA RAM addresses and emit `onAchievementUnlocked` event channel events.
+- **Description**: Wire native `rcheevos` C library to inspect mGBA RAM addresses and emit `onAchievementUnlocked` event channel events. Hardcore Mode automatically disables Rewind and Save States.
 - **Acceptance Criteria**: In-memory achievement conditions trigger unlock payload across event channel.
 
 #### `TASK-034`: Implement In-Game Achievement Unlock Toast Banner Overlay
@@ -442,3 +442,15 @@ Phase 0: Spikes (TASK-001 -> TASK-003)
 - **Effort**: **S**
 - **Description**: Generate signed production release APK and verify installation on physical Android handheld hardware.
 - **Acceptance Criteria**: Release APK compiles, installs, and executes GameGrl error-free.
+
+---
+
+### Post-MVP Feature Roadmap
+
+#### `TASK-051`: Implement mGBA Local Wi-Fi / IP Socket Link Cable Multiplayer
+- **Phase**: Post-MVP
+- **Feature**: `emulation_session`
+- **Dependencies**: `TASK-050`
+- **Effort**: **XL**
+- **Description**: Implement local Wi-Fi TCP/UDP IP socket SIO register sync allowing two GameGrl devices to connect for GBA Pokemon trading and local wireless multiplayer.
+- **Acceptance Criteria**: Two Android devices running GameGrl on local Wi-Fi perform GBA link cable connection and trade Pokemon cleanly.

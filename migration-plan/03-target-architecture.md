@@ -2,7 +2,7 @@
 
 ## 1. High-Level Architectural Vision
 
-The target architecture for **GameGrl** is built on a **Feature-First Clean Architecture** using custom handheld UI components (scrapping standard Google Material Design), mGBA emulation kernel, real-time frame rewind, fast-forward, solar light sensor integration, LCD/CRT display shaders, PDF game manual viewer, 3D front/back box art, and RetroAchievements integration.
+The target architecture for **GameGrl** is built on a **Feature-First Clean Architecture** using custom handheld UI components (scrapping standard Google Material Design), mGBA emulation kernel, real-time frame rewind, fast-forward, hardware ambient light sensor integration, LCD/CRT display shaders, PDF game manual viewer, 3D front/back box art, and RetroAchievements integration.
 
 ```
                   +-----------------------------------+
@@ -25,7 +25,7 @@ The target architecture for **GameGrl** is built on a **Feature-First Clean Arch
                   |  - mGBA Platform View             |
                   |  - Real-Time Rewind Controller    |
                   |  - Fast-Forward Multiplier        |
-                  |  - Solar Light Sensor (Boktai)    |
+                  |  - Light Sensor (Boktai ID 6)     |
                   |  - In-Game Pause Menu             |
                   |  - LCD / CRT Shader Selector      |
                   +-----------------+-----------------+
@@ -33,6 +33,7 @@ The target architecture for **GameGrl** is built on a **Feature-First Clean Arch
                   +-----------------v-----------------+
                   |   Feature: RetroAchievements      |
                   |  - rcheevos Memory Observer       |
+                  |  - Hardcore Mode Enforcer         |
                   |  - Unlock Banner Toast Overlay    |
                   +-----------------+-----------------+
                                     |
@@ -79,8 +80,7 @@ gamegrl_flutter/
 │   │   │   ├── presentation/            #
 │   │   │   │   ├── game_screen.dart            # Fullscreen mGBA Surface
 │   │   │   │   ├── in_game_pause_menu.dart     # Quick-save, quick-load & reset
-│   │   │   │   ├── rewind_overlay_button.dart  # Hold-to-rewind touch button
-│   │   │   │   └── solar_sensor_slider.dart    # Manual solar intensity slider fallback
+│   │   │   │   └── rewind_overlay_button.dart  # Hold-to-rewind touch button
 │   │   │   ├── state/                   # EmulationSessionNotifier, RewindNotifier
 │   │   │   └── data/                    # NativeEmulationBridge, NativeSensorBridge
 │   │   │
@@ -122,10 +122,10 @@ gamegrl_flutter/
 
 ### 3.1 Command Channel (`com.swordfish.lemuroid/emulation_command`)
 - `initializeCoreAndGame(dataMap)` -> Loads `mgba.so` and ROM path.
-- `setRewindEnabled(enabled, bufferSizeMb)` -> Allocates native frame rewind buffer.
+- `setRewindEnabled(enabled, bufferSizeMb)` -> Allocates native frame rewind buffer (disabled automatically in Hardcore Mode).
 - `rewindStep(stepsCount)` -> Rewinds mGBA state backward by N frames.
 - `setFastForwardRatio(multiplier)` -> Fast-forwards mGBA emulation (1.5x–8x).
-- `sendSensorEvent(sensorId: 6, value: lux)` -> Forwards light sensor reading to mGBA solar sensor (*Boktai*).
+- `sendSensorEvent(sensorId: 6, value: lux)` -> Forwards hardware light sensor reading to mGBA solar sensor (*Boktai*).
 - `setShader(shaderName)` -> Loads EGL GLSL shader preset (`lcd-grid.glsl`, `crt-easymode.glsl`).
 - `initRetroAchievements(username, token, gameHash)` -> Initializes `rcheevos` memory observer.
 

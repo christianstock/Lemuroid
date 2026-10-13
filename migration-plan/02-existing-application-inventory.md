@@ -11,13 +11,14 @@ All standard Android Material Design layouts, Compose BOM dependencies, and Andr
   - *Android TV Leanback UI*: Explicitly deleted (`Remove`).
 - **`retrograde-app-shared`**:
   - *mGBA Core & JNI Engine*: Retained (`Retain` & `Wrap`).
-  - *MotionManager.kt*: Reimplemented in Dart + JNI (`Reimplement` & `Wrap`) including Accelerometer, Gyroscope, and **Light Sensor (`Sensor.TYPE_LIGHT`)** mapped to Libretro illuminance sensor 6.
+  - *MotionManager.kt*: Reimplemented in Dart + JNI (`Reimplement` & `Wrap`) including Accelerometer, Gyroscope, and **Light Sensor (`Sensor.TYPE_LIGHT`)** mapped to Libretro illuminance sensor 6. Handheld devices lacking light sensors ignore illuminance (solar ROM hacks utilized).
   - *PDF Manual Processor*: Rebuilt as Flutter PDF manual viewer (`Reimplement`).
   - *Shader Chooser*: EGL GLSL LCD and CRT display shaders (`Wrap`).
   - *Cover Utils*: Expanded to dual-sided Front & Back 3D Box Art (`Reimplement`).
   - *Rewind Buffer*: JNI rewind frame buffer bridge (`Wrap` & `Reimplement`).
   - *Deep Link Engine*: Reimplemented via `go_router` deep links (`Reimplement`).
   - *Cache Cleaner*: Rebuilt as background cleanup task (`Reimplement`).
+  - *mGBA Link Cable Multiplayer*: Local Wi-Fi socket link cable (`Defer`).
 
 ---
 
@@ -26,15 +27,15 @@ All standard Android Material Design layouts, Compose BOM dependencies, and Andr
 ### 2.1 Emulation Core (`mgba`), Sensors, Rewind & Shaders
 - **mGBA Core Engine (`mgba.so`)**: **`Retain`** (C core binary for GB, GBC, GBA).
 - **GLRetroView Surface View**: **`Wrap`** (Flutter `AndroidView` platform view).
-- **Light & Solar Sensor Input**:
+- **Light Sensor Input**:
   - *Existing Files*: `MotionManager.kt` (`Sensor.TYPE_LIGHT` mapped to `sendSensorEvent(6, lux)`).
-  - *Disposition*: **`Reimplement`** (Dart sensor listener forwarding lux levels to JNI, plus manual solar intensity slider fallback).
+  - *Disposition*: **`Reimplement`** (Dart sensor listener forwarding lux levels to JNI when hardware sensor is present; ignored otherwise).
 - **Microphone Input Stream**:
   - *Existing Files*: `GameViewModelRetroGameView.kt` (`RECORD_AUDIO`).
   - *Disposition*: **`Reimplement`** (Audio recorder buffer passed to mGBA core).
 - **Real-Time Frame Rewind**:
   - *Existing Files*: `LibretroDroid.java` (`setRewindBuffer`, `rewindStep`).
-  - *Disposition*: **`Wrap` & `Reimplement`** (Dart `RewindController` invoking JNI frame rewind steps).
+  - *Disposition*: **`Wrap` & `Reimplement`** (Dart `RewindController`; automatically disabled in RetroAchievements Hardcore Mode).
 - **Fast-Forward Speed Toggle**:
   - *Existing Files*: `GameActivity.kt`.
   - *Disposition*: **`Reimplement`** (mGBA speed multiplier toggle 1.5x–8x).
@@ -62,18 +63,20 @@ All standard Android Material Design layouts, Compose BOM dependencies, and Andr
 
 ---
 
-### 2.3 Deep Links & Cache Management
+### 2.3 Deep Links, Cache Management & Multiplayer
 - **Deep Link Launcher**:
   - *Existing Files*: `DeepLink.kt`.
   - *Disposition*: **`Reimplement`** (`gamegrl://launch?gameId=...` URI routing).
 - **Automated Cache Cleaner**:
   - *Existing Files*: `CacheCleanerWork.kt`.
   - *Disposition*: **`Reimplement`** (Background worker deleting temporary ROM extraction files and stale thumbnails).
+- **mGBA Local Wi-Fi Link Cable Multiplayer**:
+  - *Disposition*: **`Defer`** (Local Wi-Fi / IP sockets exchanging mGBA SIO register state for Pokemon trading; deferred to Post-MVP Phase 5.2).
 
 ---
 
 ### 2.4 RetroAchievements Subsystem
-- **Purpose**: User login, hardcode mode, in-memory achievement trigger evaluation via `rcheevos` C library, unlock popups, and badge image caching.
+- **Purpose**: User login, hardcore mode (automatically disables Rewind & Save States), in-memory achievement trigger evaluation via `rcheevos` C library, unlock popups, and badge image caching.
 - **Disposition**: **`New / Reimplement`** (Native C memory observer + Dart RetroAchievements repository).
 
 ---
@@ -90,7 +93,7 @@ All standard Android Material Design layouts, Compose BOM dependencies, and Andr
 | Subsystem / Feature | Existing Location | Target Disposition | Target Implementation |
 | :--- | :--- | :--- | :--- |
 | **mGBA Core Binary (`mgba.so`)** | `lemuroid_core_mgba` | **`Retain`** | Native C `mgba.so` library |
-| **Solar Light Sensor (Boktai)**| `MotionManager.kt` | **`Reimplement`** | `Sensor.TYPE_LIGHT` -> ID 6 + Slider |
+| **Hardware Light Sensor** | `MotionManager.kt` | **`Reimplement`** | `Sensor.TYPE_LIGHT` -> ID 6 |
 | **Microphone Stream** | `GameViewModelRetroGameView.kt` | **`Reimplement`** | `RECORD_AUDIO` mic buffer |
 | **Real-Time Frame Rewind** | `LibretroDroid.java` | **`Wrap` & `Reimplement`**| Dart `RewindController` + JNI |
 | **Fast-Forward Speed Toggle** | `GameActivity.kt` | **`Reimplement`** | mGBA speed multiplier toggle |
@@ -103,5 +106,6 @@ All standard Android Material Design layouts, Compose BOM dependencies, and Andr
 | **Automated Cache Cleaner** | `CacheCleanerWork.kt` | **`Reimplement`** | Background cache cleanup worker |
 | **RetroAchievements Engine** | N/A (New Feature) | **`New / Reimplement`**| Native `rcheevos` C + Dart API |
 | **Database Storage** | `RetrogradeDatabase` (Room)| **`Replace`** | `drift` SQLite database (`retrograde.db`) |
+| **mGBA Wi-Fi Link Cable** | N/A (Future Feature) | **`Defer`** | Local IP Socket Link Cable (Post-MVP) |
 | **Android TV Codebase** | `app/tv/*` | **`Remove`** | Completely deleted |
 | **Material Design UI** | Compose Material3 | **`Remove`** | Replaced with custom GameGrl UI |
