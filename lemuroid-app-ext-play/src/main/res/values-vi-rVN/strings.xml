@@ -18,7 +18,7 @@
   ~  along with this program.  If not, see <http://www.gnu.org/licenses/>.
   -->
 <resources>
-    <string name="gdrive_sign_in_failed">Đăng nhập Google thất bại: %s (%s)</string>
+    <string name="gdrive_sign_in_failed">Đăng nhập Google thất bại: %1$s (%2$s)</string>
     <string name="gdrive_sign_in_success">Đã đăng nhập Google với tư cách là %s</string>
     <string name="gdrive_sign_out_success">Đã đăng xuất khỏi Google</string>
     <string name="gdrive_missing_play_services">Google Drive yêu cầu Dịch vụ Google Play, trong khi thiết bị của bạn không hỗ trợ ứng dụng này</string>

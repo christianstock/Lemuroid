@@ -18,7 +18,7 @@
   ~  along with this program.  If not, see <http://www.gnu.org/licenses/>.
   -->
 <resources>
-    <string name="gdrive_sign_in_failed">Google 로그인에 실패했습니다: %s (%s)</string>
+    <string name="gdrive_sign_in_failed">Google 로그인에 실패했습니다: %1$s (%2$s)</string>
     <string name="gdrive_sign_in_success">%s(으)로 Google에 로그인되었습니다</string>
     <string name="gdrive_sign_out_success">Google에서 로그아웃되었습니다</string>
     <string name="gdrive_missing_play_services">Google Drive를 사용하기 위해 필요한 Google Play 서비스가 이 장치에서 지원되지 않습니다</string>

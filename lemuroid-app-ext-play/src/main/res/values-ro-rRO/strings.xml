@@ -18,7 +18,7 @@
   ~  along with this program.  If not, see <http://www.gnu.org/licenses/>.
   -->
 <resources>
-    <string name="gdrive_sign_in_failed">Autentificare la Google a eșuat: %s (%s)</string>
+    <string name="gdrive_sign_in_failed">Autentificare la Google a eșuat: %1$s (%2$s)</string>
     <string name="gdrive_sign_in_success">Autentificat în Google ca %s</string>
     <string name="gdrive_sign_out_success">Deconectat de pe Google</string>
     <string name="gdrive_missing_play_services">Google Drive necesită serviciile Google Play care nu sunt suportate pe dispozitivul dvs</string>

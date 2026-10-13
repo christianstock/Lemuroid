@@ -18,7 +18,7 @@
   ~  along with this program.  If not, see <http://www.gnu.org/licenses/>.
   -->
 <resources>
-    <string name="gdrive_sign_in_failed">Помилка входу в Google: %s (%s)</string>
+    <string name="gdrive_sign_in_failed">Помилка входу в Google: %1$s (%2$s)</string>
     <string name="gdrive_sign_in_success">Ви увійшли в Google як %s</string>
     <string name="gdrive_sign_out_success">Ви вийшли з Google</string>
     <string name="gdrive_missing_play_services">Google Drive вимагає сервіси Google Play, які не підтримуються на вашому пристрої</string>

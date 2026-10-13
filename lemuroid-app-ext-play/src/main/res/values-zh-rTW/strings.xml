@@ -18,7 +18,7 @@
   ~  along with this program.  If not, see <http://www.gnu.org/licenses/>.
   -->
 <resources>
-    <string name="gdrive_sign_in_failed">Google 登錄失敗： %s (%s)</string>
+    <string name="gdrive_sign_in_failed">Google 登錄失敗： %1$s (%2$s)</string>
     <string name="gdrive_sign_in_success">已登錄 Google 賬戶 %s</string>
     <string name="gdrive_sign_out_success">已登出 Google 帳戶</string>
     <string name="gdrive_missing_play_services">Google 雲端硬碟需要 Google Play 服務，您的設備不支援。</string>

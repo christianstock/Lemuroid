@@ -19,7 +19,7 @@
   -->
 
 <resources>
-    <string name="gdrive_sign_in_failed">Google Sign In failed: %s (%s)</string>
+    <string name="gdrive_sign_in_failed">Google Sign In failed: %1$s (%2$s)</string>
     <string name="gdrive_sign_in_success">Logged in to Google as %s</string>
     <string name="gdrive_sign_out_success">Logged out from Google</string>
     <string name="gdrive_missing_play_services">Google Drive requires Google Play Services which are not supported on your device</string>

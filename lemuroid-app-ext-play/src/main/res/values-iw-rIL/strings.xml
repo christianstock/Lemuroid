@@ -18,7 +18,7 @@
   ~  along with this program.  If not, see <http://www.gnu.org/licenses/>.
   -->
 <resources>
-    <string name="gdrive_sign_in_failed">התחברות דרך גוגל נכשלה: %s (%s)</string>
+    <string name="gdrive_sign_in_failed">התחברות דרך גוגל נכשלה: %1$s (%2$s)</string>
     <string name="gdrive_sign_in_success">מחובר דרך גוגל כ%s</string>
     <string name="gdrive_sign_out_success">התנקת בהצלחה מגוגל</string>
     <string name="gdrive_missing_play_services">התחברות דרך גוגל דרייב מצריכה את שירותי Google Play שאינם זמינים במכשירך</string>
