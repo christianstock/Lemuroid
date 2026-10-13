@@ -59,21 +59,21 @@ Phase 0: Spikes (TASK-001 -> TASK-003)
 - **Description**: Set up target Flutter project (`gamegrl_flutter` with org `com.lunadust.gamegrl`), directory tree, Riverpod `ProviderScope`, and GameGrl dark handheld theme.
 - **Acceptance Criteria**: App compiles cleanly (`flutter analyze`) and launches GameGrl shell. [PASSED]
 
-#### `TASK-005`: Configure GameGrouter Navigation Stack
+#### `TASK-005`: Configure GameGrouter Navigation Stack [COMPLETED]
 - **Phase**: Phase 1
 - **Feature**: `shared`
 - **Dependencies**: `TASK-004`
 - **Effort**: **S**
 - **Description**: Implement route map (`/`, `/carousel`, `/games`, `/emulation_session`, `/manual_viewer`, `/retro_achievements`, `/settings`).
-- **Acceptance Criteria**: Route navigation functions cleanly with back-stack support.
+- **Acceptance Criteria**: Route navigation functions cleanly with back-stack support. [PASSED]
 
-#### `TASK-006`: Implement Drift SQLite Database Schema
+#### `TASK-006`: Implement Drift SQLite Database Schema [COMPLETED]
 - **Phase**: Phase 1
 - **Feature**: `shared/database`
 - **Dependencies**: `TASK-004`
 - **Effort**: **M**
 - **Description**: Create Drift tables (`games`, `data_files`, `game_cheats`, `achievements`) with support for `backCoverUrl` and `manualUrl`.
-- **Acceptance Criteria**: Drift code generation creates type-safe DAOs; database initializes successfully.
+- **Acceptance Criteria**: Drift code generation creates type-safe DAOs; database initializes successfully. [PASSED]
 
 #### `TASK-007`: Implement Room Database Migration Handler
 - **Phase**: Phase 1
@@ -83,21 +83,21 @@ Phase 0: Spikes (TASK-001 -> TASK-003)
 - **Description**: Write SQLite schema migration opener converting existing `retrograde.db` files without data loss.
 - **Acceptance Criteria**: Unit tests confirm legacy seed SQLite DB opens and imports games cleanly.
 
-#### `TASK-008`: Implement Shared App Logger & Error Handler
+#### `TASK-008`: Implement Shared App Logger & Error Handler [COMPLETED]
 - **Phase**: Phase 1
 - **Feature**: `core`
 - **Dependencies**: `TASK-004`
 - **Effort**: **XS**
 - **Description**: Build unified logging utility piping Dart logs to logcat in debug mode.
-- **Acceptance Criteria**: Log statements filtered by severity level.
+- **Acceptance Criteria**: Log statements filtered by severity level. [PASSED]
 
-#### `TASK-009`: Implement App Preferences Store
+#### `TASK-009`: Implement App Preferences Store [COMPLETED]
 - **Phase**: Phase 1
 - **Feature**: `settings`
 - **Dependencies**: `TASK-004`
 - **Effort**: **S**
 - **Description**: Create `SharedPreferencesWithCache` wrapper for settings (screen filter, low-latency audio, RetroAchievements login).
-- **Acceptance Criteria**: Preference state persists across app restarts.
+- **Acceptance Criteria**: Preference state persists across app restarts. [PASSED]
 
 #### `TASK-010`: Implement Game Boy LCD Palette Engine [COMPLETED]
 - **Phase**: Phase 1
