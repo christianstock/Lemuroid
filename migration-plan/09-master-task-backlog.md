@@ -10,7 +10,7 @@ This document contains a prioritized, dependency-linked checklist of implementat
 
 ```
 Phase 0: Spikes (TASK-001 -> TASK-003)
-  └── Phase 1: Foundation & Theme (TASK-004 -> TASK-010)
+  └── Phase 1: Foundation & Theme (TASK-004 -> TASK-010) [IN PROGRESS]
         ├── Phase 2: mGBA, Rewind & Sensors (TASK-011 -> TASK-020)
         ├── Phase 3: Custom UI, Carousel, Manuals & Storage (TASK-021 -> TASK-030)
         ├── Phase 4: RetroAchievements, Pause & Cheats (TASK-031 -> TASK-040)
@@ -51,13 +51,13 @@ Phase 0: Spikes (TASK-001 -> TASK-003)
 
 ### Phase 1: Core Foundation & GameGrl Custom Theme Engine
 
-#### `TASK-004`: Initialize GameGrl Flutter Application Shell
+#### `TASK-004`: Initialize GameGrl Flutter Application Shell [COMPLETED]
 - **Phase**: Phase 1
 - **Feature**: `shared`
 - **Dependencies**: `TASK-001`
 - **Effort**: **S**
-- **Description**: Set up target Flutter project, directory tree, Riverpod `ProviderScope`, and GameGrl dark handheld theme.
-- **Acceptance Criteria**: App compiles cleanly (`flutter analyze`) and launches GameGrl shell.
+- **Description**: Set up target Flutter project (`gamegrl_flutter` with org `com.lunadust.gamegrl`), directory tree, Riverpod `ProviderScope`, and GameGrl dark handheld theme.
+- **Acceptance Criteria**: App compiles cleanly (`flutter analyze`) and launches GameGrl shell. [PASSED]
 
 #### `TASK-005`: Configure GameGrouter Navigation Stack
 - **Phase**: Phase 1
@@ -99,13 +99,13 @@ Phase 0: Spikes (TASK-001 -> TASK-003)
 - **Description**: Create `SharedPreferencesWithCache` wrapper for settings (screen filter, low-latency audio, RetroAchievements login).
 - **Acceptance Criteria**: Preference state persists across app restarts.
 
-#### `TASK-010`: Implement Game Boy LCD Palette Engine
+#### `TASK-010`: Implement Game Boy LCD Palette Engine [COMPLETED]
 - **Phase**: Phase 1
 - **Feature**: `theme_engine`
 - **Dependencies**: `TASK-004`
 - **Effort**: **S**
 - **Description**: Theme provider allowing users to pick Game Boy LCD color palette presets (DMG Green, Pocket Gray, Light Blue, Atomic Purple).
-- **Acceptance Criteria**: Changing palette preset updates UI accent styling and mGBA palette shader.
+- **Acceptance Criteria**: Changing palette preset updates UI accent styling and mGBA palette shader. [PASSED]
 
 ---
 
