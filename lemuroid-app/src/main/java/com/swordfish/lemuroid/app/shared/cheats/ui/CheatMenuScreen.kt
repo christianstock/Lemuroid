@@ -70,9 +70,7 @@ private val MgbaDarkGreen = Color(0xFF1B3B1B)
 private val StarYellow = Color(0xFFFFD600)
 private val StarGreyOutline = Color(0xFFA0A0A0)
 
-val pressStart2PFontFamily = FontFamily(
-    Font(R.font.press_start_2p, FontWeight.Normal)
-)
+val pressStart2PFontFamily = FontFamily.Monospace
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
