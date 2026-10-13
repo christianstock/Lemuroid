@@ -18,7 +18,7 @@
   ~  along with this program.  If not, see <http://www.gnu.org/licenses/>.
   -->
 <resources>
-    <string name="gdrive_sign_in_failed">Αποτυχία σύνδεσης στην Google: %s (%s)</string>
+    <string name="gdrive_sign_in_failed">Αποτυχία σύνδεσης στην Google: %1$s (%2$s)</string>
     <string name="gdrive_sign_in_success">Συνδέθηκε στην Google ως %s</string>
     <string name="gdrive_sign_out_success">Αποσυνδεμένο από Google</string>
     <string name="gdrive_missing_play_services">Το Google Drive απαιτεί τα Google Play Services τα οποία δεν υποστηρίζονται στη συσκευή σας</string>
