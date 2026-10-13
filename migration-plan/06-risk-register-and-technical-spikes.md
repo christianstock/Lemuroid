@@ -2,15 +2,15 @@
 
 ## 1. Prioritized Architectural Risk Register
 
-This document identifies high-severity technical, performance, and memory risks associated with building **GameGrl** for Game Boy (GB, GBC, GBA via mGBA) emulation, RetroAchievements, real-time rewind, and LCD shaders.
+This document identifies high-severity technical, performance, and memory risks associated with building **GameGrl** for Game Boy (GB, GBC, GBA via mGBA) emulation, RetroAchievements, real-time rewind, solar light sensors, and LCD shaders.
 
 | Risk ID | Severity | Likelihood | Risk Description | Primary Impact | Mitigation Strategy |
 | :--- | :---: | :---: | :--- | :--- | :--- |
 | **RISK-01** | **High** | **Low** | **mGBA Platform View Frame Stutter**: Flutter `AndroidView` composition overhead causing audio crackling in fast GBA games. | Frame drops (< 60 FPS) on low-end devices. | Use Texture Layer Hybrid Composition (TLHC) and optimize mGBA EGL surface buffer swaps. |
 | **RISK-02** | **High** | **Medium** | **mGBA Rewind Ring Buffer Memory Pressure**: Allocating 20–50 MB native ring buffer for real-time frame rewind causing low-memory kills. | App process termination during extended rewind sessions. | Implement dynamically capped rewind buffers (e.g. 15s / 30s configurable) with compressed state diffing in C++. |
 | **RISK-03** | **Medium** | **Medium** | **LCD/CRT Shader GPU Overhead**: Heavy EGL GLSL display shaders (`crt-easymode.glsl`) dropping frame rate below 60 Hz. | Video stutter during active gameplay. | Provide lightweight fallback GLSL shaders (`lcd-grid.glsl`, bilinear filtering) auto-selected on lower-end GPUs. |
-| **RISK-04** | **High** | **Medium** | **RetroAchievements RAM Polling Overhead**: Real-time memory inspection by `rcheevos` C library interfering with mGBA's `retro_run()` loop timing. | Periodic micro-stutters during achievement checks. | Execute `rcheevos` RAM evaluation asynchronously on a separate C++ background thread or during vblank callbacks. |
-| **RISK-05** | **Medium** | **High** | **SAF GBA Directory Scan Latency**: Dart-side traversal of Android Storage Access Framework URIs slowing down catalog indexing. | App freeze during initial ROM setup. | Delegate bulk tree traversal to a native C++/Kotlin thread worker over platform channels. |
+| **RISK-04** | **High** | **Medium** | **RetroAchievements Hardcore Mode vs. Rewind Conflict**: RetroAchievements strictly prohibits Rewind and Save States in Hardcore Mode. | Invalidated achievement unlocks or cheating flags. | GameGrl automatically disables the Rewind button and Save State slots whenever Hardcore Mode is enabled. |
+| **RISK-05** | **Medium** | **High** | **Ambient Light Sensor Absence on Handheld Consoles**: Dedicated Android handhelds (e.g., Retroid, Odin) lacking `Sensor.TYPE_LIGHT` hardware. | Inability to progress in solar-sensor games like *Boktai*. | Provide an in-game "Solar Brightness" slider overlay in GameGrl for solar-sensor GBA games. |
 
 ---
 
@@ -30,13 +30,7 @@ This document identifies high-severity technical, performance, and memory risks 
 
 - **Objective**: Test native JNI allocation of 30-second mGBA frame rewind ring buffer and execution of `rewindStep` calls.
 - **Hypothesis**: Pushing compressed mGBA state diffs to a 30 MB ring buffer enables 60 FPS rewind without memory leaks.
-- **Implementation Steps**:
-  1. Allocate native ring buffer in `libretrodroid.cpp` (`retro_serialize_size`).
-  2. Capture state snapshot every N frames during `retro_run()`.
-  3. Invoke `rewindStep()` from Dart on rewind button press.
-- **Success Criteria**:
-  - Holding rewind button smoothly reverses gameplay state backward in real-time.
-  - Total heap memory allocation remains under 35 MB.
+- **Success Criteria**: Holding rewind button smoothly reverses gameplay state backward in real-time.
 
 ---
 
@@ -53,3 +47,11 @@ This document identifies high-severity technical, performance, and memory risks 
 - **Objective**: Benchmark GPU frame render times across LCD Grid, LCD Dot Matrix, and CRT scanline GLSL shaders.
 - **Hypothesis**: Standard mobile GPUs (Adreno / Mali) render LCD grid GLSL shaders at < 4 ms per frame.
 - **Success Criteria**: All LCD shader presets sustain 60 FPS frame rate on target handheld devices.
+
+---
+
+### SPIKE-05: Hardware Ambient Light Sensor & Solar Slider Fallback Spike
+
+- **Objective**: Validate that `Sensor.TYPE_LIGHT` lux levels map cleanly to Libretro sensor ID 6, and that a manual overlay slider can override the sensor value seamlessly.
+- **Hypothesis**: JNI `sendSensorEvent(6, luxValue)` updates mGBA solar sensor state instantly in games like *Boktai*.
+- **Success Criteria**: In-game solar meter responds smoothly to ambient room light or manual slider adjustments.

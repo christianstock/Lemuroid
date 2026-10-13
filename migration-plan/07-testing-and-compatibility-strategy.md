@@ -2,17 +2,17 @@
 
 ## 1. Quality Assurance Vision
 
-Building **GameGrl** requires comprehensive testing across pure Dart logic, custom handheld UI widgets, local SQLite persistence, platform channels, native mGBA core execution, real-time frame rewind, LCD shaders, and PDF game manual rendering.
+Building **GameGrl** requires comprehensive testing across pure Dart logic, custom handheld UI widgets, local SQLite persistence, platform channels, native mGBA core execution, real-time frame rewind, solar light sensors, LCD shaders, and PDF game manual rendering.
 
 ```
        / \
       /   \     Integration Tests (Android Handheld Hardware & Emulators)
-     /  I  \    - Full GBA ROM launch, mGBA JNI rewind, RetroAchievements unlock
+     /  I  \    - Full GBA ROM launch, mGBA JNI rewind, Boktai solar sensor, RetroAchievements
     /-------\
    /    W    \   Widget & UI Tests (GameGrl Custom UI)
-  /-----------\  - 3D Game Carousel, Front/Back Box Art Flipper, PDF Manual Viewer
+  /-----------\  - 3D Game Carousel, Front/Back Box Art Flipper, PDF Manual Viewer, Solar Slider
  /      U      \  Pure Unit Tests (Dart + Mocktail)
-/---------------\ - GBA serial scanner, Rewind buffer logic, Drift DB, RetroAchievements API
+/---------------\ - GBA serial scanner, Light sensor bridge, Rewind buffer, Deep Link handler
 ```
 
 ---
@@ -22,16 +22,19 @@ Building **GameGrl** requires comprehensive testing across pure Dart logic, cust
 ### 2.1 Pure Dart Unit Tests (`test/features/...`)
 - **Key Unit Test Suites**:
   1. `retro_achievements_api_test.dart`: Validates login authentication, game hash matching, and achievement payload deserialization.
-  2. `rewind_controller_test.dart`: Verifies rewind step count calculations and frame delta math.
-  3. `gba_serial_scanner_test.dart`: Verifies header serial extraction (e.g., `AGB-AXVE-USA` for *Pokemon Ruby*).
-  4. `drift_database_test.dart`: Tests SQLite CRUD queries for games, front/back cover URLs, manuals, and achievements.
+  2. `native_sensor_bridge_test.dart`: Verifies ambient light sensor (`Sensor.TYPE_LIGHT`) lux conversion to Libretro illuminance sensor ID 6.
+  3. `deep_link_handler_test.dart`: Verifies URI parsing (`gamegrl://launch?gameId=42`) and navigation routing.
+  4. `rewind_controller_test.dart`: Verifies rewind step count calculations and frame delta math.
+  5. `gba_serial_scanner_test.dart`: Verifies header serial extraction (e.g., `AGB-AXVE-USA` for *Pokemon Ruby*).
+  6. `drift_database_test.dart`: Tests SQLite CRUD queries for games, front/back cover URLs, manuals, and achievements.
 
 ### 2.2 GameGrl Custom Widget & UI Tests (`test/widgets/...`)
 - **Key Widget Test Suites**:
   1. `gamegrl_carousel_view_test.dart`: Verifies custom 3D carousel scroll gesture handling and active item focus.
   2. `box_art_3d_flipper_test.dart`: Verifies tap-to-flip gesture animating 3D matrix transform between front cover and back box art.
   3. `pdf_manual_viewer_test.dart`: Verifies PDF document loading, page zoom, and bookmark navigation.
-  4. `unlock_banner_overlay_test.dart`: Verifies animated entrance and dismissal of RetroAchievements unlock toast banners over mGBA gameplay surface.
+  4. `solar_sensor_slider_test.dart`: Verifies manual solar intensity slider overlay sending custom lux values to JNI bridge.
+  5. `unlock_banner_overlay_test.dart`: Verifies animated entrance and dismissal of RetroAchievements unlock toast banners over mGBA gameplay surface.
 
 ### 2.3 Platform Channel Mock Testing
 - **Implementation**:
@@ -43,6 +46,11 @@ Building **GameGrl** requires comprehensive testing across pure Dart logic, cust
       (MethodCall methodCall) async {
         if (methodCall.method == 'initializeCoreAndGame') {
           return true; // Simulate successful mGBA JNI initialization
+        }
+        if (methodCall.method == 'sendSensorEvent') {
+          final sensorId = methodCall.arguments['sensorId'];
+          final luxValue = methodCall.arguments['value'];
+          return sensorId == 6; // Verify light sensor ID 6
         }
         if (methodCall.method == 'rewindStep') {
           return true; // Simulate mGBA rewind step execution
@@ -82,7 +90,7 @@ Building **GameGrl** requires comprehensive testing across pure Dart logic, cust
 
 ## 5. Physical Test Device Matrix
 
-1. **Touchscreen Smartphone**: Modern Android 12+ device (e.g., Google Pixel / Samsung Galaxy) testing GameGrl custom carousel, PDF manual viewer, and GBA touch skins.
+1. **Touchscreen Smartphone**: Modern Android 12+ device (e.g., Google Pixel / Samsung Galaxy) testing GameGrl custom carousel, PDF manual viewer, hardware light sensor, and GBA touch skins.
 2. **Dedicated Android Handheld Consoles**:
-   - **Retroid Pocket / Ayn Odin**: Handheld consoles with built-in hardware DPAD, A/B/X/Y buttons, L/R shoulder triggers, testing mGBA 60 FPS performance with LCD shaders.
+   - **Retroid Pocket / Ayn Odin**: Handheld consoles with built-in hardware DPAD, A/B/X/Y buttons, L/R shoulder triggers, testing mGBA 60 FPS performance with LCD shaders and manual solar slider.
    - **Anbernic RG353V**: Compact handheld console testing Game Boy LCD color palettes (DMG Green, Pocket Gray) and physical button mapping.

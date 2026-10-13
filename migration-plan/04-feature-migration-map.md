@@ -2,22 +2,25 @@
 
 ## 1. Traceability Overview
 
-This map establishes direct traceability between existing Kotlin/Java/C++ components and target **GameGrl** Flutter features according to the refined product vision: **Custom Handheld UI (No Material Design)**, **mGBA core focus**, **RetroAchievements**, **Rewind**, **PDF Game Manuals**, **Front/Back Box Art**, **In-Game Pause Menu**, **Custom Themes**, and **LCD Shaders**.
+This map establishes direct traceability between existing Kotlin/Java/C++ components and target **GameGrl** Flutter features according to the refined product vision: **Custom Handheld UI (No Material Design)**, **mGBA core focus**, **RetroAchievements**, **Rewind**, **Fast-Forward**, **Solar Light Sensor**, **PDF Game Manuals**, **Front/Back Box Art**, **In-Game Pause Menu**, **Custom Themes**, **LCD Shaders**, **Deep Links**, and **Cache Cleaning**.
 
 ---
 
-## 2. Core Emulation, Rewind & Shader Mapping
+## 2. Core Emulation, Sensors, Rewind & Shader Mapping
 
 | Existing Component Path | Target Path | Disposition | Migration Notes |
 | :--- | :--- | :--- | :--- |
 | `lemuroid_core_mgba` (`mgba.so`) | `android/app/src/main/jniLibs/.../libmgba.so` | **`Retain`** | Retained as primary C/C++ core for GB, GBC, and GBA. |
+| `MotionManager.kt` (Light Sensor) | `lib/features/emulation_session/data/native_sensor_bridge.dart` | **`Reimplement`** | Maps `Sensor.TYPE_LIGHT` lux to Libretro illuminance sensor 6. |
+| `GameViewModelRetroGameView.kt` (Mic) | `lib/features/emulation_session/data/microphone_bridge.dart` | **`Reimplement`** | `RECORD_AUDIO` mic buffer stream passed to mGBA core. |
 | `LibretroDroid.java` (Rewind Buffer) | `lib/features/emulation_session/data/rewind_controller.dart` | **`Wrap` & `Reimplement`** | JNI bridge allocating rewind buffer and executing frame rewind steps. |
+| `GameActivity.kt` (Fast-Forward) | `lib/features/emulation_session/data/fast_forward_controller.dart` | **`Reimplement`** | mGBA speed multiplier toggle (1.5x–8x). |
 | `ShaderChooser.kt` (GLSL Shaders) | `lib/features/shader_engine/data/shader_repository.dart` | **`Wrap`** | EGL GLSL shader selector (`lcd-grid.glsl`, `crt-easymode.glsl`). |
 | `GLRetroView.kt` | `android/.../platform_view/GLRetroViewFactory.kt` | **`Wrap`** | Embedded in Flutter using `AndroidView` platform view. |
 
 ---
 
-## 3. GameGrl Custom UI & Feature Mapping
+## 3. GameGrl Custom UI & Utility Mapping
 
 | Existing Component Path | Target Path | Disposition | Migration Notes |
 | :--- | :--- | :--- | :--- |
@@ -27,6 +30,8 @@ This map establishes direct traceability between existing Kotlin/Java/C++ compon
 | `PdfManualProcessor.kt` | `lib/features/game_manuals/presentation/pdf_manual_viewer_screen.dart` | **`Reimplement`** | Embedded PDF game manual viewer with page zoom. |
 | `GameBoyArt.kt` | `lib/features/theme_engine/domain/gameboy_palette.dart` | **`Reimplement`** | Theme engine providing Game Boy LCD color palettes. |
 | `GameMenuHelper.kt` | `lib/features/emulation_session/presentation/in_game_pause_menu.dart` | **`Reimplement`** | In-game pause menu with state slots, quick-save, and reset. |
+| `DeepLink.kt` | `lib/core/deep_link_handler.dart` | **`Reimplement`** | `gamegrl://launch?gameId=...` URI routing. |
+| `CacheCleanerWork.kt` | `lib/shared/storage/cache_cleaner.dart` | **`Reimplement`** | Background cleanup worker for temporary ROM files and thumbs. |
 
 ---
 

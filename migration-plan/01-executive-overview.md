@@ -24,8 +24,9 @@ Rather than retaining stock Google Material Design tiles or mechanical package t
                                     |
                   +-----------------v-----------------+
                   |      mGBA Core Gameplay Session   |
-                  |  - Real-time Rewind (30s buffer)  |
-                  |  - LCD / CRT Shaders              |
+                  |  - Real-time Rewind & Fast-Fwd    |
+                  |  - Solar Light Sensor (Boktai)    |
+                  |  - LCD / CRT Display Shaders      |
                   |  - In-Game Pause Menu             |
                   |  - RetroAchievements Overlays     |
                   +-----------------------------------+
@@ -39,12 +40,15 @@ Rather than retaining stock Google Material Design tiles or mechanical package t
 - **Home Carousel & Coverflow**: Smooth, custom-animated 3D game carousel replacing standard grid lists.
 - **Interactive Game Info Card**: Displays game stats, description, and an interactive **3D Front & Back Box Art Flipper**.
 - **Embedded PDF Game Manual Viewer**: Integrated PDF engine (`PdfManualProcessor.kt`) allowing users to read game manuals with page pinch-zoom and bookmarking.
-- **GameGrl Themes & Game Boy Palettes**: Custom theme engine supporting OLED dark skins and authentic Game Boy color palette presets (DMG Green, Pocket Gray, Light Blue, Atomic Purple, Game Boy Color colorization).
+- **GameGrl Themes & Game Boy Palettes**: Custom theme engine supporting OLED dark skins and authentic Game Boy color palette presets (DMG Green, Pocket Gray, Light Blue, Atomic Purple).
 
 ### Pillar 2: mGBA Core Focus & Enhanced Emulation Capabilities
 - **Primary Systems**: **Game Boy (GB)**, **Game Boy Color (GBC)**, and **Game Boy Advance (GBA)** powered by the **mGBA** (`mgba.so`) Libretro core.
-- **Future Expansion Roadmap**: Game & Watch (`gw`) and Nintendo DS / 3DS (`melonds` / `citra`). All other legacy systems (PSX, N64, PSP, Arcade, Atari) are dropped.
+- **Future Expansion Roadmap**: Game & Watch (`gw`) and Nintendo DS / 3DS (`melonds` / `citra`). All other legacy systems are explicitly dropped.
 - **Real-Time Frame Rewind**: Up to 30 seconds of real-time state rewind with a single button press or dedicated touch gesture.
+- **Fast-Forward Speed Multiplier**: Variable speed accelerator (1.5x, 2x, 4x, 8x) for mGBA emulation with low-latency audio pitch adjustment.
+- **Hardware Solar Light Sensor (`RETRO_SENSOR_ILLUMINANCE`)**: Maps ambient light sensor (`Sensor.TYPE_LIGHT`) to Libretro sensor ID 6 for GBA solar games (*Boktai*), plus a manual solar intensity slider fallback in the overlay menu for handheld devices lacking light sensors.
+- **Microphone Input (`RECORD_AUDIO`)**: Hardware microphone buffer streaming for mic-dependent ROMs.
 - **In-Game Pause & Session Recovery**: Pause overlay providing state slot selection, quick-save, quick-load, and game reset.
 - **LCD & CRT Display Shaders**: Authentic EGL display shaders (`ShaderChooser.kt`) including LCD Grid, LCD Dot Matrix, Bilinear Filtering, and CRT Scanlines.
 
@@ -61,7 +65,7 @@ Rather than retaining stock Google Material Design tiles or mechanical package t
 |                             GAMEGRL FLUTTER LAYER                             |
 |                                                                               |
 |  [Custom Carousel]  [Game Info Card]  [PDF Manuals]  [3D Front/Back Box Art]  |
-|  [RetroAchievements]  [Rewind Controller]  [LCD Shaders]  [Custom Themes]     |
+|  [RetroAchievements]  [Rewind / Fast-Fwd]  [Solar Slider]  [Custom Themes]    |
 |        |                  |                |                  |               |
 |        +------------------+----------------+------------------+               |
 |                                   |                                           |
@@ -75,6 +79,7 @@ Rather than retaining stock Google Material Design tiles or mechanical package t
 |  [Native JNI Bridge] <---> [mGBA Libretro Core (`mgba.so` C/C++)]            |
 |  [mGBA Rewind Buffer]       [EGL LCD / CRT Shader Pipeline]                   |
 |  [rcheevos C Library] <---> [RetroAchievements Memory Polling]                |
+|  [Hardware Sensors]  <---> [Accelerometer, Gyroscope & Light Sensor (ID 6)]   |
 +-------------------------------------------------------------------------------+
 ```
 
@@ -86,11 +91,21 @@ Rather than retaining stock Google Material Design tiles or mechanical package t
 | :--- | :--- | :--- | :--- |
 | **mGBA Core Binary (`mgba.so`)** | `lemuroid_core_mgba` | **`Retain`** | Native C `mgba.so` library |
 | **RetroAchievements Engine** | N/A (New feature) | **`New / Reimplement`**| Native `rcheevos` C + Dart API |
-| **Home Carousel & Games View** | N/A (New UI) | **`Reimplement`** | Custom Flutter Carousel & Cards |
-| **3D Box Art Flipper (Front/Back)**| `CoverUtils.kt` | **`Reimplement`** | Flutter 3D Transform Flipper Widget |
-| **PDF Game Manual Viewer** | `PdfManualProcessor.kt` | **`Reimplement`** | Flutter PDF render engine |
+| **Solar Light Sensor (Boktai)**| `MotionManager.kt` | **`Reimplement`** | `Sensor.TYPE_LIGHT` -> ID 6 + Slider |
+| **Microphone Input** | `GameViewModelRetroGameView.kt` | **`Reimplement`** | `RECORD_AUDIO` audio stream |
 | **Real-Time Frame Rewind** | `LibretroDroid.java` | **`Wrap` & `Reimplement`**| mGBA rewind buffer JNI calls |
+| **Fast-Forward Speed Toggle** | `GameActivity.kt` | **`Reimplement`** | mGBA speed multiplier toggle |
+| **Deep Link Game Launcher** | `DeepLink.kt` | **`Reimplement`** | `gamegrl://launch?gameId=...` |
 | **LCD / CRT Display Shaders** | `ShaderChooser.kt` | **`Wrap`** | EGL GLSL shader pipeline |
-| **Game Boy Theme Palettes** | `GameBoyArt.kt` | **`Reimplement`** | GameGrl Custom Palette Engine |
+| **PDF Game Manual Viewer** | `PdfManualProcessor.kt` | **`Reimplement`** | Flutter PDF manual viewer |
+| **3D Front/Back Box Art** | `CoverUtils.kt` | **`Reimplement`** | Flutter 3D Box Art Flipper |
+| **Automated Cache Cleaner** | `CacheCleanerWork.kt` | **`Reimplement`** | Background cache cleanup worker |
 | **Database Storage** | `RetrogradeDatabase.kt` | **`Replace`** | Drift SQLite (`retrograde.db`) |
-| **Android TV Codebase** | `app/tv/*` | **`Remove`** | Completely deleted |
+
+---
+
+## 5. Open Questions & Unresolved Decisions Before Execution
+
+1. **Hardcore Mode vs. Rewind**: RetroAchievements Hardcore Mode strictly forbids Rewind and Save States. GameGrl automatically disables Rewind when Hardcore Mode is active.
+2. **Solar Sensor Fallback UI**: On handheld consoles lacking `Sensor.TYPE_LIGHT`, GameGrl provides an in-game manual solar intensity slider overlay.
+3. **mGBA Local Link Cable**: Local wireless/IP GBA link cable networking is deferred to Phase 5.2.

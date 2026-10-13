@@ -7,6 +7,7 @@
 - **[ADR-003]: Custom GameGrl Handheld UI (Scrapping Material Design)**
 - **[ADR-004]: Real-Time Frame Rewind & EGL LCD/CRT Shaders**
 - **[ADR-005]: mGBA Core Focus & RetroAchievements Integration**
+- **[ADR-006]: Solar Light Sensor & Manual Intensity Slider Fallback**
 
 ---
 
@@ -77,3 +78,16 @@ Focus strictly on the gold-standard **mGBA** (`mgba.so`) Libretro core and integ
 ### Positive Consequences
 - **Streamlined Footprint**: Significantly reduces APK size while delivering solid 60 FPS GBA emulation.
 - **RetroAchievements Integration**: Real-time memory polling emits event channel calls that display non-intrusive Flutter unlock banners during gameplay.
+
+---
+
+## ADR-006: Solar Light Sensor & Manual Intensity Slider Fallback
+
+### Context & Problem Statement
+Certain GBA games (e.g. *Boktai: The Sun Is in Your Hand*) feature a physical solar sensor built into the game cartridge. When playing on Android devices or handheld consoles without an ambient light sensor (`Sensor.TYPE_LIGHT`), players cannot progress through solar-dependent gameplay mechanics.
+
+### Decision
+Bind Android's hardware `Sensor.TYPE_LIGHT` lux readings directly to Libretro sensor ID 6 (`RETRO_SENSOR_ILLUMINANCE`), and provide an **in-game manual Solar Intensity slider** overlay in GameGrl to allow players to manually set the solar light level on handheld devices lacking light sensors.
+
+### Positive Consequences
+- **Complete Playability**: *Boktai* and other solar-sensor ROMs remain 100% playable regardless of hardware sensor presence.

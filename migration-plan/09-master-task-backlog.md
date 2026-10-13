@@ -2,7 +2,7 @@
 
 ## Overview & Tracking
 
-This document contains a prioritized, dependency-linked checklist of implementation tasks for executing the **GameGrl** clean-room migration focused on **mGBA (GB, GBC, GBA)**, **Custom Handheld UI (Carousel, Box Art Flipper, PDF Manuals)**, **RetroAchievements**, **Real-Time Rewind**, and **LCD Shaders**.
+This document contains a prioritized, dependency-linked checklist of implementation tasks for executing the **GameGrl** clean-room migration focused on **mGBA (GB, GBC, GBA)**, **Custom Handheld UI (Carousel, Box Art Flipper, PDF Manuals)**, **RetroAchievements**, **Real-Time Rewind**, **Fast-Forward**, **Solar Light Sensor**, and **LCD Shaders**.
 
 ---
 
@@ -11,8 +11,8 @@ This document contains a prioritized, dependency-linked checklist of implementat
 ```
 Phase 0: Spikes (TASK-001 -> TASK-003)
   └── Phase 1: Foundation & Theme (TASK-004 -> TASK-010)
-        ├── Phase 2: mGBA, Rewind & Shaders (TASK-011 -> TASK-020)
-        ├── Phase 3: Custom UI, Carousel & Manuals (TASK-021 -> TASK-030)
+        ├── Phase 2: mGBA, Rewind & Solar Sensor (TASK-011 -> TASK-020)
+        ├── Phase 3: Custom UI, Carousel, Manuals & Deep Links (TASK-021 -> TASK-030)
         ├── Phase 4: RetroAchievements, Pause & Cheats (TASK-031 -> TASK-040)
         └── Phase 5: Handheld Controls & Release (TASK-041 -> TASK-050)
 ```
@@ -109,7 +109,7 @@ Phase 0: Spikes (TASK-001 -> TASK-003)
 
 ---
 
-### Phase 2: mGBA Emulation Kernel, Rewind & Display Shaders
+### Phase 2: mGBA Emulation Kernel, Rewind, Solar Sensor & Shaders
 
 #### `TASK-011`: Build Native GLRetroView mGBA Platform View Factory
 - **Phase**: Phase 2
@@ -175,25 +175,25 @@ Phase 0: Spikes (TASK-001 -> TASK-003)
 - **Description**: Floating pause overlay menu with Pause, Quick-Save, Quick-Load, State Slot Picker, Reset, and Exit actions.
 - **Acceptance Criteria**: In-game menu freezes mGBA emulation smoothly without frame corruption.
 
-#### `TASK-019`: Implement Hardware Motion/Tilt Bridge
+#### `TASK-019`: Implement Hardware Light Sensor (`Sensor.TYPE_LIGHT`) & Manual Solar Slider
 - **Phase**: Phase 2
 - **Feature**: `emulation_session`
-- **Dependencies**: `TASK-013`
-- **Effort**: **S**
-- **Description**: Bind device accelerometer sensors for tilt-compatible GBC/GBA ROMs (e.g., *Yoshi's Universal Gravitation*).
-- **Acceptance Criteria**: Tilting device moves in-game analog tilt controls accurately.
+- **Dependencies**: `TASK-012`
+- **Effort**: **M**
+- **Description**: Forward ambient light sensor lux levels to Libretro illuminance sensor ID 6 (*Boktai*), and build manual solar intensity slider fallback in overlay menu.
+- **Acceptance Criteria**: Light sensor or manual slider adjusts in-game solar light level accurately.
 
-#### `TASK-020`: Implement Device Haptic Rumble Controller
+#### `TASK-020`: Implement Fast-Forward Speed Controller
 - **Phase**: Phase 2
 - **Feature**: `emulation_session`
-- **Dependencies**: `TASK-013`
+- **Dependencies**: `TASK-012`
 - **Effort**: **S**
-- **Description**: Trigger device vibration upon receiving mGBA rumble callbacks (e.g., *Pokemon Pinball*).
-- **Acceptance Criteria**: Haptic feedback triggers accurately during rumble events.
+- **Description**: Implement fast-forward speed toggle (1.5x, 2x, 4x, 8x) for mGBA emulation session.
+- **Acceptance Criteria**: Fast-forward button accelerates gameplay smoothly with low-latency audio pitch scaling.
 
 ---
 
-### Phase 3: GameGrl Custom Handheld UI, Carousel & Manuals
+### Phase 3: GameGrl Custom Handheld UI, Carousel, Manuals & Deep Links
 
 #### `TASK-021`: Implement Native SAF Fast Directory Reader
 - **Phase**: Phase 3
@@ -267,13 +267,13 @@ Phase 0: Spikes (TASK-001 -> TASK-003)
 - **Description**: Custom Game Info Details Card displaying 3D Box Art, game description, developer, stats, and Manual button.
 - **Acceptance Criteria**: Displays complete game info card; tapping Manual button opens PDF manual screen.
 
-#### `TASK-030`: Implement Storage Directory Picker Sheet
+#### `TASK-030`: Implement Deep Link Launcher & Storage Directory Picker
 - **Phase**: Phase 3
 - **Feature**: `game_library`
-- **Dependencies**: `TASK-021`
+- **Dependencies**: `TASK-021`, `TASK-029`
 - **Effort**: **S**
-- **Description**: Build folder selection sheet allowing users to pick GBA/GBC ROM storage directories.
-- **Acceptance Criteria**: Selected SAF URI saved to preferences and triggers rescan.
+- **Description**: Build `gamegrl://launch?gameId=...` deep link URI launcher and directory selector sheet.
+- **Acceptance Criteria**: Deep links launch targeted game directly; directory picker updates SAF roots.
 
 ---
 
@@ -387,13 +387,13 @@ Phase 0: Spikes (TASK-001 -> TASK-003)
 - **Description**: Settings tiles for LCD shader presets, low-latency audio, RetroAchievements account settings, and GameGrl theme selection.
 - **Acceptance Criteria**: Modifying settings updates app configuration immediately.
 
-#### `TASK-044`: Implement Background Task Worker for Rescan
+#### `TASK-044`: Implement Automated Cache Cleaner Worker
 - **Phase**: Phase 5
 - **Feature**: `shared`
 - **Dependencies**: `TASK-024`
 - **Effort**: **S**
-- **Description**: Configure `workmanager` Flutter plugin to schedule periodic ROM library rescans in background.
-- **Acceptance Criteria**: Background rescan updates database without user intervention.
+- **Description**: Configure `workmanager` Flutter plugin to schedule periodic cleanup of temporary ROM extraction files and stale thumbnails.
+- **Acceptance Criteria**: Background cleaner purges expired temporary cache files automatically.
 
 #### `TASK-045`: Execute mGBA 60 FPS Performance Benchmarking
 - **Phase**: Phase 5

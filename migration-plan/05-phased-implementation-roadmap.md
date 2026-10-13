@@ -2,7 +2,7 @@
 
 ## 1. Roadmap Overview & Milestones
 
-The migration is organized into **six incremental phases (Phase 0 through Phase 5)** focused on building **GameGrl**—a custom handheld Game Boy (GB, GBC, GBA via mGBA) emulator with RetroAchievements, real-time rewind, LCD/CRT shaders, PDF game manuals, 3D front/back box art, and custom UI components.
+The migration is organized into **six incremental phases (Phase 0 through Phase 5)** focused on building **GameGrl**—a custom handheld Game Boy (GB, GBC, GBA via mGBA) emulator with RetroAchievements, real-time rewind, fast-forward, solar light sensor (Boktai), LCD/CRT shaders, PDF game manuals, 3D front/back box art, and custom UI components.
 
 ```
 +-------------------------------------------------------------------------------+
@@ -20,17 +20,19 @@ The migration is organized into **six incremental phases (Phase 0 through Phase 
                                        |
                                        v
 +-------------------------------------------------------------------------------+
-| Phase 2: mGBA Kernel, Rewind & LCD/CRT Shaders                                |
-|  - mGBA Platform View + 30-Second Frame Rewind Controller                     |
+| Phase 2: mGBA Kernel, Rewind, Solar Sensor & Shaders                          |
+|  - mGBA Platform View + 30-Second Rewind & Fast-Forward Controllers           |
+|  - Light Sensor (Illuminance 6) & Manual Solar Slider Fallback                |
 |  - EGL LCD Grid / Dot Matrix / CRT Shader Pipeline                            |
-|  * RUNNABLE MILESTONE: Launch GBA game with active Rewind & LCD shaders       |
+|  * RUNNABLE MILESTONE: Launch GBA game with active Rewind & Solar Sensor      |
 +-------------------------------------------------------------------------------+
                                        |
                                        v
 +-------------------------------------------------------------------------------+
-| Phase 3: GameGrl Custom Handheld UI, Carousel & Manuals                       |
+| Phase 3: GameGrl Custom Handheld UI, Carousel, Manuals & Deep Links           |
 |  - Custom 3D Coverflow Game Carousel & Games View                             |
 |  - 3D Front & Back Box Art Flipper + PDF Game Manual Viewer                   |
+|  - Deep Link Router (gamegrl://launch) & Automated Cache Cleaner Task         |
 |  * RUNNABLE MILESTONE: Full custom handheld UI catalog with manuals & box art |
 +-------------------------------------------------------------------------------+
                                        |
@@ -68,7 +70,7 @@ The migration is organized into **six incremental phases (Phase 0 through Phase 
 - **Acceptance Criteria**: Native callback triggers event channel call when RAM value changes.
 
 #### Work Item 0.3: mGBA Real-Time Frame Rewind Buffer Spike
-- **Objective**: Test native JNI allocation of 30-second mGBA frame rewind buffer and execution of `rewindStep` calls.
+- **Objective**: Test native JNI allocation of 30-second mGBA frame rewind ring buffer and execution of `rewindStep` calls.
 - **Effort Estimate**: **M** (Confidence: High)
 - **Acceptance Criteria**: Holding rewind button smoothly reverses mGBA gameplay state backward in real-time.
 
@@ -88,21 +90,26 @@ The migration is organized into **six incremental phases (Phase 0 through Phase 
 
 ---
 
-### Phase 2: mGBA Kernel, Rewind & LCD/CRT Shaders
+### Phase 2: mGBA Kernel, Rewind, Solar Sensor & LCD/CRT Shaders
 
 #### Work Item 2.1: Native mGBA JNI & Rewind Controller Bridge
-- **Objective**: Build JNI bridge for mGBA session lifecycle, core options, and 30-second real-time frame rewind commands.
+- **Objective**: Build JNI bridge for mGBA session lifecycle, core options, fast-forward multiplier, and 30-second real-time frame rewind commands.
 - **Effort Estimate**: **L** (Confidence: High)
-- **Acceptance Criteria**: `initializeCoreAndGame` and `rewindStep` execute smoothly.
+- **Acceptance Criteria**: `initializeCoreAndGame`, `setFastForwardRatio`, and `rewindStep` execute smoothly.
 
-#### Work Item 2.2: EGL LCD & CRT Display Shader Pipeline
+#### Work Item 2.2: Light Sensor (`Sensor.TYPE_LIGHT`) & Manual Solar Slider
+- **Objective**: Forward ambient light sensor lux levels to Libretro sensor 6 for GBA solar games (*Boktai*), and build manual solar intensity slider overlay for handheld devices lacking light sensors.
+- **Effort Estimate**: **M** (Confidence: High)
+- **Acceptance Criteria**: Hardware light sensor or manual slider adjusts in-game solar light level accurately.
+
+#### Work Item 2.3: EGL LCD & CRT Display Shader Pipeline
 - **Objective**: Wire EGL GLSL display shaders (`lcd-grid.glsl`, `lcd-dot-matrix.glsl`, `crt-easymode.glsl`) to mGBA render surface.
 - **Effort Estimate**: **M** (Confidence: High)
 - **Acceptance Criteria**: Selecting LCD or CRT shader preset applies authentic visual filtering instantly.
 
 ---
 
-### Phase 3: GameGrl Custom Handheld UI, Carousel & Manuals
+### Phase 3: GameGrl Custom Handheld UI, Carousel, Manuals & Deep Links
 
 #### Work Item 3.1: Custom 3D Coverflow Carousel & Games View
 - **Objective**: Build bespoke, non-Material 3D game carousel and custom Games View layout.
@@ -118,6 +125,11 @@ The migration is organized into **six incremental phases (Phase 0 through Phase 
 - **Objective**: Build zoomable PDF game manual viewer with page thumbnails and pinch-zoom gestures.
 - **Effort Estimate**: **M** (Confidence: High)
 - **Acceptance Criteria**: Opens PDF manual files smoothly with zoom and page navigation.
+
+#### Work Item 3.4: Deep Link Engine & Automated Cache Cleaner Worker
+- **Objective**: Implement `gamegrl://launch?gameId=...` URI deep-link routing and background cache cleaner deleting temporary ROM extraction files.
+- **Effort Estimate**: **S** (Confidence: High)
+- **Acceptance Criteria**: Deep links launch game directly; background worker cleans temp cache.
 
 ---
 
@@ -164,10 +176,12 @@ The migration is organized into **six incremental phases (Phase 0 through Phase 
 | **Phase 1** | 1.1 | GameGrl Custom Theme & Palette Engine | **S** | High |
 | **Phase 1** | 1.2 | Drift Database Schema & Room Migration | **M** | High |
 | **Phase 2** | 2.1 | Native mGBA JNI & Rewind Controller Bridge | **L** | High |
-| **Phase 2** | 2.2 | EGL LCD & CRT Display Shader Pipeline | **M** | High |
+| **Phase 2** | 2.2 | Solar Light Sensor (ID 6) & Manual Slider | **M** | High |
+| **Phase 2** | 2.3 | EGL LCD & CRT Display Shader Pipeline | **M** | High |
 | **Phase 3** | 3.1 | Custom 3D Coverflow Game Carousel View | **L** | High |
 | **Phase 3** | 3.2 | 3D Front & Back Box Art Flipper Widget | **M** | High |
 | **Phase 3** | 3.3 | Embedded PDF Game Manual Viewer Screen | **M** | High |
+| **Phase 3** | 3.4 | Deep Link Router & Automated Cache Cleaner | **S** | High |
 | **Phase 4** | 4.1 | RetroAchievements Auth & Unlock Banner | **L** | High |
 | **Phase 4** | 4.2 | In-Game Pause Menu & State Slot Recovery | **M** | High |
 | **Phase 4** | 4.3 | GameShark / ActionReplay Cheat Engine | **M** | High |
