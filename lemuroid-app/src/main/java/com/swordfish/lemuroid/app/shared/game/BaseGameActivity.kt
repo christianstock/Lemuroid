@@ -27,7 +27,6 @@ import com.swordfish.lemuroid.app.shared.input.InputDeviceManager
 import com.swordfish.lemuroid.app.shared.motion.MotionManager
 import com.swordfish.lemuroid.app.shared.rumble.RumbleManager
 import com.swordfish.lemuroid.app.shared.settings.ControllerConfigsManager
-import com.swordfish.lemuroid.app.tv.game.TVGameActivity
 import com.swordfish.lemuroid.common.animationDuration
 import com.swordfish.lemuroid.common.coroutines.launchOnState
 import com.swordfish.lemuroid.common.displayToast
@@ -466,19 +465,12 @@ abstract class BaseGameActivity : ImmersiveActivity() {
             systemCoreConfig: SystemCoreConfig,
             game: Game,
             loadSave: Boolean,
-            useLeanback: Boolean,
         ) {
-            val gameActivity =
-                if (useLeanback) {
-                    TVGameActivity::class.java
-                } else {
-                    GameActivity::class.java
-                }
+            val gameActivity = GameActivity::class.java
             activity.startActivityForResult(
                 Intent(activity, gameActivity).apply {
                     putExtra(EXTRA_GAME, game)
                     putExtra(EXTRA_LOAD_SAVE, loadSave)
-                    putExtra(EXTRA_LEANBACK, useLeanback)
                     putExtra(EXTRA_SYSTEM_CORE_CONFIG, systemCoreConfig)
                 },
                 REQUEST_PLAY_GAME,

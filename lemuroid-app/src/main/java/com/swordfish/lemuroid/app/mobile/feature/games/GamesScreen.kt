@@ -75,7 +75,7 @@ private val RetroAmbientPalette = listOf(
     Color(0xFFFF1744)  // CRT Crimson
 )
 
-val pressStart2PFontFamily = FontFamily.Monospace
+val pressStart2PFontFamily = FontFamily(Font(R.font.press_start_2p))
 
 @Stable
 class GridRipple(

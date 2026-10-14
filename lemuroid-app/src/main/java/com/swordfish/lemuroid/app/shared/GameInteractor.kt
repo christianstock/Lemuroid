@@ -28,7 +28,7 @@ class GameInteractor(
         if (!ensureNotificationsPermissionAvailable()) {
             return
         }
-        gameLauncher.launchGameAsync(activity.activity(), game, true, useLeanback)
+        gameLauncher.launchGameAsync(activity.activity(), game, true)
     }
 
     fun onGameRestart(game: Game) {
@@ -38,7 +38,7 @@ class GameInteractor(
         if (!ensureNotificationsPermissionAvailable()) {
             return
         }
-        gameLauncher.launchGameAsync(activity.activity(), game, false, useLeanback)
+        gameLauncher.launchGameAsync(activity.activity(), game, false)
     }
 
     fun onFavoriteToggle(

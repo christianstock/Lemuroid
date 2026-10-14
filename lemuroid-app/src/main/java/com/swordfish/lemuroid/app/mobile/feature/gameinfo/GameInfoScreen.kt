@@ -50,7 +50,7 @@ import com.swordfish.lemuroid.lib.library.db.entity.Game
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-val PressStart2PFont = FontFamily.Monospace
+val PressStart2PFont = FontFamily(Font(R.font.press_start_2p))
 
 @Composable
 fun GameInfoScreen(

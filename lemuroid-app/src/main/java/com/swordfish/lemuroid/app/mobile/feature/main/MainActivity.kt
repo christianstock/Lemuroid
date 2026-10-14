@@ -26,8 +26,6 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.fredporciuncula.flow.preferences.FlowSharedPreferences
 import com.swordfish.lemuroid.R
-import com.swordfish.lemuroid.app.mobile.feature.favorites.FavoritesScreen
-import com.swordfish.lemuroid.app.mobile.feature.favorites.FavoritesViewModel
 import com.swordfish.lemuroid.app.mobile.feature.games.GamesScreen
 import com.swordfish.lemuroid.app.mobile.feature.games.GamesViewModel
 import com.swordfish.lemuroid.app.mobile.feature.gameinfo.GameInfoScreen
@@ -38,9 +36,6 @@ import com.swordfish.lemuroid.app.mobile.feature.home.HomeScreen
 import com.swordfish.lemuroid.app.mobile.feature.home.HomeViewModel
 import com.swordfish.lemuroid.lib.library.LemuroidLibrary
 import com.swordfish.lemuroid.lib.library.metadata.GameMetadataProvider
-import com.swordfish.lemuroid.lib.storage.StorageProviderRegistry
-import com.swordfish.lemuroid.app.mobile.feature.search.SearchScreen
-import com.swordfish.lemuroid.app.mobile.feature.search.SearchViewModel
 import com.swordfish.lemuroid.app.mobile.feature.settings.advanced.AdvancedSettingsScreen
 import com.swordfish.lemuroid.app.mobile.feature.settings.advanced.AdvancedSettingsViewModel
 import com.swordfish.lemuroid.app.mobile.feature.settings.bios.BiosScreen
@@ -54,8 +49,6 @@ import com.swordfish.lemuroid.app.mobile.feature.settings.inputdevices.InputDevi
 import com.swordfish.lemuroid.app.mobile.feature.settings.savesync.SaveSyncSettingsScreen
 import com.swordfish.lemuroid.app.mobile.feature.settings.savesync.SaveSyncSettingsViewModel
 import com.swordfish.lemuroid.app.mobile.feature.shortcuts.ShortcutsGenerator
-import com.swordfish.lemuroid.app.mobile.feature.systems.MetaSystemsScreen
-import com.swordfish.lemuroid.app.mobile.feature.systems.MetaSystemsViewModel
 import com.swordfish.lemuroid.app.mobile.shared.compose.ui.AppTheme
 import com.swordfish.lemuroid.app.shared.GameInteractor
 import com.swordfish.lemuroid.app.shared.GameMenuContract
@@ -235,46 +228,6 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
                             },
                             onOpenCoreSelection = { navController.navigateToRoute(MainRoute.SETTINGS_CORES_SELECTION) },
                             onOpenSettings = { navController.navigate(MainRoute.SETTINGS.route) },
-                        )
-                    }
-                    composable(MainRoute.FAVORITES) {
-                        FavoritesScreen(
-                            modifier = Modifier.padding(padding),
-                            viewModel =
-                                viewModel(
-                                    factory = FavoritesViewModel.Factory(retrogradeDb),
-                                ),
-                            onGameClick = onGameClick,
-                            onGameLongClick = onGameLongClick,
-                        )
-                    }
-                    composable(MainRoute.SEARCH) {
-                        SearchScreen(
-                            modifier = Modifier.padding(padding),
-                            viewModel =
-                                viewModel(
-                                    factory = SearchViewModel.Factory(retrogradeDb),
-                                ),
-                            searchQuery = mainUIState.searchQuery,
-                            onGameClick = onGameClick,
-                            onGameLongClick = onGameLongClick,
-                            onGameFavoriteToggle = onGameFavoriteToggle,
-                            onResetSearchQuery = { mainViewModel.changeQueryString("") },
-                        )
-                    }
-                    composable(MainRoute.SYSTEMS) {
-                        MetaSystemsScreen(
-                            modifier = Modifier.padding(padding),
-                            navController = navController,
-                            viewModel =
-                                viewModel(
-                                    factory =
-                                        MetaSystemsViewModel.Factory(
-                                            retrogradeDb,
-                                            applicationContext,
-                                        ),
-                                ),
-                            homeViewModel = homeViewModel
                         )
                     }
                     composable(MainRoute.SYSTEM_GAMES) { entry ->

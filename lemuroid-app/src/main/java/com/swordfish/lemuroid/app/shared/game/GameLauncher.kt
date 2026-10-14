@@ -21,7 +21,6 @@ class GameLauncher(
         activity: Activity,
         game: Game,
         loadSave: Boolean,
-        leanback: Boolean,
     ): Boolean {
         // Bug Fix: Check if a game process is already held by another process.
         // Some cores take a few seconds to fully release the lock file on exit.
@@ -47,7 +46,7 @@ class GameLauncher(
             val system = GameSystem.findById(game.systemId)
             val coreConfig = coresSelection.getCoreConfigForSystem(system)
             gameLaunchTaskHandler.handleGameStart(activity.applicationContext)
-            BaseGameActivity.launchGame(activity, coreConfig, game, loadSave, leanback)
+            BaseGameActivity.launchGame(activity, coreConfig, game, loadSave)
         }
 
         return true

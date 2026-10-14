@@ -69,7 +69,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
 
-val PressStart2PFontFamily = FontFamily.Monospace
+val PressStart2PFontFamily = FontFamily(Font(R.font.press_start_2p))
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
