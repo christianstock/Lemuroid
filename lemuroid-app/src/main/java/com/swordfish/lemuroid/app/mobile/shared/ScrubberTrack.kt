@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -41,6 +42,9 @@ fun ScrubberTrack(
     val smallDotRadiusPx = with(density) { 2.dp.toPx() }
     val diamondRadiusPx = with(density) { 5.5.dp.toPx() }
 
+    // Single reusable Path instance across composition frames
+    val diamondPath = remember { Path() }
+
     Box(
         modifier = modifier
             .height(28.dp)
@@ -66,7 +70,8 @@ fun ScrubberTrack(
                     cy = cy,
                     smallDotRadiusPx = smallDotRadiusPx,
                     diamondRadiusPx = diamondRadiusPx,
-                    accentColor = accentColor
+                    accentColor = accentColor,
+                    diamondPath = diamondPath
                 )
             } else {
                 drawLineTrack(
@@ -74,7 +79,8 @@ fun ScrubberTrack(
                     normalizedIndex = normalizedIndex,
                     cy = cy,
                     diamondRadiusPx = diamondRadiusPx,
-                    accentColor = accentColor
+                    accentColor = accentColor,
+                    diamondPath = diamondPath
                 )
             }
         }
@@ -139,7 +145,8 @@ private fun DrawScope.drawDotsTrack(
     cy: Float,
     smallDotRadiusPx: Float,
     diamondRadiusPx: Float,
-    accentColor: Color
+    accentColor: Color,
+    diamondPath: Path
 ) {
     val step = size.width / (itemCount - 1)
 
@@ -148,7 +155,13 @@ private fun DrawScope.drawDotsTrack(
         val distToActive = (i - normalizedIndex).absoluteValue
 
         if (distToActive < 0.5f) {
-            drawDiamond(cx, cy, diamondRadiusPx, accentColor)
+            drawDiamond(
+                cx = cx,
+                cy = cy,
+                radiusPx = diamondRadiusPx,
+                color = accentColor,
+                path = diamondPath
+            )
         } else {
             drawCircle(
                 color = Color.White.copy(alpha = 0.3f),
@@ -164,7 +177,8 @@ private fun DrawScope.drawLineTrack(
     normalizedIndex: Float,
     cy: Float,
     diamondRadiusPx: Float,
-    accentColor: Color
+    accentColor: Color,
+    diamondPath: Path
 ) {
     val trackHeightPx = 2.dp.toPx()
     drawLine(
@@ -176,21 +190,28 @@ private fun DrawScope.drawLineTrack(
 
     val fraction = (normalizedIndex / (itemCount - 1)).coerceIn(0f, 1f)
     val diamondX = size.width * fraction
-    drawDiamond(diamondX, cy, diamondRadiusPx, accentColor)
+    drawDiamond(
+        cx = diamondX,
+        cy = cy,
+        radiusPx = diamondRadiusPx,
+        color = accentColor,
+        path = diamondPath
+    )
 }
 
 private fun DrawScope.drawDiamond(
     cx: Float,
     cy: Float,
     radiusPx: Float,
-    color: Color
+    color: Color,
+    path: Path
 ) {
-    val path = Path().apply {
-        moveTo(cx, cy - radiusPx)
-        lineTo(cx + radiusPx, cy)
-        lineTo(cx, cy + radiusPx)
-        lineTo(cx - radiusPx, cy)
-        close()
-    }
+    path.reset()
+    path.moveTo(cx, cy - radiusPx)
+    path.lineTo(cx + radiusPx, cy)
+    path.lineTo(cx, cy + radiusPx)
+    path.lineTo(cx - radiusPx, cy)
+    path.close()
+
     drawPath(path = path, color = color)
 }

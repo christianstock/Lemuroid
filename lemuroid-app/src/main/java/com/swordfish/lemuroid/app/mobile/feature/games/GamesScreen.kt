@@ -11,12 +11,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -38,7 +33,6 @@ import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -47,10 +41,10 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.swordfish.lemuroid.R
-import com.swordfish.lemuroid.app.mobile.shared.GameBoyMagenta
-import com.swordfish.lemuroid.app.mobile.shared.compose.ui.LemuroidGameImage
 import com.swordfish.lemuroid.app.mobile.shared.RetroLcdGreen
 import com.swordfish.lemuroid.app.mobile.shared.RetroLcdGreenDark
+import com.swordfish.lemuroid.app.mobile.shared.RetroSearchBar
+import com.swordfish.lemuroid.app.mobile.shared.compose.ui.LemuroidGameImage
 import com.swordfish.lemuroid.lib.library.db.entity.Game
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
@@ -62,14 +56,13 @@ import kotlin.math.exp
 import kotlin.math.hypot
 import kotlin.random.Random
 
-// Arcade / Retro CRT Glow Palette extracted dynamically based on active collection
 private val RetroAmbientPalette = listOf(
-    Color(0xFF00E5FF), // Cyan Neon
-    Color(0xFFFF007F), // Neon Pink/Magenta
-    Color(0xFF7C4DFF), // Deep Violet Glow
-    Color(0xFFFF9100), // Amber Gold
-    Color(0xFF00E676), // Arcade Emerald
-    Color(0xFFFF1744)  // CRT Crimson
+    Color(0xFF00E5FF),
+    Color(0xFFFF007F),
+    Color(0xFF7C4DFF),
+    Color(0xFFFF9100),
+    Color(0xFF00E676),
+    Color(0xFFFF1744)
 )
 
 val pressStart2PFontFamily = FontFamily(Font(R.font.press_start_2p))
@@ -172,7 +165,6 @@ fun GamesScreen(
     val coroutineScope = rememberCoroutineScope()
     val gridState = rememberLazyGridState()
 
-    // Dynamic accent color selection based on active game collection hash
     val primaryGlowColor = remember(games) {
         if (games.isEmpty()) {
             Color(0xFF1F2833)
@@ -188,45 +180,7 @@ fun GamesScreen(
         label = "GlowColorTransition"
     )
 
-    // Pulse animation for upper ambient backlight
     val infiniteTransition = rememberInfiniteTransition(label = "AmbientGlowPulse")
-    val glowAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.22f,
-        targetValue = 0.38f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2800, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "GlowAlpha"
-    )
-
-    val glowRadiusScale by infiniteTransition.animateFloat(
-        initialValue = 0.85f,
-        targetValue = 1.15f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(3500, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "GlowRadius"
-    )
-
-    // Transition animation state when tapping a cover
-    var animatingGame by remember { mutableStateOf<Game?>(null) }
-    val animProgress = remember { Animatable(0f) }
-
-    // Periodically trigger the ripple
-    LaunchedEffect(gridSize, games.size) {
-        if (gridSize == IntSize.Zero || games.isEmpty()) return@LaunchedEffect
-        lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-            delay(600)
-            while (isActive) {
-                ripple.run(gridSize)
-                delay((rippleIntervalMs * (0.8f + Random.nextFloat() * 0.4f)).toLong())
-            }
-        }
-    }
-
-    // Side arrows pulsing animations (scale & opacity)
     val sideArrowScale by infiniteTransition.animateFloat(
         initialValue = 0.8f,
         targetValue = 1.0f,
@@ -246,6 +200,20 @@ fun GamesScreen(
         ),
         label = "SideArrowAlpha"
     )
+
+    var animatingGame by remember { mutableStateOf<Game?>(null) }
+    val animProgress = remember { Animatable(0f) }
+
+    LaunchedEffect(gridSize, games.size) {
+        if (gridSize == IntSize.Zero || games.isEmpty()) return@LaunchedEffect
+        lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            delay(600)
+            while (isActive) {
+                ripple.run(gridSize)
+                delay((rippleIntervalMs * (0.8f + Random.nextFloat() * 0.4f)).toLong())
+            }
+        }
+    }
 
     val launchGameWithAnimation: (Game) -> Unit = { game ->
         coroutineScope.launch {
@@ -289,96 +257,12 @@ fun GamesScreen(
 
         Column(modifier = Modifier.fillMaxSize()) {
 
-            // --- TOP HEADER: RETRO LCD SEARCH & RED EXIT BUTTON ---
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // LCD Green Search Input
-                Surface(
-                    color = RetroLcdGreen,
-                    shape = RoundedCornerShape(32.dp),
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(42.dp) // Strictly 42dp height
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = "Search",
-                            tint = RetroLcdGreenDark,
-                            modifier = Modifier.size(20.dp)
-                        )
-
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        BasicTextField(
-                            value = query,
-                            onValueChange = { viewModel.updateSearchQuery(it) },
-                            singleLine = true,
-                            textStyle = androidx.compose.ui.text.TextStyle(
-                                fontFamily = pressStart2PFontFamily,
-                                fontSize = 12.sp,
-                                color = RetroLcdGreenDark
-                            ),
-                            modifier = Modifier.weight(1f),
-                            decorationBox = { innerTextField ->
-                                Box(
-                                    contentAlignment = Alignment.CenterStart
-                                ) {
-                                    if (query.isEmpty()) {
-                                        Text(
-                                            text = "SEARCH...",
-                                            fontFamily = pressStart2PFontFamily,
-                                            fontSize = 12.sp,
-                                            color = RetroLcdGreenDark.copy(alpha = 0.6f)
-                                        )
-                                    }
-                                    innerTextField()
-                                }
-                            }
-                        )
-
-                        if (query.isNotEmpty()) {
-                            IconButton(
-                                onClick = { viewModel.updateSearchQuery("") },
-                                modifier = Modifier.size(20.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = "Clear",
-                                    tint = RetroLcdGreenDark
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // Game Boy Magenta Exit Button
-                Surface(
-                    color = GameBoyMagenta,
-                    shape = CircleShape,
-                    modifier = Modifier
-                        .size(38.dp)
-                        .combinedClickable(onClick = onExitClick)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Exit Screen",
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-            }
+            // --- REUSABLE RETRO HEADER BAR ---
+            RetroSearchBar(
+                query = query,
+                onQueryChange = viewModel::updateSearchQuery,
+                onExitClick = onExitClick
+            )
 
             // --- FILTER SELECTORS ROW ---
             Row(
@@ -431,7 +315,6 @@ fun GamesScreen(
                     }
             ) {
                 if (games.isEmpty()) {
-                    // Empty State
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
@@ -446,7 +329,6 @@ fun GamesScreen(
                         )
                     }
                 } else {
-                    // Regular 3-Column Grid
                     LazyVerticalGrid(
                         state = gridState,
                         modifier = Modifier
@@ -472,7 +354,6 @@ fun GamesScreen(
 
                 // --- RIPPLE SIDE INDICATOR ARROWS ---
                 if (ripple.isRunning) {
-                    // Left White Pulsing Triangle
                     androidx.compose.foundation.Canvas(
                         modifier = Modifier
                             .align(Alignment.CenterStart)
@@ -494,7 +375,6 @@ fun GamesScreen(
                         drawPath(path, color = Color.White)
                     }
 
-                    // Right White Pulsing Triangle
                     androidx.compose.foundation.Canvas(
                         modifier = Modifier
                             .align(Alignment.CenterEnd)

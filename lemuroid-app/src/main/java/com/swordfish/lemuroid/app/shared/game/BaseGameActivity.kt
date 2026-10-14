@@ -100,10 +100,28 @@ abstract class BaseGameActivity : ImmersiveActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setUpExceptionsHandler()
-        GameService.startService(applicationContext, intent)
-        game = intent.getSerializableExtra(EXTRA_GAME) as Game
-        systemCoreConfig = intent.getSerializableExtra(EXTRA_SYSTEM_CORE_CONFIG) as SystemCoreConfig
+
+        // Safely retrieve serializable Game object using extension helper
+        val loadedGame = intent.serializable<Game>(EXTRA_GAME)
+        val loadedSystemCoreConfig = intent.serializable<SystemCoreConfig>(EXTRA_SYSTEM_CORE_CONFIG)
+
+        if (loadedGame == null || loadedSystemCoreConfig == null) {
+            Timber.e("Failed to load Game or SystemCoreConfig from intent extras")
+            finish()
+            return
+        }
+
+        game = loadedGame
+        systemCoreConfig = loadedSystemCoreConfig
         system = GameSystem.findById(game.systemId)
+
+        // Safely pass game details to GameService
+        GameService.startService(
+            context = applicationContext,
+            gameActivityIntent = intent,
+            gameTitle = game.title,
+            coverUrl = game.coverFrontUrl
+        )
 
         val viewModel by viewModels<BaseGameScreenViewModel> {
             BaseGameScreenViewModel.Factory(

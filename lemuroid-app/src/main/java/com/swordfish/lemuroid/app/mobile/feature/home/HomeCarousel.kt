@@ -35,6 +35,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.swordfish.lemuroid.R
 import com.swordfish.lemuroid.app.mobile.feature.home.cartridge.CartridgeItem
+import com.swordfish.lemuroid.app.mobile.feature.home.console.GameConsole
 import com.swordfish.lemuroid.app.mobile.shared.GameArtBlurBackground
 import com.swordfish.lemuroid.app.mobile.shared.extractAccentColor
 import com.swordfish.lemuroid.lib.library.db.entity.Game
@@ -262,7 +263,7 @@ private fun ConsoleStage(
                 .align(Alignment.BottomCenter),
             contentAlignment = Alignment.BottomCenter
         ) {
-            SystemForegroundView(
+            GameConsole(
                 systemId = library.systemId,
                 onOpenSettings = onOpenSettings,
                 modifier = Modifier.fillMaxSize()

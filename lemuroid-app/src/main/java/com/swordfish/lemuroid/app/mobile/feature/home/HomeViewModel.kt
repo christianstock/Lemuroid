@@ -71,7 +71,6 @@ class HomeViewModel(
         val showNoNotificationPermissionCard: Boolean = false,
         val showNoMicrophonePermissionCard: Boolean = false,
         val showNoGamesCard: Boolean = false,
-        val showDesmumeDeprecatedCard: Boolean = false,
     )
 
     private val microphonePermissionEnabledState = MutableStateFlow(true)
@@ -172,7 +171,6 @@ class HomeViewModel(
                 notificationsPermissionEnabledState,
                 indexingInProgress(appContext).onStart { emit(false) },
                 microphoneNotification(retrogradeDb).onStart { emit(false) },
-                desmumeWarningNotification().onStart { emit(false) }
             ) { params ->
                 val availableSystems = params[0] as List<String>
                 val allGames = params[1] as List<Game>
@@ -185,7 +183,6 @@ class HomeViewModel(
                 val notificationsEnabled = params[6] as Boolean
                 val indexInProgress = params[7] as Boolean
                 val microphoneEnabled = params[8] as Boolean
-                val desmumeWarning = params[9] as Boolean
 
                 val preferredSystemOrder = listOf("gb", "gbc", "gba")
                 val filteredSystems = availableSystems
@@ -224,7 +221,6 @@ class HomeViewModel(
                     showNoNotificationPermissionCard = !notificationsEnabled,
                     showNoMicrophonePermissionCard = microphoneEnabled,
                     showNoGamesCard = systemLibraries.isEmpty(),
-                    showDesmumeDeprecatedCard = desmumeWarning
                 )
             }.distinctUntilChanged()
 
@@ -250,9 +246,5 @@ class HomeViewModel(
                 cores.any { it.coreConfig.supportsMicrophone } && dsCount > 0
             }
         }.distinctUntilChanged()
-    }
-
-    private fun desmumeWarningNotification(): Flow<Boolean> {
-        return coresSelection.getSelectedCores().map { cores -> cores.any { it.coreConfig.coreID == CoreID.DESMUME } }.distinctUntilChanged()
     }
 }

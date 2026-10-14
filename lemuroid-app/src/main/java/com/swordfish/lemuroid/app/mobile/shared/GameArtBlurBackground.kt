@@ -27,6 +27,7 @@ import coil.request.ImageRequest
 @Composable
 fun GameArtBlurBackground(
     coverFrontUrl: String?,
+    accentColor: Color = RetroLcdGreen,
     modifier: Modifier = Modifier
 ) {
     var isInitialRender by remember { mutableStateOf(true) }
@@ -50,7 +51,7 @@ fun GameArtBlurBackground(
         if (!coverUrl.isNullOrEmpty()) {
             BlurredCoverBackground(coverUrl = coverUrl)
         } else {
-            FallbackGradientBackground()
+            DefaultBackground(glowColor = accentColor)
         }
     }
 }
@@ -84,20 +85,6 @@ private fun BlurredCoverBackground(
                 }
         )
     }
-}
-
-@Composable
-private fun FallbackGradientBackground(
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .radialVignette(
-                centerColor = RetroLcdGreen,
-                radiusMultiplier = 0.75f
-            )
-    )
 }
 
 fun Modifier.radialVignette(

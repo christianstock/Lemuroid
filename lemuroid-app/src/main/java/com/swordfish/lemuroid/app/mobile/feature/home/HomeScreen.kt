@@ -5,7 +5,6 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -24,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.swordfish.lemuroid.R
+import com.swordfish.lemuroid.app.mobile.shared.LoadingScreen
 import com.swordfish.lemuroid.app.utils.android.ComposableLifecycle
 import com.swordfish.lemuroid.common.displayDetailsSettingsScreen
 import com.swordfish.lemuroid.lib.library.db.entity.Game
@@ -90,7 +90,7 @@ fun HomeScreen(
             )
         }
 
-        // Main Stage Carousel or Loading Fallback
+        // Main Stage Carousel or Shared Retro Loading Screen
         if (state.systemLibraries.isNotEmpty()) {
             HomeCarousel(
                 systemLibraries = state.systemLibraries,
@@ -109,15 +109,10 @@ fun HomeScreen(
                 modifier = Modifier.weight(1f)
             )
         } else if (!state.showNoGamesCard) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "Loading game library...",
-                    style = MaterialTheme.typography.bodyLarge
-                )
-            }
+            LoadingScreen(
+                text = "LOADING...",
+                modifier = Modifier.fillMaxSize()
+            )
         }
     }
 }
