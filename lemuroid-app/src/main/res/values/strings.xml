@@ -115,7 +115,7 @@
     <string name="cheat_frozen_warning">Game appears frozen. Disabling cheat: %1$s</string>
 
     <string name="home_notification_title">Enable notifications</string>
-    <string name="home_notification_message">Lemuroid uses notifications to let you know when a game or operation is running in background.</string>
+    <string name="home_notification_message">Game GRL uses notifications to let you know when a game or operation is running in background.</string>
     <string name="home_notification_action">Enable</string>
 
     <string name="home_microphone_title">Enable microphone</string>
@@ -123,7 +123,7 @@
     <string name="home_microphone_action">Enable</string>
 
     <string name="home_empty_title">Select ROMs directory</string>
-    <string name="home_empty_message">Lemuroid needs to scan a directory containing ROM files.\nThis might take up to a few minutes.</string>
+    <string name="home_empty_message">Game GRL needs to scan a directory containing ROM files.\nThis might take up to a few minutes.</string>
     <string name="home_empty_action">Select Directory</string>
 
     <string name="home_notification_desmume_deprecated_title">DeSmuME is being retired</string>

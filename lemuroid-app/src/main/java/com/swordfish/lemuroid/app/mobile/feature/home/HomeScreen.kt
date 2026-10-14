@@ -4,7 +4,6 @@ import android.Manifest
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,7 +15,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,15 +35,11 @@ fun HomeScreen(
     onGameClick: (Game) -> Unit,
     onGameLongClick: (Game) -> Unit,
     onNavigateToSystemList: (Game) -> Unit,
-    onOpenCoreSelection: () -> Unit,
     onOpenSettings: () -> Unit = {},
 ) {
     val context = LocalContext.current
-
-    // Efficient lifecycle-aware state collection (avoids unnecessary recompositions)
     val state by viewModel.getViewStates().collectAsStateWithLifecycle(initialValue = HomeViewModel.UIState())
 
-    // Defer permission updates to ON_RESUME without blocking initial composition
     ComposableLifecycle { _, event ->
         if (event == Lifecycle.Event.ON_RESUME) {
             viewModel.updatePermissions(context.applicationContext)
@@ -64,49 +58,39 @@ fun HomeScreen(
         modifier = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        // Notification Banners (Only evaluated if active)
-        if (state.showNoNotificationPermissionCard) {
-            HomeNotification(
-                titleId = R.string.home_notification_title,
-                messageId = R.string.home_notification_message,
-                actionId = R.string.home_notification_action,
-                onAction = {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        permissionsLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        // System / Permission Banners
+        when {
+            state.showNoNotificationPermissionCard -> {
+                HomeNotification(
+                    titleId = R.string.home_notification_title,
+                    messageId = R.string.home_notification_message,
+                    actionId = R.string.home_notification_action,
+                    onAction = {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            permissionsLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        }
                     }
-                }
-            )
+                )
+            }
+            state.showNoMicrophonePermissionCard -> {
+                HomeNotification(
+                    titleId = R.string.home_microphone_title,
+                    messageId = R.string.home_notification_action,
+                    actionId = R.string.home_notification_action,
+                    onAction = { permissionsLauncher.launch(Manifest.permission.RECORD_AUDIO) }
+                )
+            }
         }
 
+        // Empty Library Folder Prompt
         if (state.showNoGamesCard) {
-            HomeNotification(
-                titleId = R.string.home_empty_title,
-                messageId = R.string.home_empty_message,
-                actionId = R.string.home_empty_action,
-                onAction = { viewModel.changeLocalStorageFolder(context) },
-                enabled = !state.indexInProgress
+            EmptyLibraryCard(
+                indexInProgress = state.indexInProgress,
+                onSelectDirectory = { viewModel.changeLocalStorageFolder(context) }
             )
         }
 
-        if (state.showNoMicrophonePermissionCard) {
-            HomeNotification(
-                titleId = R.string.home_microphone_title,
-                messageId = R.string.home_notification_action,
-                actionId = R.string.home_notification_action,
-                onAction = { permissionsLauncher.launch(Manifest.permission.RECORD_AUDIO) }
-            )
-        }
-
-        if (state.showDesmumeDeprecatedCard) {
-            HomeNotification(
-                titleId = R.string.home_notification_desmume_deprecated_title,
-                messageId = R.string.home_notification_desmume_deprecated_message,
-                actionId = R.string.home_notification_desmume_deprecated_action,
-                onAction = onOpenCoreSelection
-            )
-        }
-
-        // Main Carousel or Empty State
+        // Main Stage Carousel or Loading Fallback
         if (state.systemLibraries.isNotEmpty()) {
             HomeCarousel(
                 systemLibraries = state.systemLibraries,
@@ -130,8 +114,49 @@ fun HomeScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "No games found for this system",
+                    text = "Loading game library...",
                     style = MaterialTheme.typography.bodyLarge
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Isolated Empty State Card container (ready for custom retro design).
+ */
+@Composable
+private fun EmptyLibraryCard(
+    indexInProgress: Boolean,
+    onSelectDirectory: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    ElevatedCard(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.home_empty_title),
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                text = stringResource(R.string.home_empty_message),
+                style = MaterialTheme.typography.bodyMedium
+            )
+            OutlinedButton(
+                modifier = Modifier.align(Alignment.End),
+                onClick = onSelectDirectory,
+                enabled = !indexInProgress
+            ) {
+                Text(
+                    text = if (indexInProgress) "Scanning..." else stringResource(R.string.home_empty_action)
                 )
             }
         }

@@ -23,7 +23,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.swordfish.lemuroid.app.mobile.shared.compose.ui.RetroLcdGreen
 
 @Composable
 fun GameArtBlurBackground(

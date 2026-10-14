@@ -47,7 +47,10 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.swordfish.lemuroid.R
+import com.swordfish.lemuroid.app.mobile.shared.GameBoyMagenta
 import com.swordfish.lemuroid.app.mobile.shared.compose.ui.LemuroidGameImage
+import com.swordfish.lemuroid.app.mobile.shared.RetroLcdGreen
+import com.swordfish.lemuroid.app.mobile.shared.RetroLcdGreenDark
 import com.swordfish.lemuroid.lib.library.db.entity.Game
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
@@ -58,12 +61,6 @@ import kotlin.math.abs
 import kotlin.math.exp
 import kotlin.math.hypot
 import kotlin.random.Random
-
-// retro colors
-private val RetroLcdGreen = Color(0xFF9EA83B)
-private val RetroDarkGreen = Color(0xFF1B3B1B)
-private val RetroRedExit = Color(0xFFD32F2F)
-private val GameBoyMagenta = Color(0xFFFF1493)  // Game Boy Pocket magenta
 
 // Arcade / Retro CRT Glow Palette extracted dynamically based on active collection
 private val RetroAmbientPalette = listOf(
@@ -316,7 +313,7 @@ fun GamesScreen(
                         Icon(
                             imageVector = Icons.Default.Search,
                             contentDescription = "Search",
-                            tint = RetroDarkGreen,
+                            tint = RetroLcdGreenDark,
                             modifier = Modifier.size(20.dp)
                         )
 
@@ -329,7 +326,7 @@ fun GamesScreen(
                             textStyle = androidx.compose.ui.text.TextStyle(
                                 fontFamily = pressStart2PFontFamily,
                                 fontSize = 12.sp,
-                                color = RetroDarkGreen
+                                color = RetroLcdGreenDark
                             ),
                             modifier = Modifier.weight(1f),
                             decorationBox = { innerTextField ->
@@ -341,7 +338,7 @@ fun GamesScreen(
                                             text = "SEARCH...",
                                             fontFamily = pressStart2PFontFamily,
                                             fontSize = 12.sp,
-                                            color = RetroDarkGreen.copy(alpha = 0.6f)
+                                            color = RetroLcdGreenDark.copy(alpha = 0.6f)
                                         )
                                     }
                                     innerTextField()
@@ -357,7 +354,7 @@ fun GamesScreen(
                                 Icon(
                                     imageVector = Icons.Default.Close,
                                     contentDescription = "Clear",
-                                    tint = RetroDarkGreen
+                                    tint = RetroLcdGreenDark
                                 )
                             }
                         }
@@ -443,7 +440,7 @@ fun GamesScreen(
                             text = "NO GAMES FOUND",
                             fontFamily = pressStart2PFontFamily,
                             fontSize = 12.sp,
-                            color = RetroDarkGreen,
+                            color = RetroLcdGreenDark,
                             textAlign = TextAlign.Center,
                             modifier = Modifier.padding(24.dp)
                         )

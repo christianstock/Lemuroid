@@ -226,7 +226,6 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
                                     navController.navigate("systems/${metaSystemId.name}")
                                 }
                             },
-                            onOpenCoreSelection = { navController.navigateToRoute(MainRoute.SETTINGS_CORES_SELECTION) },
                             onOpenSettings = { navController.navigate(MainRoute.SETTINGS.route) },
                         )
                     }
