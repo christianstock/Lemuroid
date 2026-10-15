@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -127,6 +128,19 @@ class GamesViewModel(
             retrogradeDb.gameDao().update(game.copy(lastPlayedAt = now))
         }
     }
+
+    // Emits only the meta-systems from ALLOWED_META_SYSTEMS that actually have games in the DB
+    val availableMetaSystems: StateFlow<List<MetaSystemID>> = retrogradeDb.gameDao().selectAllFlow()
+        .map { allGames ->
+            ALLOWED_META_SYSTEMS.filter { metaSystem ->
+                val dbNames = metaSystem.systemIDs.map { it.dbname }.toSet()
+                allGames.any { it.systemId in dbNames }
+            }
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
 
     class Factory(
         private val retrogradeDb: RetrogradeDatabase,

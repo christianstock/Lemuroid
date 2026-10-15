@@ -89,12 +89,9 @@ fun GamesScreen(
     val currentMetaSystem by viewModel.currentMetaSystem.collectAsStateWithLifecycle()
     val showAllSystems by viewModel.showAllSystems.collectAsStateWithLifecycle()
 
-    val activeSystemCount = remember(games) {
-        games.map { it.systemId }.distinct().size
-    }
-
-    val canSwipeSystems = remember(showAllSystems, activeSystemCount) {
-        !showAllSystems && activeSystemCount > 1
+    val availableMetaSystems by viewModel.availableMetaSystems.collectAsStateWithLifecycle()
+    val canSwipeSystems = remember(showAllSystems, availableMetaSystems) {
+        !showAllSystems && availableMetaSystems.size > 1
     }
 
     val ripple = remember { GridRipple() }
