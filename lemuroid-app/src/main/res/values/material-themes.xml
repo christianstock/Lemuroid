@@ -70,4 +70,10 @@
     <style name="LemuroidMaterialStyle.AlertDialogTheme" parent="@style/ThemeOverlay.AppCompat.Dialog.Alert">
         <item name="android:colorBackground">?attr/colorSurface</item>
     </style>
+
+    <style name="LemuroidMaterialTheme.Splash" parent="LemuroidMaterialTheme">
+        <item name="android:windowBackground">@color/ic_launcher_background</item>
+        <item name="android:statusBarColor">@android:color/black</item>
+        <item name="android:navigationBarColor">@android:color/black</item>
+    </style>
 </resources>
