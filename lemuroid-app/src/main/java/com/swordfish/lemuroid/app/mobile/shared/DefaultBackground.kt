@@ -17,7 +17,7 @@ fun DefaultBackground(
         modifier = modifier
             .fillMaxSize()
             .background(glowColor)
-            .background(Color.Black.copy(alpha = 0.5f))
+            .background(Color.Black.copy(alpha = 0.4f))
             .radialVignette(
                 centerColor = Color.Transparent,
                 radiusMultiplier = 0.85f,

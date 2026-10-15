@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -30,10 +29,16 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -52,12 +57,12 @@ import com.swordfish.lemuroid.app.shared.game.skins.ui.GbaSkinSelectionScreen
 import com.swordfish.lemuroid.app.shared.game.skins.ui.GbcSkinSelectionScreen
 import com.swordfish.lemuroid.app.shared.cheats.ui.CheatMenuScreen
 import com.swordfish.lemuroid.app.shared.manuals.PdfManualProcessor
-import com.swordfish.lemuroid.app.shared.manuals.ui.GameManualViewerOverlay
+import com.swordfish.lemuroid.app.shared.manuals.GameManualViewer
 import com.swordfish.lemuroid.app.mobile.shared.compose.ui.AppTheme
+import com.swordfish.lemuroid.app.mobile.shared.extractAccentColor
 import com.swordfish.lemuroid.app.shared.GameMenuContract
 import com.swordfish.lemuroid.app.shared.cheats.CheatManager
 import com.swordfish.lemuroid.app.shared.coreoptions.LemuroidCoreOption
-import com.swordfish.lemuroid.app.shared.coreoptions.CoreOptionsWrapper
 import com.swordfish.lemuroid.app.shared.input.InputDeviceManager
 import com.swordfish.lemuroid.common.kotlin.serializable
 import com.swordfish.lemuroid.lib.android.RetrogradeComponentActivity
@@ -66,6 +71,8 @@ import com.swordfish.lemuroid.lib.library.db.entity.Game
 import com.swordfish.lemuroid.lib.saves.StatesManager
 import com.swordfish.lemuroid.lib.saves.StatesPreviewManager
 import com.swordfish.touchinput.radial.sensors.TiltConfiguration
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.security.InvalidParameterException
 import javax.inject.Inject
 
@@ -366,6 +373,16 @@ class GameMenuActivity : RetrogradeComponentActivity() {
                                 val processor = remember { PdfManualProcessor(applicationContext) }
                                 val manualPages = remember { androidx.compose.runtime.mutableStateOf(emptyList<com.swordfish.lemuroid.app.shared.manuals.ManualPageInfo>()) }
                                 val isLoading = remember { androidx.compose.runtime.mutableStateOf(true) }
+                                val fallbackAccentColor = MaterialTheme.colorScheme.primary
+                                var accentColor by remember { mutableStateOf(fallbackAccentColor) }
+                                val context = LocalContext.current
+
+                                androidx.compose.runtime.LaunchedEffect(game.id, game.coverFrontUrl) {
+                                    val extracted = withContext(Dispatchers.IO) {
+                                        extractAccentColor(context, game.coverFrontUrl, fallbackAccentColor)
+                                    }
+                                    accentColor = extracted
+                                }
 
                                 androidx.compose.runtime.LaunchedEffect(game.manualUrl) {
                                     try {
@@ -383,9 +400,10 @@ class GameMenuActivity : RetrogradeComponentActivity() {
                                         androidx.compose.material3.CircularProgressIndicator()
                                     }
                                 } else if (manualPages.value.isNotEmpty()) {
-                                    GameManualViewerOverlay(
+                                    GameManualViewer(
                                         pages = manualPages.value,
                                         isVisible = true,
+                                        accentColor = accentColor,
                                         onDismiss = { 
                                             onBackPressedDispatcher.onBackPressed()
                                         }

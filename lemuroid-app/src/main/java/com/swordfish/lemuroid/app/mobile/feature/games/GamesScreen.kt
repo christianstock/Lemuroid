@@ -140,7 +140,7 @@ fun GamesScreen(
         modifier = modifier
             .fillMaxSize()
             .background(Color.Black)
-            .statusBarsPadding()
+            //.statusBarsPadding()
     ) {
         // LCD Green Top-Weighted Glow Background
         DefaultBackground(
@@ -261,7 +261,7 @@ private fun SortFilterRow(
                     text = label,
                     fontFamily = pressStart2PFontFamily,
                     fontSize = 9.sp,
-                    color = if (isSelected) RetroLcdGreen else Color.Gray
+                    color = if (isSelected) RetroLcdGreen else RetroLcdGreenDark
                 )
             }
         }

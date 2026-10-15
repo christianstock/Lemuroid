@@ -57,7 +57,7 @@ fun RetroActionBar(
                 icon = Icons.Default.Description,
                 iconColor = RetroBlue,
                 label = "MANUAL",
-                onClick = onManual
+                onClick = onManual,
             )
         }
 

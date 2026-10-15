@@ -61,8 +61,8 @@ fun HomeScreen(
 
     Column(
         modifier = modifier
-            .fillMaxSize()
-            .statusBarsPadding(),
+            .fillMaxSize(),
+            //.statusBarsPadding(),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         // System / Permission Banners

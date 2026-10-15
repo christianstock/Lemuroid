@@ -18,7 +18,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.zIndex
 import coil.compose.AsyncImage
+import com.swordfish.lemuroid.app.mobile.shared.DefaultBackground
 import com.swordfish.lemuroid.app.mobile.shared.RetroBackButton
 
 @Composable
@@ -34,10 +36,14 @@ fun FullBoxArtScreen(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
+        DefaultBackground(
+            //glowColor = accentColor,
+            modifier = Modifier
+                .fillMaxSize()
+        )
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.95f))
                 .padding(16.dp)
                 .pointerInput(Unit) {
                     detectTransformGestures { _, pan, zoom, _ ->
