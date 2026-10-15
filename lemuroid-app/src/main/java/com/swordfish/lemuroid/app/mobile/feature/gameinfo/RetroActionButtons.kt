@@ -25,7 +25,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.swordfish.lemuroid.app.mobile.feature.gameinfo.PressStart2PFont
+import com.swordfish.lemuroid.app.mobile.shared.RetroBlue
+import com.swordfish.lemuroid.app.mobile.shared.RetroGreen
+import com.swordfish.lemuroid.app.mobile.shared.RetroYellow
 
 @Composable
 fun RetroActionBar(
@@ -45,7 +47,7 @@ fun RetroActionBar(
     ) {
         RetroActionTextButton(
             icon = Icons.Default.Star,
-            iconColor = Color(0xFFFFD600),
+            iconColor = RetroYellow,
             label = "CHEATS",
             onClick = onCheats
         )
@@ -53,7 +55,7 @@ fun RetroActionBar(
         if (hasManual) {
             RetroActionTextButton(
                 icon = Icons.Default.Description,
-                iconColor = Color(0xFF29B6F6),
+                iconColor = RetroBlue,
                 label = "MANUAL",
                 onClick = onManual
             )
@@ -61,7 +63,7 @@ fun RetroActionBar(
 
         RetroActionTextButton(
             icon = Icons.Default.Refresh,
-            iconColor = Color(0xFF69F0AE),
+            iconColor = RetroGreen,
             label = "RESCAN",
             isLoading = isRescanning,
             onClick = onRescan
@@ -83,6 +85,7 @@ private fun RetroActionTextButton(
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
+                enabled = !isLoading, // 👈 Prevents duplicate taps while loading
                 onClick = onClick
             )
             .padding(8.dp)
@@ -106,7 +109,8 @@ private fun RetroActionTextButton(
             text = label,
             fontFamily = PressStart2PFont,
             fontSize = 8.sp,
-            color = Color.White.copy(alpha = 0.9f)
+            // Slightly dim the label text when disabled/loading for visual feedback
+            color = Color.White.copy(alpha = if (isLoading) 0.5f else 0.9f)
         )
     }
 }

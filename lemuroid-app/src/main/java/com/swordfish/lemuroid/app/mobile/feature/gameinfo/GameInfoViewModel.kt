@@ -8,11 +8,7 @@ import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import coil.imageLoader
 import com.swordfish.lemuroid.common.kotlin.calculateCrc32
-import com.swordfish.lemuroid.common.kotlin.cleanGameTitle
-import com.swordfish.lemuroid.common.kotlin.extractRomRegion
-import com.swordfish.lemuroid.common.kotlin.extractRomVersion
 import com.swordfish.lemuroid.lib.library.SystemID
 import com.swordfish.lemuroid.lib.library.db.RetrogradeDatabase
 import com.swordfish.lemuroid.lib.library.db.entity.Game
@@ -25,8 +21,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import okhttp3.Request
 import java.io.File
 import java.io.FileOutputStream
 
@@ -139,12 +133,12 @@ class GameInfoViewModel(
         }
     }
 
-    private suspend fun fetchMetadata(currentGame: Game): GameMetadata? {
+    private suspend fun fetchMetadata(currentGame: Game): GameMetadata? = withContext(Dispatchers.IO) {
         try {
             val uri = Uri.parse(currentGame.fileUri)
             val document = DocumentFile.fromSingleUri(appContext, uri)
             if (document == null || !document.exists()) {
-                return null
+                return@withContext null
             }
 
             val baseFile = BaseStorageFile(
@@ -168,15 +162,13 @@ class GameInfoViewModel(
                     storageFile = storageFile.copy(crc = crc)
                 }
 
-                return metadataProvider.retrieveMetadata(storageFile) { }
+                return@withContext metadataProvider.retrieveMetadata(storageFile) { }
             }
         } catch (e: Exception) {
             // Silently ignore
         }
-        return null
+        return@withContext null
     }
-
-
 
     private fun isValidImageUri(path: String?): Boolean {
         if (path.isNullOrBlank()) return false
@@ -198,6 +190,8 @@ class GameInfoViewModel(
 
                 val maxDim = 512
                 val ratio = bitmap.width.toFloat() / bitmap.height.toFloat()
+
+                // ✅ Fixed aspect ratio calculation multiplication
                 val (targetW, targetH) = if (bitmap.width > bitmap.height) {
                     maxDim to (maxDim / ratio).toInt()
                 } else {

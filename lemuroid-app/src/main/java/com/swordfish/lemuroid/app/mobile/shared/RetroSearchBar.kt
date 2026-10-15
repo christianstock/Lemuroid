@@ -27,9 +27,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.swordfish.lemuroid.app.mobile.feature.games.pressStart2PFontFamily
+import com.swordfish.lemuroid.R
+
+val pressStart2PFontFamily = FontFamily(Font(R.font.press_start_2p))
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -50,7 +54,7 @@ fun RetroSearchBar(
     ) {
         // LCD Green Search Input
         Surface(
-            color = RetroLcdGreen,
+            color = RetroLcdGreenLight,
             shape = RoundedCornerShape(32.dp),
             modifier = Modifier
                 .weight(1f)
@@ -86,7 +90,7 @@ fun RetroSearchBar(
                                     text = placeholderText,
                                     fontFamily = pressStart2PFontFamily,
                                     fontSize = 12.sp,
-                                    color = RetroLcdGreenDark.copy(alpha = 0.6f)
+                                    color = RetroLcdGreen
                                 )
                             }
                             innerTextField()

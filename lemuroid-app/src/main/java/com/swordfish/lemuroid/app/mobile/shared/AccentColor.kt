@@ -1,7 +1,6 @@
 package com.swordfish.lemuroid.app.mobile.shared
 
 import android.content.Context
-import android.graphics.Bitmap
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.graphics.ColorUtils
@@ -30,7 +29,7 @@ suspend fun extractAccentColor(
             val bitmap = result.drawable.toBitmap()
             val palette = Palette.from(bitmap).generate()
 
-            val ambientBgColor = calculateAverageColor(bitmap)
+            val ambientBgColor = palette.dominantSwatch?.rgb ?: 0xFF000000.toInt()
             val compositeBgColor = ColorUtils.blendARGB(ambientBgColor, 0xFF000000.toInt(), 0.55f)
 
             val candidateSwatches = listOfNotNull(
@@ -53,15 +52,6 @@ suspend fun extractAccentColor(
     } catch (_: Exception) {
         fallbackColor
     }
-}
-
-private fun calculateAverageColor(bitmap: Bitmap): Int {
-    val scaled = Bitmap.createScaledBitmap(bitmap, 1, 1, true)
-    val color = scaled.getPixel(0, 0)
-    if (scaled != bitmap) {
-        scaled.recycle()
-    }
-    return color
 }
 
 private fun adjustCandidateForReadability(color: Color, bgArgb: Int): Color {

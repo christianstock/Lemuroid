@@ -15,6 +15,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -28,20 +29,9 @@ import coil.request.ImageRequest
 fun GameArtBlurBackground(
     coverFrontUrl: String?,
     accentColor: Color = RetroLcdGreen,
+    animationSpec: FiniteAnimationSpec<Float> = tween(durationMillis = 600),
     modifier: Modifier = Modifier
 ) {
-    var isInitialRender by remember { mutableStateOf(true) }
-
-    val animationSpec: FiniteAnimationSpec<Float> = if (isInitialRender) {
-        snap()
-    } else {
-        tween(durationMillis = 600)
-    }
-
-    SideEffect {
-        isInitialRender = false
-    }
-
     Crossfade(
         targetState = coverFrontUrl,
         animationSpec = animationSpec,
@@ -49,7 +39,7 @@ fun GameArtBlurBackground(
         modifier = modifier.fillMaxSize()
     ) { coverUrl ->
         if (!coverUrl.isNullOrEmpty()) {
-            BlurredCoverBackground(coverUrl = coverUrl)
+            BlurredCoverBackground(coverUrl = coverUrl, ambientColor = accentColor)
         } else {
             DefaultBackground(glowColor = accentColor)
         }
@@ -59,6 +49,7 @@ fun GameArtBlurBackground(
 @Composable
 private fun BlurredCoverBackground(
     coverUrl: String,
+    ambientColor: Color,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -66,9 +57,10 @@ private fun BlurredCoverBackground(
             .fillMaxSize()
             .radialVignette(
                 centerColor = Color.Transparent,
-                radiusMultiplier = 0.75f
+                radiusMultiplier = 0.85f
             )
     ) {
+        // Base blurred cover art
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
                 .data(coverUrl)
@@ -78,29 +70,39 @@ private fun BlurredCoverBackground(
             contentScale = ContentScale.Crop,
             modifier = Modifier
                 .fillMaxSize()
-                .blur(radius = 500.dp)
+                .blur(radius = 160.dp)
                 .graphicsLayer {
-                    scaleX = 1.2f
-                    scaleY = 1.2f
+                    scaleX = 1.25f
+                    scaleY = 1.25f
+                    alpha = 0.85f
                 }
         )
     }
 }
 
+/**
+ * Vignette overlay that frames the screen in dark cinema contrast.
+ */
 fun Modifier.radialVignette(
     centerColor: Color = Color.Transparent,
-    radiusMultiplier: Float = 0.75f
+    radiusMultiplier: Float = 0.85f,
+    verticalBias: Float = 0.5f
 ): Modifier = this.drawWithContent {
     drawContent()
-    drawRect(Color.Black.copy(alpha = 0.25f))
+
+    // Slight uniform dimming wash
+    drawRect(Color.Black.copy(alpha = 0.20f))
+
+    // Edge-darkening radial fade
+    val centerOffset = Offset(size.width / 2f, size.height * verticalBias)
     drawRect(
         brush = Brush.radialGradient(
             colors = listOf(
                 centerColor,
-                Color.Black.copy(alpha = 0.5f),
+                Color.Black.copy(alpha = 0.45f),
                 Color.Black.copy(alpha = 0.95f)
             ),
-            center = center,
+            center = centerOffset,
             radius = size.maxDimension * radiusMultiplier
         )
     )

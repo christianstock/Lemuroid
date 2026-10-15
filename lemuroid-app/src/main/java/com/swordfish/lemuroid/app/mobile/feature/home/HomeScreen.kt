@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -38,7 +39,9 @@ fun HomeScreen(
     onOpenSettings: () -> Unit = {},
 ) {
     val context = LocalContext.current
-    val state by viewModel.getViewStates().collectAsStateWithLifecycle(initialValue = HomeViewModel.UIState())
+
+    // Collect directly from the read-only StateFlow for optimal lifecycle safety
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     ComposableLifecycle { _, event ->
         if (event == Lifecycle.Event.ON_RESUME) {
@@ -51,11 +54,15 @@ fun HomeScreen(
     ) { isGranted ->
         if (!isGranted) {
             context.displayDetailsSettingsScreen()
+        } else {
+            viewModel.updatePermissions(context.applicationContext)
         }
     }
 
     Column(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier
+            .fillMaxSize()
+            .statusBarsPadding(),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         // System / Permission Banners
@@ -117,9 +124,6 @@ fun HomeScreen(
     }
 }
 
-/**
- * Isolated Empty State Card container (ready for custom retro design).
- */
 @Composable
 private fun EmptyLibraryCard(
     indexInProgress: Boolean,

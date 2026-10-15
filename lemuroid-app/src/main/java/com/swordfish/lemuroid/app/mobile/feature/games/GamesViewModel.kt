@@ -6,18 +6,35 @@ import androidx.lifecycle.viewModelScope
 import com.swordfish.lemuroid.lib.library.MetaSystemID
 import com.swordfish.lemuroid.lib.library.db.RetrogradeDatabase
 import com.swordfish.lemuroid.lib.library.db.entity.Game
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 class GamesViewModel(
     private val retrogradeDb: RetrogradeDatabase,
     private val initialMetaSystem: MetaSystemID,
 ) : ViewModel() {
+
     enum class SortMode {
         RECENTS, ALPHABETICAL, RELEASE
+    }
+
+    companion object {
+        // Enforce strict chronological handheld order: GB -> GBC -> GBA
+        val ALLOWED_META_SYSTEMS = listOf(
+            MetaSystemID.GB,
+            MetaSystemID.GBC,
+            MetaSystemID.GBA
+        )
+
+        private val ALLOWED_DB_NAMES = ALLOWED_META_SYSTEMS
+            .flatMap { it.systemIDs }
+            .map { it.dbname }
+            .toSet()
     }
 
     private val _searchQuery = MutableStateFlow("")
@@ -29,7 +46,9 @@ class GamesViewModel(
     private val _sortMode = MutableStateFlow(SortMode.RECENTS)
     val sortMode: StateFlow<SortMode> = _sortMode
 
-    private val _currentMetaSystem = MutableStateFlow(initialMetaSystem)
+    private val _currentMetaSystem = MutableStateFlow(
+        if (initialMetaSystem in ALLOWED_META_SYSTEMS) initialMetaSystem else ALLOWED_META_SYSTEMS.first()
+    )
     val currentMetaSystem: StateFlow<MetaSystemID> = _currentMetaSystem
 
     val games: StateFlow<List<Game>> = combine(
@@ -39,52 +58,54 @@ class GamesViewModel(
         _sortMode,
         _currentMetaSystem,
     ) { allGames, query, showAll, sort, metaSystem ->
-        var filtered = allGames
-        
-        // 1. System Filter
-        if (!showAll) {
-            val dbNames = metaSystem.systemIDs.map { it.dbname }
-            filtered = filtered.filter { dbNames.contains(it.systemId) }
+
+        // 1. System Whitelist & MetaSystem Filter
+        var filtered = if (showAll) {
+            allGames.filter { it.systemId in ALLOWED_DB_NAMES }
+        } else {
+            val activeDbNames = metaSystem.systemIDs.map { it.dbname }.toSet()
+            allGames.filter { it.systemId in activeDbNames }
         }
 
-        // 2. Search Filter
-        if (query.isNotEmpty()) {
-            filtered = filtered.filter { 
-                it.title.contains(query, ignoreCase = true) || 
-                it.country?.contains(query, ignoreCase = true) == true ||
-                it.summary?.contains(query, ignoreCase = true) == true
+        // 2. Search Query Filter
+        if (query.isNotBlank()) {
+            val trimmedQuery = query.trim()
+            filtered = filtered.filter { game ->
+                game.title.contains(trimmedQuery, ignoreCase = true) ||
+                        game.country?.contains(trimmedQuery, ignoreCase = true) == true ||
+                        game.summary?.contains(trimmedQuery, ignoreCase = true) == true
             }
         }
 
         // 3. Sorting
         when (sort) {
             SortMode.RECENTS -> filtered.sortedByDescending { it.lastPlayedAt ?: 0L }
-            SortMode.ALPHABETICAL -> filtered.sortedBy { it.title.lowercase() }
+            SortMode.ALPHABETICAL -> filtered.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.title })
             SortMode.RELEASE -> filtered.sortedByDescending { it.releaseDate ?: "" }
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    private val allowedSystems = listOf(MetaSystemID.GB, MetaSystemID.GBC, MetaSystemID.GBA)
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
 
     fun switchToPreviousSystem() {
-        val entries = allowedSystems
-        val currentIndex = entries.indexOf(_currentMetaSystem.value)
+        val currentIndex = ALLOWED_META_SYSTEMS.indexOf(_currentMetaSystem.value)
         if (currentIndex != -1) {
-            val prevIndex = (currentIndex - 1 + entries.size) % entries.size
-            _currentMetaSystem.value = entries[prevIndex]
+            val prevIndex = (currentIndex - 1 + ALLOWED_META_SYSTEMS.size) % ALLOWED_META_SYSTEMS.size
+            _currentMetaSystem.value = ALLOWED_META_SYSTEMS[prevIndex]
         } else {
-            _currentMetaSystem.value = entries.last()
+            _currentMetaSystem.value = ALLOWED_META_SYSTEMS.last()
         }
     }
 
     fun switchToNextSystem() {
-        val entries = allowedSystems
-        val currentIndex = entries.indexOf(_currentMetaSystem.value)
+        val currentIndex = ALLOWED_META_SYSTEMS.indexOf(_currentMetaSystem.value)
         if (currentIndex != -1) {
-            val nextIndex = (currentIndex + 1) % entries.size
-            _currentMetaSystem.value = entries[nextIndex]
+            val nextIndex = (currentIndex + 1) % ALLOWED_META_SYSTEMS.size
+            _currentMetaSystem.value = ALLOWED_META_SYSTEMS[nextIndex]
         } else {
-            _currentMetaSystem.value = entries.first()
+            _currentMetaSystem.value = ALLOWED_META_SYSTEMS.first()
         }
     }
 
@@ -98,6 +119,13 @@ class GamesViewModel(
 
     fun updateSortMode(mode: SortMode) {
         _sortMode.value = mode
+    }
+
+    fun onGameLaunched(game: Game) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val now = System.currentTimeMillis()
+            retrogradeDb.gameDao().update(game.copy(lastPlayedAt = now))
+        }
     }
 
     class Factory(

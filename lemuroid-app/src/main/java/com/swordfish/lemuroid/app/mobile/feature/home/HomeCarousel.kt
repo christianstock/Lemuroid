@@ -3,10 +3,12 @@ package com.swordfish.lemuroid.app.mobile.feature.home
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.EaseInOutSine
+import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Box
@@ -28,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.Font
@@ -98,7 +101,51 @@ fun HomeCarousel(
         }
     }
 
+    // Determine current active game across system and scroll state for the root background
+    val currentLibrary = systemLibraries[systemPagerState.currentPage % systemsCount]
+    val currentScrollPage = systemScrollPositions[currentLibrary.systemId] ?: baseIndex
+    val currentGame = currentLibrary.games.takeIf { it.isNotEmpty() }?.let { games ->
+        games[currentScrollPage % games.size]
+    }
+
+    val context = LocalContext.current
+    val fallbackAccentColor = MaterialTheme.colorScheme.primary
+    var accentColor by remember { mutableStateOf(fallbackAccentColor) }
+
+    LaunchedEffect(currentGame?.id, currentGame?.coverFrontUrl) {
+        accentColor = extractAccentColor(
+            context = context,
+            coverUrl = currentGame?.coverFrontUrl,
+            fallbackColor = fallbackAccentColor
+        )
+    }
+
+    val animatedAccentColor by animateColorAsState(
+        targetValue = accentColor,
+        animationSpec = tween(durationMillis = 500),
+        label = "CarouselAccentCrossfade"
+    )
+
+    // Track initial app startup to snap the very first frame, then tween everything else
+    var isAppFirstRender by remember { mutableStateOf(true) }
+    LaunchedEffect(Unit) {
+        isAppFirstRender = false
+    }
+    val backgroundAnimSpec: FiniteAnimationSpec<Float> = if (isAppFirstRender) {
+        snap()
+    } else {
+        tween(durationMillis = 600)
+    }
+
     Box(modifier = modifier.fillMaxSize()) {
+        // Single root background persisting across system and game swipes
+        GameArtBlurBackground(
+            coverFrontUrl = currentGame?.coverFrontUrl,
+            accentColor = animatedAccentColor,
+            animationSpec = backgroundAnimSpec,
+            modifier = Modifier.fillMaxSize()
+        )
+
         HorizontalPager(
             state = systemPagerState,
             key = { page -> systemLibraries[page % systemsCount].systemId },
@@ -112,6 +159,7 @@ fun HomeCarousel(
                 library = library,
                 refreshCount = refreshCount,
                 scrollPage = scrollPage,
+                animatedAccentColor = animatedAccentColor,
                 onScroll = { newIndex -> onSystemScroll(library.systemId, newIndex) },
                 onGameClick = onGameClick,
                 onShowContextMenu = onShowContextMenu,
@@ -128,6 +176,7 @@ private fun ConsoleStage(
     library: HomeViewModel.SystemLibrary,
     refreshCount: Int,
     scrollPage: Int,
+    animatedAccentColor: Color,
     onScroll: (Int) -> Unit,
     onGameClick: (Game) -> Unit,
     onShowContextMenu: (Game) -> Unit,
@@ -140,7 +189,6 @@ private fun ConsoleStage(
     val gamePagerState = rememberPagerState(initialPage = initialPage) {
         if (games.size <= 1) 1 else Int.MAX_VALUE
     }
-    val context = LocalContext.current
 
     LaunchedEffect(scrollPage) {
         if (games.size > 1 && gamePagerState.currentPage != scrollPage) {
@@ -158,23 +206,6 @@ private fun ConsoleStage(
         games[gamePagerState.currentPage % games.size]
     } else null
 
-    val fallbackAccentColor = MaterialTheme.colorScheme.primary
-    var accentColor by remember { mutableStateOf(fallbackAccentColor) }
-
-    LaunchedEffect(currentGame?.id, currentGame?.coverFrontUrl) {
-        accentColor = extractAccentColor(
-            context = context,
-            coverUrl = currentGame?.coverFrontUrl,
-            fallbackColor = fallbackAccentColor
-        )
-    }
-
-    val animatedAccentColor by animateColorAsState(
-        targetValue = accentColor,
-        animationSpec = tween(durationMillis = 500),
-        label = "AccentColorCrossfade"
-    )
-
     val infiniteTransition = rememberInfiniteTransition(label = "CartridgeFloatTransition")
     val idleFloatDp by infiniteTransition.animateFloat(
         initialValue = -1.5f,
@@ -186,23 +217,10 @@ private fun ConsoleStage(
         label = "dyFloat"
     )
 
-    val hintAlphaAnim = remember { Animatable(0f) }
-    LaunchedEffect(library.systemId) {
-        hintAlphaAnim.snapTo(0f)
-        hintAlphaAnim.animateTo(0.85f, animationSpec = tween(600))
-        delay(3500.milliseconds)
-        hintAlphaAnim.animateTo(0f, animationSpec = tween(800))
-    }
-
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.BottomCenter
     ) {
-        GameArtBlurBackground(
-            coverFrontUrl = currentGame?.coverFrontUrl,
-            modifier = Modifier.fillMaxSize()
-        )
-
         // Top Header Info
         if (currentGame != null) {
             GameTitle(
@@ -247,7 +265,7 @@ private fun ConsoleStage(
                     idleFloatDp = idleFloatDp,
                     refreshCount = refreshCount,
                     accentColor = animatedAccentColor,
-                    hintAlpha = hintAlphaAnim.value,
+                    hintAlpha = 0f,
                     onGameClick = onGameClick,
                     onShowContextMenu = onShowContextMenu,
                     onNavigateToList = onNavigateToList

@@ -1,26 +1,44 @@
 package com.swordfish.lemuroid.app.mobile.feature.games
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.*
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
@@ -37,111 +55,22 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.zIndex
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.swordfish.lemuroid.R
+import com.swordfish.lemuroid.app.mobile.shared.DefaultBackground
 import com.swordfish.lemuroid.app.mobile.shared.RetroLcdGreen
 import com.swordfish.lemuroid.app.mobile.shared.RetroLcdGreenDark
 import com.swordfish.lemuroid.app.mobile.shared.RetroSearchBar
 import com.swordfish.lemuroid.app.mobile.shared.compose.ui.LemuroidGameImage
 import com.swordfish.lemuroid.lib.library.db.entity.Game
-import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import kotlin.math.abs
-import kotlin.math.exp
-import kotlin.math.hypot
 import kotlin.random.Random
 
-private val RetroAmbientPalette = listOf(
-    Color(0xFF00E5FF),
-    Color(0xFFFF007F),
-    Color(0xFF7C4DFF),
-    Color(0xFFFF9100),
-    Color(0xFF00E676),
-    Color(0xFFFF1744)
-)
-
 val pressStart2PFontFamily = FontFamily(Font(R.font.press_start_2p))
-
-@Stable
-class GridRipple(
-    private val speed: Float = 3f,
-    private val bandWidth: Float = 1f,
-    private val tailFactor: Float = 2f,
-    private val strength: Float = 0.7f,
-) {
-    var origin by mutableStateOf(Offset.Zero)
-    var coverWidthPx by mutableFloatStateOf(1f)
-
-    private val front = Animatable(INACTIVE)
-    private var maxDist = 0f
-
-    val isRunning: Boolean
-        get() = front.value != INACTIVE
-
-    suspend fun run(gridSize: IntSize) {
-        if (coverWidthPx <= 0f) return
-        maxDist = hypot(gridSize.width.toFloat(), gridSize.height.toFloat()) / coverWidthPx
-        val travel = maxDist + bandWidth * 3f
-        try {
-            front.snapTo(0f)
-            front.animateTo(travel, tween((travel / speed * 1000).toInt(), easing = LinearEasing))
-        } finally {
-            withContext(NonCancellable) { front.snapTo(INACTIVE) }
-        }
-    }
-
-    fun intensity(d: Float): Float {
-        val f = front.value
-        if (f == INACTIVE) return 0f
-        val dl = d - f
-        val s = if (dl < 0f) bandWidth * tailFactor else bandWidth
-        val fade = (1f - f / (maxDist + bandWidth * tailFactor)).coerceIn(0f, 1f)
-        val v = exp(-(dl / s) * (dl / s)) * (0.4f + 0.6f * fade)
-        return v * strength
-    }
-
-    private companion object { const val INACTIVE = -1000f }
-}
-
-@Composable
-fun Modifier.rippleLift(ripple: GridRipple, shape: Shape): Modifier {
-    var center by remember { mutableStateOf(Offset.Zero) }
-
-    fun k(): Float {
-        if (ripple.coverWidthPx <= 0f) return 0f
-        val d = (center - ripple.origin).getDistance() / ripple.coverWidthPx
-        return ripple.intensity(d)
-    }
-
-    val kVal = k()
-
-    return this
-        .onGloballyPositioned { c ->
-            center = c.positionInRoot() + Offset(c.size.width / 2f, c.size.height / 2f)
-            if (c.size.width > 0) {
-                ripple.coverWidthPx = c.size.width.toFloat()
-            }
-        }
-        .zIndex(if (kVal > 0.01f) 1f else 0f)
-        .graphicsLayer {
-            val s = 1f + 0.02f * kVal
-            scaleX = s
-            scaleY = s
-        }
-        .clip(shape)
-        .drawWithContent {
-            drawContent()
-            val a = kVal * 0.6f
-            if (a > 0.005f) {
-                drawRect(Color.White.copy(alpha = a))
-            }
-        }
-}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -151,12 +80,22 @@ fun GamesScreen(
     onGameClick: (Game) -> Unit,
     onGameLongClick: (Game) -> Unit,
     onExitClick: () -> Unit,
-    @Suppress("UNUSED_PARAMETER") onGameFavoriteToggle: (Game, Boolean) -> Unit,
+    @Suppress("UNUSED_PARAMETER") onGameFavoriteToggle: (Game, Boolean) -> Unit = { _, _ -> },
     rippleIntervalMs: Long = 6_000L,
 ) {
-    val games by viewModel.games.collectAsState()
-    val query by viewModel.searchQuery.collectAsState()
-    val sortMode by viewModel.sortMode.collectAsState()
+    val games by viewModel.games.collectAsStateWithLifecycle()
+    val query by viewModel.searchQuery.collectAsStateWithLifecycle()
+    val sortMode by viewModel.sortMode.collectAsStateWithLifecycle()
+    val currentMetaSystem by viewModel.currentMetaSystem.collectAsStateWithLifecycle()
+    val showAllSystems by viewModel.showAllSystems.collectAsStateWithLifecycle()
+
+    val activeSystemCount = remember(games) {
+        games.map { it.systemId }.distinct().size
+    }
+
+    val canSwipeSystems = remember(showAllSystems, activeSystemCount) {
+        !showAllSystems && activeSystemCount > 1
+    }
 
     val ripple = remember { GridRipple() }
     var gridSize by remember { mutableStateOf(IntSize.Zero) }
@@ -165,22 +104,7 @@ fun GamesScreen(
     val coroutineScope = rememberCoroutineScope()
     val gridState = rememberLazyGridState()
 
-    val primaryGlowColor = remember(games) {
-        if (games.isEmpty()) {
-            Color(0xFF1F2833)
-        } else {
-            val hash = abs(games.first().title.hashCode() xor games.size)
-            RetroAmbientPalette[hash % RetroAmbientPalette.size]
-        }
-    }
-
-    val animatedGlowColor by animateColorAsState(
-        targetValue = primaryGlowColor,
-        animationSpec = tween(durationMillis = 1000, easing = LinearOutSlowInEasing),
-        label = "GlowColorTransition"
-    )
-
-    val infiniteTransition = rememberInfiniteTransition(label = "AmbientGlowPulse")
+    val infiniteTransition = rememberInfiniteTransition(label = "SideArrowPulse")
     val sideArrowScale by infiniteTransition.animateFloat(
         initialValue = 0.8f,
         targetValue = 1.0f,
@@ -201,9 +125,6 @@ fun GamesScreen(
         label = "SideArrowAlpha"
     )
 
-    var animatingGame by remember { mutableStateOf<Game?>(null) }
-    val animProgress = remember { Animatable(0f) }
-
     LaunchedEffect(gridSize, games.size) {
         if (gridSize == IntSize.Zero || games.isEmpty()) return@LaunchedEffect
         lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
@@ -215,104 +136,52 @@ fun GamesScreen(
         }
     }
 
-    val launchGameWithAnimation: (Game) -> Unit = { game ->
-        coroutineScope.launch {
-            animatingGame = game
-            animProgress.snapTo(0f)
-            animProgress.animateTo(
-                targetValue = 1f,
-                animationSpec = tween(durationMillis = 1200, easing = LinearOutSlowInEasing)
-            )
-            onGameClick(game)
-            animatingGame = null
-        }
-    }
-
-    Box(modifier = modifier.fillMaxSize().background(Color.Black)) {
-
-        // --- UPPER HALF AMBIENT GLOW BACKLIGHT ---
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .drawBehind {
-                    val radiusPx = size.width * 0.85f
-                    val centerOffset = Offset(
-                        x = size.width / 2f,
-                        y = size.height * 0.32f
-                    )
-
-                    drawRect(
-                        brush = Brush.radialGradient(
-                            colors = listOf(
-                                primaryGlowColor.copy(alpha = 0.4f),
-                                primaryGlowColor.copy(alpha = 0.15f),
-                                Color.Transparent
-                            ),
-                            center = centerOffset,
-                            radius = radiusPx
-                        )
-                    )
-                }
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .statusBarsPadding()
+    ) {
+        // LCD Green Top-Weighted Glow Background
+        DefaultBackground(
+            glowColor = RetroLcdGreen,
+            isCentered = false
         )
 
         Column(modifier = Modifier.fillMaxSize()) {
-
-            // --- REUSABLE RETRO HEADER BAR ---
             RetroSearchBar(
                 query = query,
                 onQueryChange = viewModel::updateSearchQuery,
                 onExitClick = onExitClick
             )
 
-            // --- FILTER SELECTORS ROW ---
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                val sortOptions = listOf(
-                    GamesViewModel.SortMode.ALPHABETICAL to "A-Z",
-                    GamesViewModel.SortMode.RECENTS to "LAST PLAYED",
-                    GamesViewModel.SortMode.RELEASE to "RELEASE"
-                )
-
-                sortOptions.forEach { (mode, label) ->
-                    val isSelected = sortMode == mode
-                    TextButton(
-                        onClick = {
-                            viewModel.updateSortMode(mode)
-                            coroutineScope.launch {
-                                gridState.scrollToItem(0)
-                            }
-                        }
-                    ) {
-                        Text(
-                            text = label,
-                            fontFamily = pressStart2PFontFamily,
-                            fontSize = 10.sp,
-                            color = if (isSelected) RetroLcdGreen else Color.Gray
-                        )
-                    }
+            SortFilterRow(
+                currentSortMode = sortMode,
+                onSelectSortMode = { mode ->
+                    viewModel.updateSortMode(mode)
+                    coroutineScope.launch { gridState.scrollToItem(0) }
                 }
-            }
+            )
 
-            // --- MAIN GRID / CONTENT AREA ---
+            // Main Grid / Content Area
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .pointerInput(Unit) {
-                        detectHorizontalDragGestures { change, dragAmount ->
-                            change.consume()
-                            if (dragAmount > 50) {
-                                viewModel.switchToPreviousSystem()
-                            } else if (dragAmount < -50) {
-                                viewModel.switchToNextSystem()
+                    .then(
+                        if (canSwipeSystems) {
+                            Modifier.pointerInput(currentMetaSystem, showAllSystems) {
+                                detectHorizontalDragGestures { change, dragAmount ->
+                                    change.consume()
+                                    if (dragAmount > 50) {
+                                        viewModel.switchToPreviousSystem()
+                                    } else if (dragAmount < -50) {
+                                        viewModel.switchToNextSystem()
+                                    }
+                                }
                             }
-                        }
-                    }
+                        } else Modifier
+                    )
             ) {
                 if (games.isEmpty()) {
                     Box(
@@ -345,87 +214,108 @@ fun GamesScreen(
                                 game = game,
                                 ripple = ripple,
                                 shape = coverShape,
-                                onClick = { launchGameWithAnimation(game) },
+                                onClick = {
+                                    viewModel.onGameLaunched(game)
+                                    onGameClick(game)
+                                },
                                 onLongClick = { onGameLongClick(game) }
                             )
                         }
                     }
                 }
 
-                // --- RIPPLE SIDE INDICATOR ARROWS ---
-                if (ripple.isRunning) {
-                    androidx.compose.foundation.Canvas(
-                        modifier = Modifier
-                            .align(Alignment.CenterStart)
-                            .padding(start = 12.dp)
-                            .width(14.dp)
-                            .height(24.dp)
-                            .graphicsLayer {
-                                scaleX = sideArrowScale
-                                scaleY = sideArrowScale
-                                alpha = sideArrowAlpha
-                            }
-                    ) {
-                        val path = Path().apply {
-                            moveTo(0f, size.height / 2f)
-                            lineTo(size.width, 0f)
-                            lineTo(size.width, size.height)
-                            close()
-                        }
-                        drawPath(path, color = Color.White)
-                    }
-
-                    androidx.compose.foundation.Canvas(
-                        modifier = Modifier
-                            .align(Alignment.CenterEnd)
-                            .padding(end = 12.dp)
-                            .width(14.dp)
-                            .height(24.dp)
-                            .graphicsLayer {
-                                scaleX = sideArrowScale
-                                scaleY = sideArrowScale
-                                alpha = sideArrowAlpha
-                            }
-                    ) {
-                        val path = Path().apply {
-                            moveTo(size.width, size.height / 2f)
-                            lineTo(0f, 0f)
-                            lineTo(0f, size.height)
-                            close()
-                        }
-                        drawPath(path, color = Color.White)
-                    }
-                }
-            }
-        }
-
-        // --- TAP COVER FULL-SCREEN LAUNCH ANIMATION OVERLAY ---
-        animatingGame?.let { game ->
-            val p = animProgress.value
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = p.coerceIn(0f, 1f)))
-                    .zIndex(100f),
-                contentAlignment = Alignment.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size((180 + p * 160).dp)
-                        .graphicsLayer {
-                            rotationZ = p * 360f
-                            alpha = (1f - p * 0.8f).coerceIn(0f, 1f)
-                        }
-                        .clip(coverShape)
-                ) {
-                    LemuroidGameImage(
-                        game = game,
-                        modifier = Modifier.fillMaxSize(),
-                        applyAspectRatio = false,
-                        contentScale = ContentScale.Crop
+                if (ripple.isRunning && canSwipeSystems) {
+                    RippleSideArrows(
+                        scale = sideArrowScale,
+                        alpha = sideArrowAlpha
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun SortFilterRow(
+    currentSortMode: GamesViewModel.SortMode,
+    onSelectSortMode: (GamesViewModel.SortMode) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(bottom = 8.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        val sortOptions = listOf(
+            GamesViewModel.SortMode.ALPHABETICAL to "A-Z",
+            GamesViewModel.SortMode.RECENTS to "LAST PLAYED",
+            GamesViewModel.SortMode.RELEASE to "RELEASE"
+        )
+
+        sortOptions.forEach { (mode, label) ->
+            val isSelected = currentSortMode == mode
+            TextButton(onClick = { onSelectSortMode(mode) }) {
+                Text(
+                    text = label,
+                    fontFamily = pressStart2PFontFamily,
+                    fontSize = 9.sp,
+                    color = if (isSelected) RetroLcdGreen else Color.Gray
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun RippleSideArrows(
+    scale: Float,
+    alpha: Float,
+    modifier: Modifier = Modifier
+) {
+    val leftArrowPath = remember { Path() }
+    val rightArrowPath = remember { Path() }
+
+    Box(modifier = modifier.fillMaxSize()) {
+        Canvas(
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .padding(start = 12.dp)
+                .width(14.dp)
+                .height(24.dp)
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                    this.alpha = alpha
+                }
+        ) {
+            leftArrowPath.reset()
+            leftArrowPath.moveTo(0f, size.height / 2f)
+            leftArrowPath.lineTo(size.width, 0f)
+            leftArrowPath.lineTo(size.width, size.height)
+            leftArrowPath.close()
+            drawPath(leftArrowPath, color = Color.White)
+        }
+
+        Canvas(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .padding(end = 12.dp)
+                .width(14.dp)
+                .height(24.dp)
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                    this.alpha = alpha
+                }
+        ) {
+            rightArrowPath.reset()
+            rightArrowPath.moveTo(size.width, size.height / 2f)
+            rightArrowPath.lineTo(0f, 0f)
+            rightArrowPath.lineTo(0f, size.height)
+            rightArrowPath.close()
+            drawPath(rightArrowPath, color = Color.White)
         }
     }
 }

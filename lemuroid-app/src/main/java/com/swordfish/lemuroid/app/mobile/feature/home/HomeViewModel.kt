@@ -12,7 +12,6 @@ import com.swordfish.lemuroid.app.shared.library.PendingOperationsMonitor
 import com.swordfish.lemuroid.app.shared.settings.StorageFrameworkPickerLauncher
 import com.swordfish.lemuroid.common.kotlin.cleanGameTitle
 import com.swordfish.lemuroid.lib.core.CoresSelection
-import com.swordfish.lemuroid.lib.library.CoreID
 import com.swordfish.lemuroid.lib.library.SystemID
 import com.swordfish.lemuroid.lib.library.db.RetrogradeDatabase
 import com.swordfish.lemuroid.lib.library.db.entity.Game
@@ -21,6 +20,8 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -30,17 +31,22 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
+import androidx.core.content.edit
 
-@OptIn(FlowPreview::class)
+@OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 class HomeViewModel(
     private val appContext: Context,
     private val retrogradeDb: RetrogradeDatabase,
     private val coresSelection: CoresSelection,
 ) : ViewModel() {
+
     companion object {
         private const val PREFS_NAME = "home_prefs"
         private const val KEY_SELECTED_SYSTEM = "selected_system_id"
         const val BASE_PAGE_INDEX = Int.MAX_VALUE / 2
+
+        // Explicit whitelist for Game Boy systems in display order
+        private val SUPPORTED_SYSTEMS = listOf("gb", "gbc", "gba")
     }
 
     private val prefs = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -79,27 +85,28 @@ class HomeViewModel(
     private val selectedSystemIdState = MutableStateFlow<String?>(prefs.getString(KEY_SELECTED_SYSTEM, null))
     private val systemScrollIndicesState = MutableStateFlow<Map<String, Int>>(emptyMap())
     private val systemResetsState = MutableStateFlow<Map<String, Long>>(emptyMap())
-    private val uiStates = MutableStateFlow(UIState())
 
-    fun getViewStates(): Flow<UIState> = uiStates
+    private val _uiState = MutableStateFlow(UIState())
+    val uiState: StateFlow<UIState> = _uiState.asStateFlow()
 
     fun setSelectedSystem(systemId: String) {
         val normalizedId = systemId.lowercase()
+        if (normalizedId !in SUPPORTED_SYSTEMS) return
         if (selectedSystemIdState.value == normalizedId) return
-        
+
         selectedSystemIdState.value = normalizedId
-        prefs.edit().putString(KEY_SELECTED_SYSTEM, normalizedId).apply()
+        prefs.edit { putString(KEY_SELECTED_SYSTEM, normalizedId) }
     }
 
     fun setSystemScrollPosition(systemId: String, page: Int) {
-        val uiState = uiStates.value
-        val library = uiState.systemLibraries.find { it.systemId == systemId } ?: return
+        val currentUiState = _uiState.value
+        val library = currentUiState.systemLibraries.find { it.systemId == systemId } ?: return
         if (library.games.isEmpty()) return
 
         val relativeIndex = page % library.games.size
         val current = systemScrollIndicesState.value.toMutableMap()
         if (current[systemId] == relativeIndex) return
-        
+
         current[systemId] = relativeIndex
         systemScrollIndicesState.value = current
     }
@@ -108,7 +115,7 @@ class HomeViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             val now = System.currentTimeMillis()
             retrogradeDb.gameDao().update(game.copy(lastPlayedAt = now))
-            
+
             val indices = systemScrollIndicesState.value.toMutableMap()
             indices[game.systemId] = 0
             systemScrollIndicesState.value = indices
@@ -142,27 +149,34 @@ class HomeViewModel(
     }
 
     init {
-        viewModelScope.launch {
-            if (selectedSystemIdState.value == null || selectedSystemIdState.value?.lowercase() == "psp") {
+        // Ensure default system selection is strictly GB / GBC / GBA
+        viewModelScope.launch(Dispatchers.IO) {
+            val currentSelected = selectedSystemIdState.value?.lowercase()
+            if (currentSelected == null || currentSelected !in SUPPORTED_SYSTEMS) {
                 val lastPlayedGame = retrogradeDb.gameDao().selectLastPlayedGameFlow().first()
-                if (lastPlayedGame != null && lastPlayedGame.systemId.lowercase() != "psp") {
-                    setSelectedSystem(lastPlayedGame.systemId)
+                val lastSystem = lastPlayedGame?.systemId?.lowercase()
+
+                if (lastSystem != null && lastSystem in SUPPORTED_SYSTEMS) {
+                    setSelectedSystem(lastSystem)
                 } else {
-                    val preferred = listOf("gb", "gbc", "gba")
-                    val systems = retrogradeDb.gameDao().selectSystems()
-                        .filter { it.lowercase() != "psp" }
-                        .sortedBy { sysId ->
-                            val idx = preferred.indexOf(sysId.lowercase())
-                            if (idx != -1) idx else Int.MAX_VALUE
-                        }
-                    if (systems.isNotEmpty()) setSelectedSystem(systems.first())
+                    val availableSystems = retrogradeDb.gameDao().selectSystems()
+                        .map { it.lowercase() }
+                        .filter { it in SUPPORTED_SYSTEMS }
+                        .sortedBy { SUPPORTED_SYSTEMS.indexOf(it) }
+
+                    if (availableSystems.isNotEmpty()) {
+                        setSelectedSystem(availableSystems.first())
+                    } else {
+                        setSelectedSystem(SUPPORTED_SYSTEMS.first())
+                    }
                 }
             }
         }
 
+        // Combine DB & State Flows
         viewModelScope.launch {
-            val uiStatesFlow = combine(
-                retrogradeDb.gameDao().selectSystemsFlow(), 
+            combine(
+                retrogradeDb.gameDao().selectSystemsFlow(),
                 retrogradeDb.gameDao().selectAllFlow(),
                 selectedSystemIdState,
                 systemScrollIndicesState,
@@ -170,37 +184,37 @@ class HomeViewModel(
                 refreshCountState,
                 notificationsPermissionEnabledState,
                 indexingInProgress(appContext).onStart { emit(false) },
-                microphoneNotification(retrogradeDb).onStart { emit(false) },
-            ) { params ->
-                val availableSystems = params[0] as List<String>
-                val allGames = params[1] as List<Game>
-                val selectedSystemId = params[2] as String?
+                microphoneNotification(retrogradeDb).onStart { emit(false) }
+            ) { args: Array<Any?> ->
                 @Suppress("UNCHECKED_CAST")
-                val scrollIndices = params[3] as Map<String, Int>
+                val availableSystems = args[0] as List<String>
                 @Suppress("UNCHECKED_CAST")
-                val systemResets = params[4] as Map<String, Long>
-                val refreshCount = params[5] as Int
-                val notificationsEnabled = params[6] as Boolean
-                val indexInProgress = params[7] as Boolean
-                val microphoneEnabled = params[8] as Boolean
+                val allGames = args[1] as List<Game>
+                val selectedSystemId = args[2] as String?
+                @Suppress("UNCHECKED_CAST")
+                val scrollIndices = args[3] as Map<String, Int>
+                @Suppress("UNCHECKED_CAST")
+                val systemResets = args[4] as Map<String, Long>
+                val refreshCount = args[5] as Int
+                val notificationsEnabled = args[6] as Boolean
+                val indexInProgress = args[7] as Boolean
+                val showMicrophoneCard = args[8] as Boolean
 
-                val preferredSystemOrder = listOf("gb", "gbc", "gba")
+                // Strict whitelist filter for GB, GBC, and GBA
                 val filteredSystems = availableSystems
-                    .filter { it.lowercase() != "psp" }
-                    .sortedBy { sysId ->
-                        val idx = preferredSystemOrder.indexOf(sysId.lowercase())
-                        if (idx != -1) idx else Int.MAX_VALUE
-                    }
+                    .map { it.lowercase() }
+                    .filter { it in SUPPORTED_SYSTEMS }
+                    .sortedBy { SUPPORTED_SYSTEMS.indexOf(it) }
 
                 val systemLibraries = filteredSystems.map { sysId ->
                     val systemGames = allGames
-                        .filter { it.systemId.lowercase() == sysId.lowercase() }
+                        .filter { it.systemId.lowercase() == sysId }
                         .sortedWith(compareByDescending<Game> { it.lastPlayedAt ?: 0L }.thenBy { it.title })
                         .map { game ->
                             val cleaned = game.title.cleanGameTitle()
                             if (cleaned != game.title) game.copy(title = cleaned) else game
                         }
-                    
+
                     SystemLibrary(sysId, systemGames, systemResets[sysId] ?: 0L)
                 }
 
@@ -219,14 +233,15 @@ class HomeViewModel(
                     indexInProgress = indexInProgress,
                     refreshCount = refreshCount,
                     showNoNotificationPermissionCard = !notificationsEnabled,
-                    showNoMicrophonePermissionCard = microphoneEnabled,
+                    showNoMicrophonePermissionCard = showMicrophoneCard,
                     showNoGamesCard = systemLibraries.isEmpty(),
                 )
-            }.distinctUntilChanged()
-
-            uiStatesFlow
+            }
+                .distinctUntilChanged()
                 .flowOn(Dispatchers.IO)
-                .collect { uiStates.value = it }
+                .collect { updatedState ->
+                    _uiState.value = updatedState
+                }
         }
     }
 
@@ -239,7 +254,6 @@ class HomeViewModel(
             .distinctUntilChanged()
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     private fun microphoneNotification(db: RetrogradeDatabase): Flow<Boolean> {
         return microphonePermissionEnabledState.flatMapLatest { isEnabled ->
             if (isEnabled) flowOf(false) else combine(coresSelection.getSelectedCores(), dsGamesCount(db)) { cores, dsCount ->
