@@ -82,6 +82,7 @@ import com.swordfish.lemuroid.app.mobile.shared.RetroLime
 import com.swordfish.lemuroid.app.mobile.shared.RetroLimeEdge
 import com.swordfish.lemuroid.app.mobile.shared.RetroMagenta
 import com.swordfish.lemuroid.app.mobile.shared.RetroMagentaEdge
+import com.swordfish.lemuroid.app.mobile.shared.RetroMuted
 import com.swordfish.lemuroid.app.mobile.shared.RetroPanel
 import com.swordfish.lemuroid.app.mobile.shared.RetroPanelLight
 import com.swordfish.lemuroid.app.mobile.shared.RetroSearchBar
@@ -219,7 +220,7 @@ fun CheatMenuScreen(
                             fontFamily = pressStart2PFontFamily,
                             fontSize = 10.sp,
                             fontWeight = if (isAllSelected) FontWeight.Bold else FontWeight.Normal,
-                            color = if (isAllSelected) RetroLcdGreen else RetroLcdGreenDark
+                            color = if (isAllSelected) RetroText else RetroMuted
                         )
                     }
 
@@ -319,7 +320,7 @@ fun CheatMenuScreen(
                             color = RetroBorder,
                             start = Offset(0f, 0f),
                             end = Offset(size.width, 0f),
-                            strokeWidth = 2.dp.toPx()
+                            strokeWidth = 4.dp.toPx()
                         )
                     }
                     .padding(top = 12.dp)
