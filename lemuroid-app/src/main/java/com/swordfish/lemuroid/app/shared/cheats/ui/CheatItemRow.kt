@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -213,7 +214,7 @@ private fun CheatStarToggleIcon(
         contentAlignment = Alignment.Center
     ) {
         Icon(
-            imageVector = if (enabled) Icons.Filled.Star else Icons.Outlined.Star,
+            imageVector = if (enabled) Icons.Filled.Star else Icons.Rounded.StarBorder,
             contentDescription = if (enabled) "Cheat enabled" else "Cheat disabled",
             tint = if (enabled) RetroLime else Color.DarkGray,
             modifier = Modifier

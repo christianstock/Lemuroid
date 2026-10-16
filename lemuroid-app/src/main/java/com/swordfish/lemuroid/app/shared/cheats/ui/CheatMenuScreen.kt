@@ -2,14 +2,11 @@ package com.swordfish.lemuroid.app.shared.cheats.ui
 
 import android.net.Uri
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
@@ -18,17 +15,16 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -50,41 +46,30 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.swordfish.lemuroid.R
 import com.swordfish.lemuroid.app.mobile.shared.DefaultBackground
-import com.swordfish.lemuroid.app.mobile.shared.RetroBorder
-import com.swordfish.lemuroid.app.mobile.shared.RetroBorderLight
 import com.swordfish.lemuroid.app.mobile.shared.RetroCoral
 import com.swordfish.lemuroid.app.mobile.shared.RetroCoralEdge
 import com.swordfish.lemuroid.app.mobile.shared.RetroCyan
 import com.swordfish.lemuroid.app.mobile.shared.RetroCyanEdge
-import com.swordfish.lemuroid.app.mobile.shared.RetroLcdGreen
-import com.swordfish.lemuroid.app.mobile.shared.RetroLcdGreenDark
 import com.swordfish.lemuroid.app.mobile.shared.RetroLime
 import com.swordfish.lemuroid.app.mobile.shared.RetroLimeEdge
 import com.swordfish.lemuroid.app.mobile.shared.RetroMagenta
 import com.swordfish.lemuroid.app.mobile.shared.RetroMagentaEdge
 import com.swordfish.lemuroid.app.mobile.shared.RetroMuted
-import com.swordfish.lemuroid.app.mobile.shared.RetroPanel
-import com.swordfish.lemuroid.app.mobile.shared.RetroPanelLight
 import com.swordfish.lemuroid.app.mobile.shared.RetroSearchBar
 import com.swordfish.lemuroid.app.mobile.shared.RetroText
 import com.swordfish.lemuroid.app.mobile.shared.RetroViolet
@@ -167,201 +152,136 @@ fun CheatMenuScreen(
     }
 
     Box(modifier = modifier.fillMaxSize()) {
-        DefaultBackground(
-            modifier = Modifier.fillMaxSize()
-        )
+        DefaultBackground(modifier = Modifier.fillMaxSize())
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
         ) {
-            RetroSearchBar(
-                query = searchQuery,
-                onQueryChange = onSetSearchQuery,
-                onExitClick = onClose,
-                placeholderText = "SEARCH CHEATS..."
+            CheatMenuHeader(
+                searchQuery = searchQuery,
+                onSetSearchQuery = onSetSearchQuery,
+                onClose = onClose,
+                isRescanning = isRescanning,
+                allSources = allSources,
+                selectedSources = selectedSources,
+                onClearSourceFilter = onClearSourceFilter,
+                onToggleSourceFilter = onToggleSourceFilter
             )
 
-            if (isRescanning) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        text = "Scanning Libretro cheat database...",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(bottom = 4.dp)
-                    )
-                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                }
-            }
+            CheatMenuList(
+                displayCheats = displayCheats,
+                isRescanning = isRescanning,
+                rippleEngine = rippleEngine,
+                lazyListState = lazyListState,
+                onCheatToggle = onCheatToggle,
+                onDeleteCheat = onDeleteCheat,
+                onRescanCheats = onRescanCheats,
+                onListSizeChanged = { listSize = it },
+                modifier = Modifier.weight(1f)
+            )
 
-            // Source Filter Row with system-specific vibrant/edge colors
-            if (allSources.isNotEmpty()) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState())
-                        .padding(vertical = 4.dp, horizontal = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    val isAllSelected = selectedSources.isEmpty()
+            CheatMenuBottomBar(
+                isRescanning = isRescanning,
+                onRescanCheats = onRescanCheats,
+                onDisableAllCheats = onDisableAllCheats
+            )
+        }
 
-                    TextButton(
-                        onClick = onClearSourceFilter,
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = "ALL",
-                            fontFamily = pressStart2PFontFamily,
-                            fontSize = 10.sp,
-                            fontWeight = if (isAllSelected) FontWeight.Bold else FontWeight.Normal,
-                            color = if (isAllSelected) RetroText else RetroMuted
-                        )
-                    }
+        CheatMenuSnackbarHost(
+            deletedCheats = deletedCheats,
+            snackbarHostState = snackbarHostState,
+            onUndoDeleteCheat = onUndoDeleteCheat
+        )
+    }
+}
 
-                    allSources.forEach { source ->
-                        val isSelected = source in selectedSources
-                        val vibrantColor = getSourceColor(source)
-                        val edgeColor = getSourceEdgeColor(source)
+// --- Private Helper Composables ---
 
-                        TextButton(
-                            onClick = {
-                                onClearSourceFilter()
-                                if (!isSelected) {
-                                    onToggleSourceFilter(source)
-                                }
-                            },
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Text(
-                                text = source.uppercase(),
-                                fontFamily = pressStart2PFontFamily,
-                                fontSize = 10.sp,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                color = if (isSelected) vibrantColor else edgeColor
-                            )
-                        }
-                    }
-                }
-            }
+@Composable
+private fun CheatMenuHeader(
+    searchQuery: String,
+    onSetSearchQuery: (String) -> Unit,
+    onClose: () -> Unit,
+    isRescanning: Boolean,
+    allSources: List<String>,
+    selectedSources: Set<String>,
+    onClearSourceFilter: () -> Unit,
+    onToggleSourceFilter: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        RetroSearchBar(
+            query = searchQuery,
+            onQueryChange = onSetSearchQuery,
+            onExitClick = onClose,
+            placeholderText = "SEARCH CHEATS..."
+        )
 
-            // Main cheat list container
-            Box(
+        if (isRescanning) {
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f, fill = true)
+                    .padding(horizontal = 12.dp, vertical = 4.dp)
             ) {
-                if (displayCheats.isEmpty() && !isRescanning) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = "No cheats available for this game",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            OutlinedButton(onClick = onRescanCheats) {
-                                Icon(
-                                    imageVector = Icons.Default.Refresh,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.size(4.dp))
-                                Text("Rescan Libretro Database")
-                            }
-                        }
-                    }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .onGloballyPositioned {
-                                listSize = it.size
-                                rippleEngine.listTopPx = it.positionInRoot().y
-                            },
-                        state = lazyListState,
-                    ) {
-                        itemsIndexed(
-                            items = displayCheats,
-                            key = { _, cheat -> cheat.id }
-                        ) { index, cheat ->
-                            CheatItemRow(
-                                cheat = cheat,
-                                rippleEngine = rippleEngine,
-                                onToggle = {
-                                    onCheatToggle(cheat, !cheat.enabled)
-                                },
-                                onDelete = {
-                                    onDeleteCheat(cheat)
-                                }
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Tab-style Bottom Action Bar (Rescan & Unselect All)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(RetroPanelLight)
-                    .drawWithContent {
-                        drawContent()
-                        drawLine(
-                            color = RetroBorder,
-                            start = Offset(0f, 0f),
-                            end = Offset(size.width, 0f),
-                            strokeWidth = 4.dp.toPx()
-                        )
-                    }
-                    .padding(top = 12.dp)
-                    .padding(horizontal = 16.dp)
-                    .navigationBarsPadding(), // Pushes the entire bottom row container cleanly above the nav bar!
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalAlignment = Alignment.Bottom
-            ) {
-                RetroBottomActionButton(
-                    label = "RESCAN",
-                    isLoading = isRescanning,
-                    onClick = onRescanCheats,
-                    modifier = Modifier.weight(1f)
+                Text(
+                    text = "Scanning Libretro cheat database...",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(bottom = 4.dp)
                 )
-
-                RetroBottomActionButton(
-                    label = "UNSELECT ALL",
-                    onClick = onDisableAllCheats,
-                    modifier = Modifier.weight(1f)
-                )
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
         }
 
-        if (deletedCheats.isNotEmpty()) {
-            val lastDeletedId = deletedCheats.keys.maxOrNull() ?: 0
-            val lastDeletedCheat = deletedCheats[lastDeletedId]
-
-            SnackbarHost(
-                hostState = snackbarHostState,
+        // Source Filter Row
+        if (allSources.isNotEmpty()) {
+            Row(
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(16.dp)
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(vertical = 4.dp, horizontal = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Snackbar(
-                    action = {
-                        TextButton(onClick = { onUndoDeleteCheat(lastDeletedId) }) {
-                            Text("Undo")
-                        }
-                    }
+                val isAllSelected = selectedSources.isEmpty()
+
+                TextButton(
+                    onClick = onClearSourceFilter,
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                 ) {
-                    Text("Cheat deleted: ${lastDeletedCheat?.description ?: "Unknown"}")
+                    Text(
+                        text = "ALL",
+                        fontFamily = pressStart2PFontFamily,
+                        fontSize = 9.sp,
+                        fontWeight = if (isAllSelected) FontWeight.Bold else FontWeight.Normal,
+                        color = if (isAllSelected) RetroText else RetroMuted
+                    )
+                }
+
+                allSources.forEach { source ->
+                    val isSelected = source in selectedSources
+                    val vibrantColor = getSourceColor(source)
+                    val edgeColor = getSourceEdgeColor(source)
+
+                    TextButton(
+                        onClick = {
+                            onClearSourceFilter()
+                            if (!isSelected) {
+                                onToggleSourceFilter(source)
+                            }
+                        },
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = source.uppercase(),
+                            fontFamily = pressStart2PFontFamily,
+                            fontSize = 10.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isSelected) vibrantColor else edgeColor
+                        )
+                    }
                 }
             }
         }
@@ -369,66 +289,115 @@ fun CheatMenuScreen(
 }
 
 @Composable
-private fun RetroBottomActionButton(
-    label: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    isLoading: Boolean = false,
+private fun CheatMenuList(
+    displayCheats: List<GameCheatEntity>,
+    isRescanning: Boolean,
+    rippleEngine: TimedRippleEngine,
+    lazyListState: LazyListState,
+    onCheatToggle: (GameCheatEntity, Boolean) -> Unit,
+    onDeleteCheat: (GameCheatEntity) -> Unit,
+    onRescanCheats: () -> Unit,
+    onListSizeChanged: (IntSize) -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    val outerShape = RoundedCornerShape(8.dp)
-    val faceShape = RoundedCornerShape(
-        topStart = 6.dp, topEnd = 6.dp,
-        bottomStart = 2.dp, bottomEnd = 2.dp,
-    )
-
-    Box(
-        modifier = modifier
-            .height(60.dp)
-            .alpha(if (isLoading) 0.5f else 1f)
-            .clip(outerShape)
-            .background(RetroBorderLight)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                enabled = !isLoading,
-                role = Role.Button,
-                onClick = onClick,
-            ),
-    ) {
-        // Bottom band, drawn over the outline so it has no border of its own
-        Box(
-            Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .height(8.dp)
-                .background(RetroPanel)
-        )
-
-        // Face: 2 dp inside on top and sides, 6 dp on the bottom
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(start = 2.dp, top = 2.dp, end = 2.dp, bottom = 8.dp)
-                .clip(faceShape)
-                .background(RetroPanelLight),
-            contentAlignment = Alignment.Center,
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
+    Box(modifier = modifier.fillMaxWidth()) {
+        if (displayCheats.isEmpty() && !isRescanning) {
+            CheatMenuEmptyState(onRescanCheats = onRescanCheats)
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .onGloballyPositioned {
+                        onListSizeChanged(it.size)
+                        rippleEngine.listTopPx = it.positionInRoot().y
+                    },
+                state = lazyListState,
             ) {
-                Text(
-                    text = label,
-                    fontFamily = pressStart2PFontFamily,
-                    fontSize = 8.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp,
-                    color = RetroText,
-                )
+                itemsIndexed(
+                    items = displayCheats,
+                    key = { _, cheat -> cheat.id }
+                ) { _, cheat ->
+                    CheatItemRow(
+                        cheat = cheat,
+                        rippleEngine = rippleEngine,
+                        onToggle = { onCheatToggle(cheat, !cheat.enabled) },
+                        onDelete = { onDeleteCheat(cheat) }
+                    )
+                }
             }
         }
     }
 }
+
+@Composable
+private fun CheatMenuEmptyState(
+    onRescanCheats: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.game_grl_gum),
+                contentDescription = "Game Girl Gum Graphic",
+                modifier = Modifier
+                    .height(200.dp)
+                    .graphicsLayer(
+                        scaleX = 1.5f,
+                        scaleY = 1.5f
+                    )
+                    .offset(x = (-12).dp)
+            )
+
+            Text(
+                text = "NO CHEATS\nAVAILABLE FOR\nTHIS GAME.",
+                fontFamily = pressStart2PFontFamily,
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp,
+                color = RetroLimeEdge,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.offset(y = (-50).dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun BoxScope.CheatMenuSnackbarHost(
+    deletedCheats: Map<Int, GameCheatEntity>,
+    snackbarHostState: SnackbarHostState,
+    onUndoDeleteCheat: (Int) -> Unit,
+) {
+    if (deletedCheats.isNotEmpty()) {
+        val lastDeletedId = deletedCheats.keys.maxOrNull() ?: 0
+        val lastDeletedCheat = deletedCheats[lastDeletedId]
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(16.dp)
+        ) {
+            Snackbar(
+                action = {
+                    TextButton(onClick = { onUndoDeleteCheat(lastDeletedId) }) {
+                        Text("Undo")
+                    }
+                }
+            ) {
+                Text("Cheat deleted: ${lastDeletedCheat?.description ?: "Unknown"}")
+            }
+        }
+    }
+}
+
+// --- Source Color Resolvers ---
 
 fun getSourceColor(source: String?): Color {
     return when (source?.lowercase()) {
