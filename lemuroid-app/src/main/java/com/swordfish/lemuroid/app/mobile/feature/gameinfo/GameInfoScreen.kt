@@ -116,7 +116,6 @@ fun GameInfoScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .statusBarsPadding()
             ) {
                 LazyColumn(
                     modifier = Modifier
@@ -133,7 +132,7 @@ fun GameInfoScreen(
 
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.padding(top = 8.dp)
+                            modifier = Modifier.padding(top = 8.dp).statusBarsPadding()
                         ) {
                             Text(
                                 text = titleParts[0].uppercase(),

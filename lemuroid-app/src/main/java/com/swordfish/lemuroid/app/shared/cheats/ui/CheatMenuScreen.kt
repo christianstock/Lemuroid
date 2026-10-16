@@ -3,18 +3,23 @@ package com.swordfish.lemuroid.app.shared.cheats.ui
 import android.net.Uri
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -22,55 +27,73 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.Star
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.swordfish.lemuroid.R
+import com.swordfish.lemuroid.app.mobile.shared.DefaultBackground
+import com.swordfish.lemuroid.app.mobile.shared.RetroBorder
+import com.swordfish.lemuroid.app.mobile.shared.RetroBorderLight
+import com.swordfish.lemuroid.app.mobile.shared.RetroCoral
+import com.swordfish.lemuroid.app.mobile.shared.RetroCoralEdge
+import com.swordfish.lemuroid.app.mobile.shared.RetroCyan
+import com.swordfish.lemuroid.app.mobile.shared.RetroCyanEdge
+import com.swordfish.lemuroid.app.mobile.shared.RetroLcdGreen
+import com.swordfish.lemuroid.app.mobile.shared.RetroLcdGreenDark
+import com.swordfish.lemuroid.app.mobile.shared.RetroLime
+import com.swordfish.lemuroid.app.mobile.shared.RetroLimeEdge
+import com.swordfish.lemuroid.app.mobile.shared.RetroMagenta
+import com.swordfish.lemuroid.app.mobile.shared.RetroMagentaEdge
+import com.swordfish.lemuroid.app.mobile.shared.RetroPanel
+import com.swordfish.lemuroid.app.mobile.shared.RetroPanelLight
+import com.swordfish.lemuroid.app.mobile.shared.RetroSearchBar
+import com.swordfish.lemuroid.app.mobile.shared.RetroText
+import com.swordfish.lemuroid.app.mobile.shared.RetroViolet
+import com.swordfish.lemuroid.app.mobile.shared.RetroVioletEdge
 import com.swordfish.lemuroid.lib.library.db.entity.GameCheatEntity
 import kotlinx.coroutines.flow.Flow
 
-// MGBA LCD Green colors (matching games list)
-private val MgbaLcdGreen = Color(0xFF9EA83B)
-private val MgbaDarkGreen = Color(0xFF1B3B1B)
-private val StarYellow = Color(0xFFFFD600)
-private val StarGreyOutline = Color(0xFFA0A0A0)
-
-val pressStart2PFontFamily = FontFamily(Font(R.font.press_start_2p))
+val pressStart2PFontFamily = FontFamily(
+    Font(R.font.press_start_2p, FontWeight.Normal)
+)
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -94,113 +117,71 @@ fun CheatMenuScreen(
     onDisableAllCheats: () -> Unit = {},
     onClose: () -> Unit,
 ) {
-    val cheats = cheatsFlow.collectAsState(initial = emptyList()).value
-    val searchQuery = searchQueryFlow.collectAsState(initial = "").value
-    val selectedSources = selectedSourcesFlow.collectAsState(initial = emptySet()).value
-    val isRescanning = isRescanningFlow.collectAsState(initial = false).value
-    val deletedCheats = deletedCheatsFlow.collectAsState(initial = emptyMap()).value
+    val cheats by cheatsFlow.collectAsState(initial = emptyList())
+    val searchQuery by searchQueryFlow.collectAsState(initial = "")
+    val selectedSources by selectedSourcesFlow.collectAsState(initial = emptySet())
+    val isRescanning by isRescanningFlow.collectAsState(initial = false)
+    val deletedCheats by deletedCheatsFlow.collectAsState(initial = emptyMap())
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Extract all unique sources sorted alphabetically, with "Others" / "Other" last
-    val allSources = remember(cheats) {
-        cheats.mapNotNull { it.source }
-            .distinct()
-            .sortedWith { a, b ->
-                val isOthersA = a.equals("Others", ignoreCase = true) || a.equals("Other", ignoreCase = true)
-                val isOthersB = b.equals("Others", ignoreCase = true) || b.equals("Other", ignoreCase = true)
-                if (isOthersA != isOthersB) {
-                    if (isOthersA) 1 else -1
-                } else {
-                    a.compareTo(b, ignoreCase = true)
-                }
-            }
+    val rippleEngine = remember { TimedRippleEngine() }
+    var listSize by remember { mutableStateOf(IntSize.Zero) }
+
+    val density = LocalDensity.current.density
+    LaunchedEffect(listSize) {
+        if (listSize.height > 0) {
+            rippleEngine.startLoop(listSize.height.toFloat(), density)
+        }
     }
 
-    /*
-    // ZIP import functionality commented out per user request
-    val filePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let { onImportCheats(it) }
+    // Freeze list item order while screen is active so toggling stars doesn't jump items
+    val currentCheatIds = remember(cheats.size) { cheats.map { it.id } }
+    val displayCheats = remember(cheats, currentCheatIds) {
+        val cheatMap = cheats.associateBy { it.id }
+        currentCheatIds.mapNotNull { cheatMap[it] } + (cheats - cheatMap.values.toSet())
     }
-    */
+
+    val cachedSources = remember { mutableStateOf<List<String>>(emptyList()) }
+    val allSources = remember(cheats) {
+        val currentSources = cheats.mapNotNull { it.source }.distinct()
+        val combined = (cachedSources.value + currentSources).distinct().sortedWith { a, b ->
+            val isOthersA = a.equals("Others", ignoreCase = true) || a.equals("Other", ignoreCase = true)
+            val isOthersB = b.equals("Others", ignoreCase = true) || b.equals("Other", ignoreCase = true)
+            if (isOthersA != isOthersB) {
+                if (isOthersA) 1 else -1
+            } else {
+                a.compareTo(b, ignoreCase = true)
+            }
+        }
+        cachedSources.value = combined
+        combined
+    }
 
     val lazyListState = rememberLazyListState()
-    val draggedItemIndex = remember { mutableStateOf<Int?>(null) }
-    val mutableCheats = remember(cheats) { mutableStateOf(cheats) }
+
+    LaunchedEffect(selectedSources) {
+        if (cheats.isNotEmpty()) {
+            lazyListState.scrollToItem(0)
+        }
+    }
 
     Box(modifier = modifier.fillMaxSize()) {
+        DefaultBackground(
+            modifier = Modifier.fillMaxSize()
+        )
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
         ) {
-            // Search box with MGBA green styling
-            Surface(
-                color = MgbaLcdGreen,
-                shape = RoundedCornerShape(32.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(42.dp)
-                    .padding(horizontal = 12.dp, vertical = 8.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = "Search",
-                        tint = MgbaDarkGreen,
-                        modifier = Modifier.size(20.dp)
-                    )
+            RetroSearchBar(
+                query = searchQuery,
+                onQueryChange = onSetSearchQuery,
+                onExitClick = onClose,
+                placeholderText = "SEARCH CHEATS..."
+            )
 
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    BasicTextField(
-                        value = searchQuery,
-                        onValueChange = onSetSearchQuery,
-                        singleLine = true,
-                        textStyle = TextStyle(
-                            fontFamily = FontFamily.Default,
-                            fontSize = 12.sp,
-                            color = MgbaDarkGreen
-                        ),
-                        modifier = Modifier.weight(1f),
-                        decorationBox = { innerTextField ->
-                            Box(
-                                contentAlignment = Alignment.CenterStart
-                            ) {
-                                if (searchQuery.isEmpty()) {
-                                    Text(
-                                        text = "SEARCH...",
-                                        fontFamily = FontFamily.Default,
-                                        fontSize = 12.sp,
-                                        color = MgbaDarkGreen.copy(alpha = 0.6f)
-                                    )
-                                }
-                                innerTextField()
-                            }
-                        }
-                    )
-
-                    if (searchQuery.isNotEmpty()) {
-                        IconButton(
-                            onClick = { onSetSearchQuery("") },
-                            modifier = Modifier.size(20.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Clear",
-                                tint = MgbaDarkGreen,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Progress Bar during database rescan
             if (isRescanning) {
                 Column(
                     modifier = Modifier
@@ -217,141 +198,151 @@ fun CheatMenuScreen(
                 }
             }
 
-            // Source Filter Chips - styled like games list filter
+            // Source Filter Row with system-specific vibrant/edge colors
             if (allSources.isNotEmpty()) {
-                Surface(
-                    color = MgbaLcdGreen,
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    shape = RoundedCornerShape(8.dp)
+                        .horizontalScroll(rememberScrollState())
+                        .padding(vertical = 4.dp, horizontal = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    FlowRow(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    val isAllSelected = selectedSources.isEmpty()
+
+                    TextButton(
+                        onClick = onClearSourceFilter,
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                     ) {
-                        FilterChip(
-                            selected = selectedSources.isEmpty(),
-                            onClick = onClearSourceFilter,
-                            label = { 
-                                Text(
-                                    "ALL",
-                                    fontFamily = pressStart2PFontFamily,
-                                    fontSize = 9.sp
-                                ) 
-                            },
-                            colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = MgbaDarkGreen,
-                                selectedLabelColor = MgbaLcdGreen,
-                                containerColor = MgbaLcdGreen.copy(alpha = 0.5f),
-                                labelColor = MgbaDarkGreen
-                            )
-                        )
-
-                        allSources.forEach { source ->
-                            FilterChip(
-                                selected = source in selectedSources,
-                                onClick = { onToggleSourceFilter(source) },
-                                label = { 
-                                    Text(
-                                        source.uppercase(),
-                                        fontFamily = pressStart2PFontFamily,
-                                        fontSize = 9.sp
-                                    ) 
-                                },
-                                colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MgbaDarkGreen,
-                                    selectedLabelColor = MgbaLcdGreen,
-                                    containerColor = MgbaLcdGreen.copy(alpha = 0.5f),
-                                    labelColor = MgbaDarkGreen
-                                )
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Cheat list
-            if (cheats.isEmpty() && !isRescanning) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .padding(16.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = "No cheats available for this game",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            text = "ALL",
+                            fontFamily = pressStart2PFontFamily,
+                            fontSize = 10.sp,
+                            fontWeight = if (isAllSelected) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isAllSelected) RetroLcdGreen else RetroLcdGreenDark
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        OutlinedButton(onClick = onRescanCheats) {
-                            Icon(
-                                imageVector = Icons.Default.Refresh,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.size(4.dp))
-                            Text("Rescan Libretro Database")
-                        }
                     }
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .padding(horizontal = 8.dp),
-                    state = lazyListState,
-                ) {
-                    itemsIndexed(mutableCheats.value) { index, cheat ->
-                        CheatItemRow(
-                            cheat = cheat,
-                            displayOrder = index,
-                            isDragged = draggedItemIndex.value == index,
-                            onToggle = { enabled ->
-                                onCheatToggle(cheat, enabled)
+
+                    allSources.forEach { source ->
+                        val isSelected = source in selectedSources
+                        val vibrantColor = getSourceColor(source)
+                        val edgeColor = getSourceEdgeColor(source)
+
+                        TextButton(
+                            onClick = {
+                                onClearSourceFilter()
+                                if (!isSelected) {
+                                    onToggleSourceFilter(source)
+                                }
                             },
-                            onDelete = {
-                                onDeleteCheat(cheat)
-                            },
-                            onReorder = { fromIndex, toIndex ->
-                                val newList = mutableCheats.value.toMutableList()
-                                val item = newList.removeAt(fromIndex)
-                                newList.add(toIndex, item)
-                                mutableCheats.value = newList
-                                onUpdateCheatOrder(cheat.id, toIndex)
-                            },
-                            onDragStart = { draggedItemIndex.value = index },
-                            onDragEnd = { draggedItemIndex.value = null },
-                        )
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = source.uppercase(),
+                                fontFamily = pressStart2PFontFamily,
+                                fontSize = 10.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                color = if (isSelected) vibrantColor else edgeColor
+                            )
+                        }
                     }
                 }
             }
 
-            // Action buttons at the bottom (like GameInfo)
+            // Main cheat list container
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f, fill = true)
+            ) {
+                if (displayCheats.isEmpty() && !isRescanning) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = "No cheats available for this game",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            OutlinedButton(onClick = onRescanCheats) {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.size(4.dp))
+                                Text("Rescan Libretro Database")
+                            }
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .onGloballyPositioned {
+                                listSize = it.size
+                                rippleEngine.listTopPx = it.positionInRoot().y
+                            },
+                        state = lazyListState,
+                    ) {
+                        itemsIndexed(
+                            items = displayCheats,
+                            key = { _, cheat -> cheat.id }
+                        ) { index, cheat ->
+                            CheatItemRow(
+                                cheat = cheat,
+                                rippleEngine = rippleEngine,
+                                onToggle = {
+                                    onCheatToggle(cheat, !cheat.enabled)
+                                },
+                                onDelete = {
+                                    onDeleteCheat(cheat)
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Tab-style Bottom Action Bar (Rescan & Unselect All)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 8.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
+                    .background(RetroPanelLight)
+                    .drawWithContent {
+                        drawContent()
+                        drawLine(
+                            color = RetroBorder,
+                            start = Offset(0f, 0f),
+                            end = Offset(size.width, 0f),
+                            strokeWidth = 2.dp.toPx()
+                        )
+                    }
+                    .padding(top = 12.dp)
+                    .padding(horizontal = 16.dp)
+                    .navigationBarsPadding(), // Pushes the entire bottom row container cleanly above the nav bar!
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.Bottom
             ) {
-                RetroActionTextButton(
-                    icon = Icons.Default.Refresh,
-                    iconColor = Color(0xFF69F0AE),
+                RetroBottomActionButton(
                     label = "RESCAN",
                     isLoading = isRescanning,
-                    onClick = onRescanCheats
+                    onClick = onRescanCheats,
+                    modifier = Modifier.weight(1f)
+                )
+
+                RetroBottomActionButton(
+                    label = "UNSELECT ALL",
+                    onClick = onDisableAllCheats,
+                    modifier = Modifier.weight(1f)
                 )
             }
         }
 
-        // Snackbar for undo delete
         if (deletedCheats.isNotEmpty()) {
             val lastDeletedId = deletedCheats.keys.maxOrNull() ?: 0
             val lastDeletedCheat = deletedCheats[lastDeletedId]
@@ -364,9 +355,7 @@ fun CheatMenuScreen(
             ) {
                 Snackbar(
                     action = {
-                        TextButton(onClick = {
-                            onUndoDeleteCheat(lastDeletedId)
-                        }) {
+                        TextButton(onClick = { onUndoDeleteCheat(lastDeletedId) }) {
                             Text("Undo")
                         }
                     }
@@ -379,134 +368,83 @@ fun CheatMenuScreen(
 }
 
 @Composable
-private fun CheatItemRow(
-    cheat: GameCheatEntity,
-    displayOrder: Int,
-    isDragged: Boolean = false,
-    onToggle: (Boolean) -> Unit,
-    onDelete: () -> Unit,
-    onReorder: (fromIndex: Int, toIndex: Int) -> Unit = { _, _ -> },
-    onDragStart: () -> Unit = {},
-    onDragEnd: () -> Unit = {},
-) {
-    val backgroundColor = getSourceColor(cheat.source)
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp, horizontal = 8.dp)
-            .background(
-                color = backgroundColor.copy(alpha = 0.1f),
-                shape = RoundedCornerShape(8.dp)
-            )
-            .padding(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        // Star button instead of checkbox
-        IconButton(
-            onClick = { onToggle(!cheat.enabled) },
-            modifier = Modifier
-                .size(32.dp)
-                .padding(0.dp)
-        ) {
-            Icon(
-                imageVector = if (cheat.enabled) Icons.Filled.Star else Icons.Outlined.Star,
-                contentDescription = if (cheat.enabled) "Cheat enabled" else "Cheat disabled",
-                tint = if (cheat.enabled) StarYellow else StarGreyOutline,
-                modifier = Modifier.size(24.dp)
-            )
-        }
-
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .padding(start = 4.dp)
-        ) {
-            Text(
-                text = cheat.description,
-                color = MaterialTheme.colorScheme.onSurface,
-                fontFamily = pressStart2PFontFamily,
-                fontSize = 9.sp,
-                fontWeight = FontWeight.Normal,
-            )
-
-            if (cheat.source != null) {
-                Text(
-                    text = cheat.source!!,
-                    color = backgroundColor,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 10.sp,
-                )
-            }
-        }
-
-        IconButton(
-            onClick = onDelete,
-        ) {
-            Icon(
-                imageVector = Icons.Default.Delete,
-                contentDescription = "Delete cheat",
-                tint = MaterialTheme.colorScheme.error,
-            )
-        }
-    }
-}
-
-private fun getSourceColor(source: String?): Color {
-    return when (source?.lowercase()) {
-        "gameshark" -> Color(0xFF4CAF50)      // Green
-        "codebreaker" -> Color(0xFF2196F3)    // Blue
-        "actionreplay" -> Color(0xFF9C27B0)   // Purple
-        "gamegenie" -> Color(0xFFFF9800)      // Orange
-        else -> Color(0xFF757575)              // Gray for Others
-    }
-}
-
-@Composable
-private fun RetroActionTextButton(
-    icon: ImageVector,
-    iconColor: Color,
+private fun RetroBottomActionButton(
     label: String,
     onClick: () -> Unit,
-    isLoading: Boolean = false
+    modifier: Modifier = Modifier,
+    isLoading: Boolean = false,
 ) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center,
-        modifier = Modifier
+    val outerShape = RoundedCornerShape(8.dp)
+    val faceShape = RoundedCornerShape(
+        topStart = 6.dp, topEnd = 6.dp,
+        bottomStart = 2.dp, bottomEnd = 2.dp,
+    )
+
+    Box(
+        modifier = modifier
+            .height(60.dp)
+            .alpha(if (isLoading) 0.5f else 1f)
+            .clip(outerShape)
+            .background(RetroBorderLight)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
+                enabled = !isLoading,
+                role = Role.Button,
                 onClick = onClick,
-                enabled = !isLoading
-            )
-            .padding(vertical = 8.dp, horizontal = 12.dp)
+            ),
     ) {
-        if (isLoading) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(16.dp),
-                strokeWidth = 2.dp,
-                color = iconColor
-            )
-        } else {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                tint = iconColor,
-                modifier = Modifier.size(16.dp)
-            )
-        }
-        
-        Spacer(modifier = Modifier.width(8.dp))
-        
-        Text(
-            text = label,
-            fontFamily = pressStart2PFontFamily,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Bold,
-            color = iconColor
+        // Bottom band, drawn over the outline so it has no border of its own
+        Box(
+            Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .height(8.dp)
+                .background(RetroPanel)
         )
+
+        // Face: 2 dp inside on top and sides, 6 dp on the bottom
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(start = 2.dp, top = 2.dp, end = 2.dp, bottom = 8.dp)
+                .clip(faceShape)
+                .background(RetroPanelLight),
+            contentAlignment = Alignment.Center,
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+            ) {
+                Text(
+                    text = label,
+                    fontFamily = pressStart2PFontFamily,
+                    fontSize = 8.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp,
+                    color = RetroText,
+                )
+            }
+        }
+    }
+}
+
+fun getSourceColor(source: String?): Color {
+    return when (source?.lowercase()) {
+        "actionreplay" -> RetroViolet
+        "gamegenie" -> RetroCoral
+        "gameshark" -> RetroLime
+        "codebreaker" -> RetroCyan
+        else -> RetroMagenta
+    }
+}
+
+fun getSourceEdgeColor(source: String?): Color {
+    return when (source?.lowercase()) {
+        "actionreplay" -> RetroVioletEdge
+        "gamegenie" -> RetroCoralEdge
+        "gameshark" -> RetroLimeEdge
+        "codebreaker" -> RetroCyanEdge
+        else -> RetroMagentaEdge
     }
 }

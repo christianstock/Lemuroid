@@ -13,11 +13,11 @@ object CheatParser {
             return emptyList()
         }
 
-        // Normalize all keys by trimming them
+        // Normalize all keys by trimming and lowercasing them for case-insensitive lookup
         val normalizedProps = mutableMapOf<String, String>()
-        properties.forEach { key, value ->
-            if (key is String && value is String) {
-                normalizedProps[key.trim()] = value.trim()
+        for ((key, value) in properties) {
+            if (key != null && value != null) {
+                normalizedProps[key.toString().trim().lowercase()] = value.toString().trim()
             }
         }
 
@@ -62,11 +62,13 @@ object CheatParser {
             val typeKey2 = "cheat${i}_cheat_type"
             val typeValue = (normalizedProps[typeKey1] ?: normalizedProps[typeKey2])?.removeSurrounding("\"")
 
-            val type = when(typeValue) {
+            val type = when(typeValue?.lowercase()) {
                 "1" -> "GameShark"
                 "2" -> "ActionReplay"
-                "3" -> "GameGenie"
-                "4" -> "CodeBreaker"
+                "3", "gamegenie", "game genie", "gg" -> "GameGenie"
+                "4", "codebreaker", "code breaker", "cb" -> "CodeBreaker"
+                "gameshark", "game shark", "gs" -> "GameShark"
+                "actionreplay", "action replay", "ar" -> "ActionReplay"
                 else -> typeValue
             }
 

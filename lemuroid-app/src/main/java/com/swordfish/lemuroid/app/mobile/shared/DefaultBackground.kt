@@ -5,9 +5,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
-@Composable
+/*@Composable
 fun DefaultBackground(
     modifier: Modifier = Modifier,
     glowColor: Color = RetroLcdGreen,
@@ -22,6 +23,25 @@ fun DefaultBackground(
                 centerColor = Color.Transparent,
                 radiusMultiplier = 0.85f,
                 verticalBias = if (isCentered) 0.5f else 0.35f
+            )
+    )
+}*/
+
+@Composable
+fun DefaultBackground(
+    modifier: Modifier = Modifier,
+    topColor: Color = RetroNavy,
+    bottomColor: Color = RetroDeepGreen,
+    glowColor: Color = RetroLcdGreen,
+    isCentered: Boolean = true,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(topColor, bottomColor)
+                )
             )
     )
 }

@@ -26,8 +26,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.fredporciuncula.flow.preferences.FlowSharedPreferences
 import com.swordfish.lemuroid.R
-import com.swordfish.lemuroid.app.mobile.feature.games.GamesScreen
-import com.swordfish.lemuroid.app.mobile.feature.games.GamesViewModel
+import com.swordfish.lemuroid.app.mobile.feature.gamelist.GamesScreen
+import com.swordfish.lemuroid.app.mobile.feature.gamelist.GameListViewModel
 import com.swordfish.lemuroid.app.mobile.feature.gameinfo.GameInfoScreen
 import com.swordfish.lemuroid.app.mobile.feature.gameinfo.GameInfoViewModel
 import com.swordfish.lemuroid.app.mobile.feature.gamemenu.GameMenuActivity
@@ -236,7 +236,7 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
                             viewModel =
                                 viewModel(
                                     factory =
-                                        GamesViewModel.Factory(
+                                        GameListViewModel.Factory(
                                             retrogradeDb,
                                             MetaSystemID.valueOf(metaSystemId!!),
                                         ),

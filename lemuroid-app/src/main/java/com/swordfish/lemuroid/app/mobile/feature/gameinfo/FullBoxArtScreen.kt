@@ -4,8 +4,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
@@ -18,7 +20,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.compose.ui.zIndex
 import coil.compose.AsyncImage
 import com.swordfish.lemuroid.app.mobile.shared.DefaultBackground
 import com.swordfish.lemuroid.app.mobile.shared.RetroBackButton
@@ -34,47 +35,55 @@ fun FullBoxArtScreen(
 
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
-    ) {
-        DefaultBackground(
-            //glowColor = accentColor,
-            modifier = Modifier
-                .fillMaxSize()
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false // Ensures dialog ignores system window framing and fills completely
         )
+    ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp)
-                .pointerInput(Unit) {
-                    detectTransformGestures { _, pan, zoom, _ ->
-                        zoomScale.floatValue = (zoomScale.floatValue * zoom).coerceIn(1f, 5f)
-                        if (zoomScale.floatValue > 1f) {
-                            panX.floatValue += pan.x
-                            panY.floatValue += pan.y
-                        }
-                    }
-                }
-                .clickable { onDismiss() },
-            contentAlignment = Alignment.Center
+                .windowInsetsPadding(WindowInsets(0, 0, 0, 0)) // Strip inherited window padding
         ) {
-            AsyncImage(
-                model = imageUrl,
-                contentDescription = "Full screen box art",
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer(
-                        scaleX = zoomScale.floatValue,
-                        scaleY = zoomScale.floatValue,
-                        translationX = panX.floatValue,
-                        translationY = panY.floatValue
-                    ),
-                contentScale = ContentScale.Fit
+            DefaultBackground(
+                modifier = Modifier.fillMaxSize()
             )
 
-            RetroBackButton(
-                onBack = onDismiss,
-                modifier = Modifier.align(Alignment.BottomCenter)
-            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp)
+                    .pointerInput(Unit) {
+                        detectTransformGestures { _, pan, zoom, _ ->
+                            zoomScale.floatValue = (zoomScale.floatValue * zoom).coerceIn(1f, 5f)
+                            if (zoomScale.floatValue > 1f) {
+                                panX.floatValue += pan.x
+                                panY.floatValue += pan.y
+                            }
+                        }
+                    }
+                    .clickable { onDismiss() },
+                contentAlignment = Alignment.Center
+            ) {
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = "Full screen box art",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer(
+                            scaleX = zoomScale.floatValue,
+                            scaleY = zoomScale.floatValue,
+                            translationX = panX.floatValue,
+                            translationY = panY.floatValue
+                        ),
+                    contentScale = ContentScale.Fit
+                )
+
+                RetroBackButton(
+                    onBack = onDismiss,
+                    modifier = Modifier.align(Alignment.BottomCenter)
+                )
+            }
         }
     }
 }

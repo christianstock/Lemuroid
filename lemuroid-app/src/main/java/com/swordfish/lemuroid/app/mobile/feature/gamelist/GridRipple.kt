@@ -1,4 +1,4 @@
-package com.swordfish.lemuroid.app.mobile.feature.games
+package com.swordfish.lemuroid.app.mobile.feature.gamelist
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing

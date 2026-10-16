@@ -1,4 +1,4 @@
-package com.swordfish.lemuroid.app.mobile.feature.games
+package com.swordfish.lemuroid.app.mobile.feature.gamelist
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class GamesViewModel(
+class GameListViewModel(
     private val retrogradeDb: RetrogradeDatabase,
     private val initialMetaSystem: MetaSystemID,
 ) : ViewModel() {
@@ -148,7 +148,7 @@ class GamesViewModel(
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return GamesViewModel(retrogradeDb, initialMetaSystem) as T
+            return GameListViewModel(retrogradeDb, initialMetaSystem) as T
         }
     }
 }

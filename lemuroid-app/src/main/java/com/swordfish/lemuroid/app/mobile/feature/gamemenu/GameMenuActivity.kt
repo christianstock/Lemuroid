@@ -174,7 +174,7 @@ class GameMenuActivity : RetrogradeComponentActivity() {
             Surface(
                 modifier = Modifier
                     .fillMaxSize()
-                    .windowInsetsPadding(WindowInsets.displayCutout)
+                    //.windowInsetsPadding(WindowInsets.displayCutout)
             ) {
                 val hideHeader = currentRoute == GameMenuRoute.MANUAL || currentRoute == GameMenuRoute.CHEATS
 
@@ -317,7 +317,8 @@ class GameMenuActivity : RetrogradeComponentActivity() {
                                     cheatsChanged = true
                                 },
                                 onClose = {
-                                    navController.popBackStack()
+                                    //navController.popBackStack()
+                                    finish()
                                 }
                             )
                         }

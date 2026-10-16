@@ -27,18 +27,18 @@ class PdfManualProcessor(private val context: Context) {
      */
     fun getExistingPages(gameId: String): List<ManualPageInfo> {
         val outputDir = File(context.filesDir, "manuals/$gameId")
-        
+
         if (!outputDir.exists() || !outputDir.isDirectory) {
             return emptyList()
         }
 
         val files = outputDir.listFiles()?.filter { it.extension == "webp" }?.sortedBy { it.name } ?: emptyList()
-        
+
         if (files.isEmpty()) {
             return emptyList()
         }
 
-        val pages = files.mapIndexed { index, file ->
+        return files.mapIndexed { index, file ->
             ManualPageInfo(
                 pageIndex = index,
                 filePath = file.absolutePath,
@@ -46,7 +46,6 @@ class PdfManualProcessor(private val context: Context) {
                 height = 1200
             )
         }
-        return pages
     }
 
     /**
@@ -60,71 +59,36 @@ class PdfManualProcessor(private val context: Context) {
         aspectRatioThreshold: Float = 1.5f,
         quality: Int = 60
     ): List<ManualPageInfo> = withContext(Dispatchers.IO) {
-        
+
         val existing = getExistingPages(gameId)
         if (existing.isNotEmpty()) {
             return@withContext existing
         }
 
         val fileDescriptor: ParcelFileDescriptor? = try {
+            val uri = Uri.parse(pdfUriString)
             if (pdfUriString.startsWith("content://") || pdfUriString.startsWith("file://")) {
-                context.contentResolver.openFileDescriptor(Uri.parse(pdfUriString), "r")
+                context.contentResolver.openFileDescriptor(uri, "r")
             } else {
                 ParcelFileDescriptor.open(File(pdfUriString), ParcelFileDescriptor.MODE_READ_ONLY)
             }
         } catch (e: Exception) {
-            Log.e("PdfManualProcessor", "Error opening PDF: ${e.message}")
+            Log.e("PdfManualProcessor", "Error opening PDF: ${e.message}", e)
             null
         }
-        
+
         if (fileDescriptor == null) {
             Log.e("PdfManualProcessor", "Failed to open PDF file descriptor")
             return@withContext emptyList()
         }
 
-        val result = renderPdfFileDescriptor(
+        renderPdfFileDescriptor(
             fileDescriptor = fileDescriptor,
             gameId = gameId,
             targetHeight = targetHeight,
             aspectRatioThreshold = aspectRatioThreshold,
             quality = quality
         )
-        return@withContext result
-    }
-
-    suspend fun processPdf(
-        pdfFile: File,
-        gameId: String,
-        targetHeight: Int = 1200,
-        aspectRatioThreshold: Float = 1.5f,
-        quality: Int = 80
-    ): List<ManualPageInfo> = withContext(Dispatchers.IO) {
-        
-        val existing = getExistingPages(gameId)
-        if (existing.isNotEmpty()) {
-            return@withContext existing
-        }
-
-        if (!pdfFile.exists()) {
-            Log.e("PdfManualProcessor", "PDF file not found: ${pdfFile.absolutePath}")
-            return@withContext emptyList()
-        }
-
-        val fileDescriptor = try {
-            ParcelFileDescriptor.open(pdfFile, ParcelFileDescriptor.MODE_READ_ONLY)
-        } catch (e: Exception) {
-            Log.e("PdfManualProcessor", "Error opening PDF: ${e.message}")
-            null
-        } ?: return@withContext emptyList()
-
-        val result = renderPdfFileDescriptor(
-            fileDescriptor = fileDescriptor,
-            gameId = gameId,
-            targetHeight = targetHeight,
-            aspectRatioThreshold = aspectRatioThreshold,
-            quality = quality
-        )
-        return@withContext result
     }
 
     private fun renderPdfFileDescriptor(
@@ -141,7 +105,7 @@ class PdfManualProcessor(private val context: Context) {
         val pdfRenderer = try {
             PdfRenderer(fileDescriptor)
         } catch (e: Exception) {
-            Log.e("PdfManualProcessor", "Error creating PdfRenderer: ${e.message}")
+            Log.e("PdfManualProcessor", "Error creating PdfRenderer: ${e.message}", e)
             fileDescriptor.close()
             return emptyList()
         }
@@ -151,59 +115,57 @@ class PdfManualProcessor(private val context: Context) {
 
         try {
             for (i in 0 until pdfRenderer.pageCount) {
-                val page = pdfRenderer.openPage(i)
+                pdfRenderer.openPage(i).use { page ->
+                    val originalWidth = page.width
+                    val originalHeight = page.height
+                    val aspectRatio = originalWidth.toFloat() / originalHeight.toFloat()
 
-                val originalWidth = page.width
-                val originalHeight = page.height
-                val aspectRatio = originalWidth.toFloat() / originalHeight.toFloat()
+                    if (aspectRatio > aspectRatioThreshold) {
+                        // --- DOUBLE-PAGE SPREAD DETECTED: SPLIT IN HALF ---
+                        val fullWidth = (targetHeight * aspectRatio).toInt()
+                        val singlePageTargetWidth = fullWidth / 2
 
-                if (aspectRatio > aspectRatioThreshold) {
-                    // --- DOUBLE-PAGE SPREAD DETECTED: SPLIT IN HALF ---
-                    val singlePageTargetWidth = ((targetHeight * (aspectRatio / 2f))).toInt()
-                    val renderWidth = singlePageTargetWidth * 2
+                        val fullBitmap = Bitmap.createBitmap(
+                            fullWidth,
+                            targetHeight,
+                            Bitmap.Config.ARGB_8888
+                        )
 
-                    val fullBitmap = Bitmap.createBitmap(
-                        renderWidth,
-                        targetHeight,
-                        Bitmap.Config.ARGB_8888
-                    )
+                        page.render(fullBitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
 
-                    page.render(fullBitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                        // Left Page (Page N)
+                        val leftBitmap = cropBitmap(fullBitmap, 0, 0, singlePageTargetWidth, targetHeight)
+                        val leftFile = File(outputDir, "page_${pageIndexCounter.toString().padStart(3, '0')}.webp")
+                        saveCompressedBitmap(leftBitmap, leftFile, quality)
+                        pagesInfo.add(ManualPageInfo(pageIndexCounter++, leftFile.absolutePath, singlePageTargetWidth, targetHeight))
+                        leftBitmap.recycle()
 
-                    // Left Page (Page N)
-                    val leftBitmap = cropBitmap(fullBitmap, 0, 0, singlePageTargetWidth, targetHeight)
-                    val leftFile = File(outputDir, "page_${pageIndexCounter.toString().padStart(3, '0')}.webp")
-                    saveCompressedBitmap(leftBitmap, leftFile, quality)
-                    pagesInfo.add(ManualPageInfo(pageIndexCounter++, leftFile.absolutePath, singlePageTargetWidth, targetHeight))
-                    leftBitmap.recycle()
+                        // Right Page (Page N+1)
+                        val rightBitmap = cropBitmap(fullBitmap, singlePageTargetWidth, 0, singlePageTargetWidth, targetHeight)
+                        val rightFile = File(outputDir, "page_${pageIndexCounter.toString().padStart(3, '0')}.webp")
+                        saveCompressedBitmap(rightBitmap, rightFile, quality)
+                        pagesInfo.add(ManualPageInfo(pageIndexCounter++, rightFile.absolutePath, singlePageTargetWidth, targetHeight))
+                        rightBitmap.recycle()
 
-                    // Right Page (Page N+1)
-                    val rightBitmap = cropBitmap(fullBitmap, singlePageTargetWidth, 0, singlePageTargetWidth, targetHeight)
-                    val rightFile = File(outputDir, "page_${pageIndexCounter.toString().padStart(3, '0')}.webp")
-                    saveCompressedBitmap(rightBitmap, rightFile, quality)
-                    pagesInfo.add(ManualPageInfo(pageIndexCounter++, rightFile.absolutePath, singlePageTargetWidth, targetHeight))
-                    rightBitmap.recycle()
+                        fullBitmap.recycle()
+                    } else {
+                        // --- SINGLE PAGE ---
+                        val targetWidth = (targetHeight * aspectRatio).toInt()
 
-                    fullBitmap.recycle()
-                } else {
-                    // --- SINGLE PAGE ---
-                    val targetWidth = (targetHeight * aspectRatio).toInt()
+                        val bitmap = Bitmap.createBitmap(
+                            targetWidth,
+                            targetHeight,
+                            Bitmap.Config.ARGB_8888
+                        )
 
-                    val bitmap = Bitmap.createBitmap(
-                        targetWidth,
-                        targetHeight,
-                        Bitmap.Config.ARGB_8888
-                    )
+                        page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
 
-                    page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-
-                    val pageFile = File(outputDir, "page_${pageIndexCounter.toString().padStart(3, '0')}.webp")
-                    saveCompressedBitmap(bitmap, pageFile, quality)
-                    pagesInfo.add(ManualPageInfo(pageIndexCounter++, pageFile.absolutePath, targetWidth, targetHeight))
-                    bitmap.recycle()
+                        val pageFile = File(outputDir, "page_${pageIndexCounter.toString().padStart(3, '0')}.webp")
+                        saveCompressedBitmap(bitmap, pageFile, quality)
+                        pagesInfo.add(ManualPageInfo(pageIndexCounter++, pageFile.absolutePath, targetWidth, targetHeight))
+                        bitmap.recycle()
+                    }
                 }
-
-                page.close()
             }
         } finally {
             pdfRenderer.close()
@@ -224,16 +186,13 @@ class PdfManualProcessor(private val context: Context) {
 
     private fun saveCompressedBitmap(bitmap: Bitmap, outputFile: File, quality: Int) {
         FileOutputStream(outputFile).use { out ->
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                bitmap.compress(Bitmap.CompressFormat.WEBP_LOSSY, quality, out)
+            val format = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                Bitmap.CompressFormat.WEBP_LOSSY
             } else {
                 @Suppress("DEPRECATION")
-                bitmap.compress(Bitmap.CompressFormat.WEBP, quality, out)
+                Bitmap.CompressFormat.WEBP
             }
+            bitmap.compress(format, quality, out)
         }
-    }
-
-    private fun Int.padStart(length: Int): String {
-        return this.toString().padStart(length, '0')
     }
 }

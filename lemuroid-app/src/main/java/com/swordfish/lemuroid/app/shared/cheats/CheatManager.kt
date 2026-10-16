@@ -80,27 +80,31 @@ class CheatManager(
                 var entry = zipInputStream.nextEntry
                 var globalCheatIndex = 0
                 var displayOrder = 0
+                val seenCodes = mutableSetOf<String>()
+
                 while (entry != null) {
                     if (entry.name.endsWith(".cht", ignoreCase = true)) {
                         val cheats = CheatParser.parse(zipInputStream)
-                        val fileNameTypeTag = getCheatTypeTag(entry.name.substringAfterLast("/").substringBeforeLast("."))
 
                         cheats.forEach { cheat ->
-                            // Prioritize filename-based detection, fallback to cheat file type if filename detection returns null
-                            val source = (fileNameTypeTag ?: cheat.type ?: "Others").trim()
-                            gameCheatDao.insertCheat(
-                                GameCheatEntity(
-                                    gameId = gameId,
-                                    zipUri = zipUri.toString(),
-                                    entryName = entry.name,
-                                    cheatIndex = globalCheatIndex++,
-                                    description = cheat.description,
-                                    code = cheat.code,
-                                    enabled = cheat.enabled,
-                                    source = source,
-                                    displayOrder = displayOrder++
+                            val cleanCode = cheat.code.replace(Regex("[^a-zA-Z0-9]"), "").lowercase()
+
+                            if (cleanCode.isNotEmpty() && seenCodes.add(cleanCode)) {
+                                val source = determineCheatSource(File(entry.name), cheat)
+                                gameCheatDao.insertCheat(
+                                    GameCheatEntity(
+                                        gameId = gameId,
+                                        zipUri = zipUri.toString(),
+                                        entryName = entry.name,
+                                        cheatIndex = globalCheatIndex++,
+                                        description = cheat.description,
+                                        code = cheat.code,
+                                        enabled = cheat.enabled,
+                                        source = source,
+                                        displayOrder = displayOrder++
+                                    )
                                 )
-                            )
+                            }
                         }
                     }
                     entry = zipInputStream.nextEntry
@@ -154,17 +158,7 @@ class CheatManager(
             var systemGamesCount = 0
             var systemCheatCount = 0
             
-            // Search in multiple possible folder names - only for systems with games
-            val systemDirs = listOf(
-                File(cheatsDir, system.libretroFullName),
-                File(cheatsDir, system.libretroFullName.replace(" - ", " ")),
-                File(cheatsDir, system.id.dbname.uppercase()),
-                File(cheatsDir, system.id.dbname),
-                File(cheatsDir, "PPSSPP"),
-                File(cheatsDir, "PSP"),
-                File(cheatsDir, "Playstation Portable"),
-                File(cheatsDir, "PlayStation Portable"),
-            ).distinct().filter { it.exists() }
+            val systemDirs = getSystemCheatDirs(cheatsDir, system)
 
             systemGames.forEachIndexed { index, game ->
                 onProgress((processedGames + index).toFloat() / games.size.toFloat())
@@ -178,6 +172,7 @@ class CheatManager(
 
                  if (distinctMatchingFiles.isNotEmpty()) {
                        var globalCheatIndex = 0
+                       val seenCodes = mutableSetOf<String>()
                        distinctMatchingFiles.forEach { chtFile ->
                            runCatching {
                                 chtFile.inputStream().use { inputStream ->
@@ -200,28 +195,30 @@ class CheatManager(
                                             CheatParser.parse(it)
                                         }
                                     }
-                                    
-                                    val fileNameTypeTag = getCheatTypeTag(chtFile.nameWithoutExtension)
 
                                    cheats.forEach { cheat ->
-                                       val source = (fileNameTypeTag ?: cheat.type ?: "Others").trim()
-                                       try {
-                                           gameCheatDao.insertCheat(
-                                               GameCheatEntity(
-                                                   gameId = game.id,
-                                                   zipUri = chtFile.absolutePath,
-                                                   entryName = chtFile.name,
-                                                   cheatIndex = globalCheatIndex++,
-                                                   description = cheat.description,
-                                                   code = cheat.code,
-                                                   enabled = false,
-                                                   source = source,
-                                                   displayOrder = totalCheats++
+                                       val cleanCode = cheat.code.replace(Regex("[^a-zA-Z0-9]"), "").lowercase()
+
+                                       if (cleanCode.isNotEmpty() && seenCodes.add(cleanCode)) {
+                                           val source = determineCheatSource(chtFile, cheat)
+                                           try {
+                                               gameCheatDao.insertCheat(
+                                                   GameCheatEntity(
+                                                       gameId = game.id,
+                                                       zipUri = chtFile.absolutePath,
+                                                       entryName = chtFile.name,
+                                                       cheatIndex = globalCheatIndex++,
+                                                       description = cheat.description,
+                                                       code = cheat.code,
+                                                       enabled = false,
+                                                       source = source,
+                                                       displayOrder = totalCheats++
+                                                   )
                                                )
-                                           )
-                                           systemCheatCount++
-                                       } catch (e: Exception) {
-                                           Timber.e(e, "Error inserting cheat for game ${game.id}")
+                                               systemCheatCount++
+                                           } catch (e: Exception) {
+                                               Timber.e(e, "Error inserting cheat for game ${game.id}")
+                                           }
                                        }
                                    }
                                }
@@ -267,46 +264,115 @@ class CheatManager(
         totalMatchedGames
     }
 
+    private fun getSystemCheatDirs(cheatsDir: File, system: GameSystem): List<File> {
+        val fullName = system.libretroFullName
+        val shortName = fullName.substringAfter(" - ").trim()
+        val compactShortName = shortName.replace(" ", "")
+
+        return listOf(
+            File(cheatsDir, fullName),
+            File(cheatsDir, fullName.replace(" - ", " ")),
+            File(cheatsDir, shortName),
+            File(cheatsDir, compactShortName),
+            File(cheatsDir, system.id.dbname.uppercase()),
+            File(cheatsDir, system.id.dbname),
+            File(cheatsDir, "PPSSPP"),
+            File(cheatsDir, "PSP"),
+            File(cheatsDir, "Playstation Portable"),
+            File(cheatsDir, "PlayStation Portable"),
+        ).distinct().filter { it.exists() }
+    }
+
     private fun findMatchingCheatFiles(game: Game, systemCheatDir: File): List<File> {
         val gameTitleNorm = normalizeForMatching(game.title)
         val gameFileNorm = normalizeForMatching(game.fileName.substringBeforeLast("."))
-        
-        return systemCheatDir.listFiles()?.filter { file ->
+
+        val files = try {
+            systemCheatDir.walkTopDown()
+                .filter { it.isFile && it.extension.equals("cht", ignoreCase = true) }
+                .toList()
+        } catch (_: Exception) {
+            emptyList()
+        }
+
+        val matched = files.filter { file ->
             val chtNameNorm = normalizeForMatching(file.nameWithoutExtension)
-            // Match if names are identical after normalization or if one contains the other
-            chtNameNorm == gameTitleNorm || chtNameNorm == gameFileNorm || 
-                    (gameTitleNorm.length > 5 && chtNameNorm.contains(gameTitleNorm)) || 
-                    (chtNameNorm.length > 5 && gameTitleNorm.contains(chtNameNorm))
-        } ?: emptyList()
+            val parentNameNorm = normalizeForMatching(file.parentFile?.name ?: "")
+
+            chtNameNorm == gameTitleNorm || chtNameNorm == gameFileNorm ||
+                    parentNameNorm == gameTitleNorm || parentNameNorm == gameFileNorm ||
+                    (gameTitleNorm.length >= 4 && chtNameNorm.contains(gameTitleNorm)) ||
+                    (chtNameNorm.length >= 4 && gameTitleNorm.contains(chtNameNorm)) ||
+                    (gameTitleNorm.length >= 4 && parentNameNorm.contains(gameTitleNorm))
+        }
+
+        // Prioritize cheat-type specific files (e.g. "(Game Genie).cht") and exact region filename matches
+        return matched.sortedWith(compareByDescending<File> { file ->
+            val name = file.nameWithoutExtension.lowercase()
+            when {
+                name.contains("game genie") || name.contains("gamegenie") || name.contains("gameshark") -> 3
+                gameFileNorm.isNotEmpty() && normalizeForMatching(file.nameWithoutExtension) == gameFileNorm -> 2
+                else -> 1
+            }
+        })
     }
 
     private fun normalizeForMatching(name: String): String {
-        return name.replace(Regex("\\(.*\\)|\\s*\\[.*\\]"), "") // Remove tags in () or []
+        return name
+            .replace(Regex("\\([^)]*\\)"), "") // Remove (...) non-greedily
+            .replace(Regex("\\[[^]]*]"), "") // Remove [...] non-greedily
             .replace(Regex("[^a-zA-Z0-9]"), "") // Remove non-alphanumeric
             .lowercase()
             .trim()
     }
 
-    private fun getCheatTypeTag(fileName: String): String? {
-        val name = fileName.lowercase()
+    private fun getCheatTypeTag(text: String): String? {
+        val name = text.lowercase()
         return when {
             // GameGenie patterns
             name.contains("gamegenie") || name.contains("game genie") ||
-            name.contains("game-genie") || Regex("\\bgg\\b").containsMatchIn(name) -> "GameGenie"
+            name.contains("game-genie") || name.contains("game_genie") ||
+            name.contains("(gg)") || name.contains("[gg]") -> "GameGenie"
+
             // CodeBreaker patterns
             name.contains("codebreaker") || name.contains("code breaker") ||
-            name.contains("code-breaker") || Regex("\\bcb\\b").containsMatchIn(name) ||
+            name.contains("code-breaker") || name.contains("code_breaker") ||
+            name.contains("(cb)") || name.contains("[cb]") ||
             name.contains("pelican") -> "CodeBreaker"
+
             // ActionReplay patterns
             name.contains("actionreplay") || name.contains("action replay") ||
-            name.contains("action-replay") || Regex("\\bar\\b").containsMatchIn(name) ||
+            name.contains("action-replay") || name.contains("action_replay") ||
+            name.contains("(ar)") || name.contains("[ar]") ||
             name.contains("armax") -> "ActionReplay"
+
             // GameShark patterns
             name.contains("gameshark") || name.contains("game shark") ||
-            name.contains("game-shark") || Regex("\\bgs\\b").containsMatchIn(name) ||
+            name.contains("game-shark") || name.contains("game_shark") ||
+            name.contains("(gs)") || name.contains("[gs]") ||
             name.contains("x-terminator") -> "GameShark"
+
             else -> null
         }
+    }
+
+    private fun determineCheatSource(chtFile: File, cheat: Cheat): String {
+        // 1. Check file name and immediate parent folder name
+        getCheatTypeTag(chtFile.name)?.let { return it }
+        chtFile.parentFile?.name?.let { parentName ->
+            getCheatTypeTag(parentName)?.let { return it }
+        }
+
+        // 2. Check cheat.type from file parser
+        if (!cheat.type.isNullOrBlank()) {
+            getCheatTypeTag(cheat.type)?.let { return it }
+            val typeClean = cheat.type.trim()
+            if (!typeClean.equals("0", ignoreCase = true) && !typeClean.equals("1", ignoreCase = true)) {
+                return typeClean
+            }
+        }
+
+        return "Others"
     }
 
     suspend fun rescandGameForCheats(gameId: Int): Int = withContext(Dispatchers.IO) {
@@ -323,25 +389,10 @@ class CheatManager(
             return@withContext 0
         }
 
-        // Get existing cheats for this game to prevent duplicate entries ("no doubleups")
-        val existingCheats = gameCheatDao.getCheatsForGame(gameId)
-        val existingKeys = existingCheats.map { "${it.description.trim().lowercase()}|${it.code.trim().lowercase()}" }.toSet()
-        val existingCodes = existingCheats.map { it.code.trim().lowercase() }.toSet()
+        // Wipe DB cheats for this game before repopulating from scratch
+        gameCheatDao.clearCheatsForGame(gameId)
 
-        val systemDirs = listOf(
-            File(cheatsDir, system.libretroFullName),
-            File(cheatsDir, system.libretroFullName.replace(" - ", " ")),
-            File(cheatsDir, system.id.dbname.uppercase()),
-            File(cheatsDir, system.id.dbname),
-            File(cheatsDir, "PPSSPP"),
-            File(cheatsDir, "PSP"),
-            File(cheatsDir, "Playstation Portable"),
-            File(cheatsDir, "PlayStation Portable"),
-        ).distinct().filter { it.exists() }
-
-        var insertedCount = 0
-        var maxIndex = existingCheats.maxOfOrNull { it.cheatIndex } ?: -1
-        var maxDisplayOrder = existingCheats.maxOfOrNull { it.displayOrder } ?: -1
+        val systemDirs = getSystemCheatDirs(cheatsDir, system)
 
         val matchingFiles = mutableListOf<File>()
         systemDirs.forEach { dir ->
@@ -349,6 +400,10 @@ class CheatManager(
         }
 
         val distinctMatchingFiles = matchingFiles.distinctBy { it.absolutePath }
+        var globalCheatIndex = 0
+        var displayOrder = 0
+
+        val seenCodes = mutableSetOf<String>()
 
         if (distinctMatchingFiles.isNotEmpty()) {
             distinctMatchingFiles.forEach { chtFile ->
@@ -367,32 +422,26 @@ class CheatManager(
                             fileContent.byteInputStream().use { CheatParser.parse(it) }
                         }
 
-                        val fileNameTypeTag = getCheatTypeTag(chtFile.nameWithoutExtension)
                         cheats.forEach { cheat ->
-                            val key = "${cheat.description.trim().lowercase()}|${cheat.code.trim().lowercase()}"
-                            val normalizedCode = cheat.code.trim().lowercase()
+                            val cleanCode = cheat.code.replace(Regex("[^a-zA-Z0-9]"), "").lowercase()
 
-                            // Skip inserting duplicate cheats
-                            if (!existingKeys.contains(key) && !existingCodes.contains(normalizedCode)) {
-                                val source = (fileNameTypeTag ?: cheat.type ?: "Others").trim()
+                            if (cleanCode.isNotEmpty() && seenCodes.add(cleanCode)) {
+                                val detectedSource = determineCheatSource(chtFile, cheat)
                                 try {
-                                    maxIndex++
-                                    maxDisplayOrder++
                                     gameCheatDao.insertCheat(
                                         GameCheatEntity(
                                             gameId = gameId,
                                             zipUri = chtFile.absolutePath,
                                             entryName = chtFile.name,
-                                            cheatIndex = maxIndex,
+                                            cheatIndex = globalCheatIndex++,
                                             description = cheat.description,
                                             code = cheat.code,
                                             enabled = false,
-                                            source = source,
-                                            displayOrder = maxDisplayOrder,
+                                            source = detectedSource,
+                                            displayOrder = displayOrder++,
                                             lastUsed = 0L
                                         )
                                     )
-                                    insertedCount++
                                 } catch (e: Exception) {
                                     Timber.e(e, "Error inserting cheat for game ${game.id}")
                                 }
@@ -405,7 +454,7 @@ class CheatManager(
             }
         }
 
-        insertedCount
+        globalCheatIndex
     }
 
     suspend fun deleteCheat(cheatId: Int) = withContext(Dispatchers.IO) {

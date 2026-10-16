@@ -5,6 +5,7 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -60,44 +61,52 @@ fun HomeScreen(
     }
 
     Column(
-        modifier = modifier
-            .fillMaxSize(),
-            //.statusBarsPadding(),
+        modifier = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        // System / Permission Banners
-        when {
-            state.showNoNotificationPermissionCard -> {
-                HomeNotification(
-                    titleId = R.string.home_notification_title,
-                    messageId = R.string.home_notification_message,
-                    actionId = R.string.home_notification_action,
-                    onAction = {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            permissionsLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        // 1. Conditionally render the top wrapper ONLY when top banners/cards exist
+        val hasTopBanner = state.showNoNotificationPermissionCard ||
+                state.showNoMicrophonePermissionCard ||
+                state.showNoGamesCard
+
+        if (hasTopBanner) {
+            Box(modifier = modifier.statusBarsPadding()) {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    when {
+                        state.showNoNotificationPermissionCard -> {
+                            HomeNotification(
+                                titleId = R.string.home_notification_title,
+                                messageId = R.string.home_notification_message,
+                                actionId = R.string.home_notification_action,
+                                onAction = {
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                        permissionsLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                    }
+                                }
+                            )
+                        }
+
+                        state.showNoMicrophonePermissionCard -> {
+                            HomeNotification(
+                                titleId = R.string.home_microphone_title,
+                                messageId = R.string.home_notification_message,
+                                actionId = R.string.home_notification_action,
+                                onAction = { permissionsLauncher.launch(Manifest.permission.RECORD_AUDIO) }
+                            )
                         }
                     }
-                )
-            }
-            state.showNoMicrophonePermissionCard -> {
-                HomeNotification(
-                    titleId = R.string.home_microphone_title,
-                    messageId = R.string.home_notification_action,
-                    actionId = R.string.home_notification_action,
-                    onAction = { permissionsLauncher.launch(Manifest.permission.RECORD_AUDIO) }
-                )
+
+                    if (state.showNoGamesCard) {
+                        EmptyLibraryCard(
+                            indexInProgress = state.indexInProgress,
+                            onSelectDirectory = { viewModel.changeLocalStorageFolder(context) }
+                        )
+                    }
+                }
             }
         }
 
-        // Empty Library Folder Prompt
-        if (state.showNoGamesCard) {
-            EmptyLibraryCard(
-                indexInProgress = state.indexInProgress,
-                onSelectDirectory = { viewModel.changeLocalStorageFolder(context) }
-            )
-        }
-
-        // Main Stage Carousel or Shared Retro Loading Screen
+        // 2. Main Stage Carousel or Loading Screen (Pads nothing, fills screen edge-to-edge when cards are gone)
         if (state.systemLibraries.isNotEmpty()) {
             HomeCarousel(
                 systemLibraries = state.systemLibraries,

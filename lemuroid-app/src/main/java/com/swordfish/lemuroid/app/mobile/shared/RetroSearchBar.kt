@@ -115,7 +115,7 @@ fun RetroSearchBar(
 
         // Game Boy Magenta Exit Button
         Surface(
-            color = GameBoyMagenta,
+            color = RetroMagenta,
             shape = CircleShape,
             modifier = Modifier
                 .size(38.dp)
