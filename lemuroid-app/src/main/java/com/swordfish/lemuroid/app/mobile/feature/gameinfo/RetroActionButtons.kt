@@ -26,7 +26,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.swordfish.lemuroid.app.mobile.shared.RetroBlue
+import com.swordfish.lemuroid.app.mobile.shared.RetroCyan
 import com.swordfish.lemuroid.app.mobile.shared.RetroGreen
+import com.swordfish.lemuroid.app.mobile.shared.RetroLime
+import com.swordfish.lemuroid.app.mobile.shared.RetroViolet
 import com.swordfish.lemuroid.app.mobile.shared.RetroYellow
 
 @Composable
@@ -47,7 +50,7 @@ fun RetroActionBar(
     ) {
         RetroActionTextButton(
             icon = Icons.Default.Star,
-            iconColor = RetroYellow,
+            iconColor = RetroViolet,
             label = "CHEATS",
             onClick = onCheats
         )
@@ -55,7 +58,7 @@ fun RetroActionBar(
         if (hasManual) {
             RetroActionTextButton(
                 icon = Icons.Default.Description,
-                iconColor = RetroBlue,
+                iconColor = RetroCyan,
                 label = "MANUAL",
                 onClick = onManual,
             )
@@ -63,7 +66,7 @@ fun RetroActionBar(
 
         RetroActionTextButton(
             icon = Icons.Default.Refresh,
-            iconColor = RetroGreen,
+            iconColor = RetroLime,
             label = "RESCAN",
             isLoading = isRescanning,
             onClick = onRescan

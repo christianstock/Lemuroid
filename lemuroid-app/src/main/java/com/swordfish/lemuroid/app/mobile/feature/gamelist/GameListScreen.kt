@@ -8,6 +8,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -20,6 +21,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -48,8 +50,10 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -61,8 +65,11 @@ import com.swordfish.lemuroid.R
 import com.swordfish.lemuroid.app.mobile.shared.DefaultBackground
 import com.swordfish.lemuroid.app.mobile.shared.RetroLcdGreen
 import com.swordfish.lemuroid.app.mobile.shared.RetroLcdGreenDark
+import com.swordfish.lemuroid.app.mobile.shared.RetroLime
+import com.swordfish.lemuroid.app.mobile.shared.RetroLimeEdge
 import com.swordfish.lemuroid.app.mobile.shared.RetroSearchBar
 import com.swordfish.lemuroid.app.mobile.shared.compose.ui.LemuroidGameImage
+import com.swordfish.lemuroid.app.shared.cheats.ui.pressStart2PFontFamily
 import com.swordfish.lemuroid.lib.library.db.entity.Game
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -185,14 +192,33 @@ fun GamesScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = "NO GAMES FOUND",
-                            fontFamily = pressStart2PFontFamily,
-                            fontSize = 12.sp,
-                            color = RetroLcdGreenDark,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(24.dp)
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier.offset(y = (-120).dp)
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.game_grl_gum),
+                                contentDescription = "Game Girl Gum Graphic",
+                                modifier = Modifier
+                                    .height(200.dp)
+                                    .graphicsLayer(
+                                        scaleX = 1.5f,
+                                        scaleY = 1.5f
+                                    )
+                                    .offset(x = (-12).dp)
+                            )
+
+                            Text(
+                                text = "NO GAMES FOUND.",
+                                fontFamily = pressStart2PFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp,
+                                color = RetroLimeEdge,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.offset(y = (-50).dp)
+                            )
+                        }
                     }
                 } else {
                     LazyVerticalGrid(
@@ -258,7 +284,7 @@ private fun SortFilterRow(
                     text = label,
                     fontFamily = pressStart2PFontFamily,
                     fontSize = 9.sp,
-                    color = if (isSelected) RetroLcdGreen else RetroLcdGreenDark
+                    color = if (isSelected) RetroLime else RetroLimeEdge
                 )
             }
         }

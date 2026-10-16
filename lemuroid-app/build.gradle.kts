@@ -135,6 +135,7 @@ dependencies {
     implementation(project(":lemuroid-metadata-libretro-db"))
     implementation(project(":lemuroid-touchinput"))
     implementation("androidx.compose.animation:animation")
+    implementation("androidx.compose.animation:animation-core")
     implementation("androidx.palette:palette-ktx:1.0.0")
     implementation(deps.libs.androidx.compose.foundationLayout)
     implementation(deps.libs.androidx.compose.foundation)
