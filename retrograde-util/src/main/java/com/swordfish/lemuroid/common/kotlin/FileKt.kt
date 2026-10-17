@@ -47,6 +47,17 @@ fun InputStream.calculateCrc32(): String =
         }
     }
 
+fun InputStream.calculateMd5(): String =
+    this.use { fileStream ->
+        val digest = MessageDigest.getInstance("MD5")
+        val buffer = ByteArray(CRC32_BYTE_ARRAY_SIZE)
+        var bytesRead: Int
+        while (fileStream.read(buffer).also { bytesRead = it } != -1) {
+            digest.update(buffer, 0, bytesRead)
+        }
+        digest.digest().toHexString()
+    }
+
 fun File.calculateMd5(): String {
     val bytes =
         MessageDigest

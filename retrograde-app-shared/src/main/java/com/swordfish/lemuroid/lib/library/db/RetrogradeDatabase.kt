@@ -21,17 +21,27 @@ package com.swordfish.lemuroid.lib.library.db
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import com.swordfish.lemuroid.lib.library.db.dao.AchievementDao
 import com.swordfish.lemuroid.lib.library.db.dao.DataFileDao
 import com.swordfish.lemuroid.lib.library.db.dao.GameCheatDao
 import com.swordfish.lemuroid.lib.library.db.dao.GameDao
 import com.swordfish.lemuroid.lib.library.db.dao.GameSearchDao
+import com.swordfish.lemuroid.lib.library.db.dao.LeaderboardDao
+import com.swordfish.lemuroid.lib.library.db.entity.AchievementEntity
 import com.swordfish.lemuroid.lib.library.db.entity.DataFile
 import com.swordfish.lemuroid.lib.library.db.entity.Game
 import com.swordfish.lemuroid.lib.library.db.entity.GameCheatEntity
+import com.swordfish.lemuroid.lib.library.db.entity.LeaderboardEntity
 
 @Database(
-    entities = [Game::class, DataFile::class, GameCheatEntity::class],
-    version = 17,
+    entities = [
+        Game::class,
+        DataFile::class,
+        GameCheatEntity::class,
+        AchievementEntity::class,
+        LeaderboardEntity::class,
+    ],
+    version = 18,
     exportSchema = true,
 )
 abstract class RetrogradeDatabase : RoomDatabase() {
@@ -44,6 +54,10 @@ abstract class RetrogradeDatabase : RoomDatabase() {
     abstract fun dataFileDao(): DataFileDao
 
     abstract fun gameCheatDao(): GameCheatDao
+
+    abstract fun achievementDao(): AchievementDao
+
+    abstract fun leaderboardDao(): LeaderboardDao
 
     fun gameSearchDao() = GameSearchDao(gameSearchDaoInternal())
 

@@ -116,4 +116,53 @@ object Migrations {
                 database.execSQL("ALTER TABLE games ADD COLUMN achievementId INTEGER DEFAULT 0")
             }
         }
+
+    val VERSION_17_18: Migration =
+        object : Migration(17, 18) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `achievements` (
+                        `id` INTEGER PRIMARY KEY NOT NULL,
+                        `gameId` INTEGER NOT NULL,
+                        `title` TEXT NOT NULL,
+                        `description` TEXT NOT NULL,
+                        `points` INTEGER NOT NULL,
+                        `badgeUrl` TEXT NOT NULL,
+                        `isUnlocked` INTEGER NOT NULL DEFAULT 0,
+                        `unlockTimestamp` INTEGER,
+                        `type` TEXT,
+                        `displayOrder` INTEGER NOT NULL DEFAULT 0
+                    )
+                    """.trimIndent(),
+                )
+                database.execSQL(
+                    """
+                    CREATE INDEX IF NOT EXISTS `index_achievements_gameId` ON `achievements` (`gameId`)
+                    """.trimIndent(),
+                )
+
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `leaderboards` (
+                        `id` INTEGER PRIMARY KEY NOT NULL,
+                        `gameId` INTEGER NOT NULL,
+                        `title` TEXT NOT NULL,
+                        `description` TEXT NOT NULL,
+                        `format` TEXT NOT NULL DEFAULT 'TIME',
+                        `userRank` INTEGER,
+                        `userResult` TEXT,
+                        `topEntryUser` TEXT,
+                        `topEntryResult` TEXT,
+                        `displayOrder` INTEGER NOT NULL DEFAULT 0
+                    )
+                    """.trimIndent(),
+                )
+                database.execSQL(
+                    """
+                    CREATE INDEX IF NOT EXISTS `index_leaderboards_gameId` ON `leaderboards` (`gameId`)
+                    """.trimIndent(),
+                )
+            }
+        }
 }
