@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.CircularProgressIndicator
@@ -27,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.swordfish.lemuroid.app.mobile.shared.RetroBlue
 import com.swordfish.lemuroid.app.mobile.shared.RetroCyan
+import com.swordfish.lemuroid.app.mobile.shared.RetroGold
 import com.swordfish.lemuroid.app.mobile.shared.RetroGreen
 import com.swordfish.lemuroid.app.mobile.shared.RetroLime
 import com.swordfish.lemuroid.app.mobile.shared.RetroViolet
@@ -35,9 +37,11 @@ import com.swordfish.lemuroid.app.mobile.shared.RetroYellow
 @Composable
 fun RetroActionBar(
     hasManual: Boolean,
+    hasAchievements: Boolean,
     isRescanning: Boolean,
     onCheats: () -> Unit,
     onManual: () -> Unit,
+    onAchievements: () -> Unit,
     onRescan: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -61,6 +65,15 @@ fun RetroActionBar(
                 iconColor = RetroCyan,
                 label = "MANUAL",
                 onClick = onManual,
+            )
+        }
+
+        if (hasAchievements) {
+            RetroActionTextButton(
+                icon = Icons.Filled.EmojiEvents,
+                iconColor = RetroGold,
+                label = "TROPHIES",
+                onClick = onAchievements,
             )
         }
 

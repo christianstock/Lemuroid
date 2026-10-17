@@ -373,6 +373,19 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
                                     startActivity(intent)
                                 }
                             },
+                            onAchievements = { game ->
+                                if (game.achievementId != 0) {
+                                    val intent = Intent(applicationContext, GameMenuActivity::class.java)
+                                    intent.putExtra("INITIAL_ROUTE", "achievements")
+                                    intent.putExtra("IS_DIRECT_ACCESS", false)
+                                    intent.putExtra(GameMenuContract.EXTRA_GAME, game)
+                                    intent.putExtra(GameMenuContract.EXTRA_CORE_OPTIONS, CoreOptionsWrapper(emptyList()))
+                                    intent.putExtra(GameMenuContract.EXTRA_ADVANCED_CORE_OPTIONS, CoreOptionsWrapper(emptyList()))
+                                    val gameSystem = GameSystem.findById(game.systemId)
+                                    intent.putExtra(GameMenuContract.EXTRA_SYSTEM_CORE_CONFIG, gameSystem.systemCoreConfigs.first())
+                                    startActivity(intent)
+                                }
+                            },
                             modifier = Modifier.fillMaxSize(),
                             onBack = { navController.popBackStack() }
                         )

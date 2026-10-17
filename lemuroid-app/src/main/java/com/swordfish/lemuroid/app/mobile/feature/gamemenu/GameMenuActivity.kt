@@ -58,6 +58,7 @@ import com.swordfish.lemuroid.app.shared.game.skins.ui.GbcSkinSelectionScreen
 import com.swordfish.lemuroid.app.shared.cheats.ui.CheatMenuScreen
 import com.swordfish.lemuroid.app.shared.manuals.PdfManualProcessor
 import com.swordfish.lemuroid.app.shared.manuals.GameManualViewer
+import com.swordfish.lemuroid.app.shared.achievements.GameAchievementsViewer
 import com.swordfish.lemuroid.app.mobile.shared.compose.ui.AppTheme
 import com.swordfish.lemuroid.app.mobile.shared.extractAccentColor
 import com.swordfish.lemuroid.app.shared.GameMenuContract
@@ -176,7 +177,7 @@ class GameMenuActivity : RetrogradeComponentActivity() {
                     .fillMaxSize()
                     //.windowInsetsPadding(WindowInsets.displayCutout)
             ) {
-                val hideHeader = currentRoute == GameMenuRoute.MANUAL || currentRoute == GameMenuRoute.CHEATS
+                val hideHeader = currentRoute == GameMenuRoute.MANUAL || currentRoute == GameMenuRoute.CHEATS || currentRoute == GameMenuRoute.ACHIEVEMENTS
 
                 Column(modifier = Modifier.fillMaxSize()) {
                     if (!hideHeader) {
@@ -419,6 +420,13 @@ class GameMenuActivity : RetrogradeComponentActivity() {
                                     androidx.compose.material3.Text("No manual available")
                                 }
                             }
+                        }
+                        composable(GameMenuRoute.ACHIEVEMENTS) {
+                            GameAchievementsViewer(
+                                onDismiss = {
+                                    finish()
+                                }
+                            )
                         }
                     }
                 }

@@ -78,7 +78,7 @@ fun CheatMenuBottomBar(
 }
 
 @Composable
-private fun RetroBottomActionButton(
+fun RetroBottomActionButton(
     label: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,

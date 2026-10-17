@@ -109,4 +109,11 @@ object Migrations {
                 database.execSQL("ALTER TABLE game_cheats ADD COLUMN lastUsed INTEGER NOT NULL DEFAULT 0")
             }
         }
+
+    val VERSION_16_17: Migration =
+        object : Migration(16, 17) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE games ADD COLUMN achievementId INTEGER DEFAULT 0")
+            }
+        }
 }

@@ -59,6 +59,7 @@ fun GameInfoScreen(
     onRestart: (Game) -> Unit,
     onCheats: (Game) -> Unit = {},
     onManual: (Game) -> Unit = {},
+    onAchievements: (Game) -> Unit = {},
     modifier: Modifier = Modifier,
     onBack: () -> Unit = {}
 ) {
@@ -277,9 +278,11 @@ fun GameInfoScreen(
                     item {
                         RetroActionBar(
                             hasManual = game.manualUrl != null,
+                            hasAchievements = game.achievementId != 0,
                             isRescanning = isRescanning,
                             onCheats = { onCheats(game) },
                             onManual = { onManual(game) },
+                            onAchievements = { onAchievements(game) },
                             onRescan = { viewModel.rescan() }
                         )
                     }

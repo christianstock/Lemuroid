@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 16,
-    "identityHash": "d1633005527abf40bce1d3e746f76eb9",
+    "identityHash": "d61f8cdfa23e20822bcfc34806fde059",
     "entities": [
       {
         "tableName": "games",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `fileName` TEXT NOT NULL, `fileUri` TEXT NOT NULL, `title` TEXT NOT NULL, `systemId` TEXT NOT NULL, `developer` TEXT, `publisher` TEXT, `coverFrontUrl` TEXT, `coverBackUrl` TEXT, `cartridgeUrl` TEXT, `releaseDate` TEXT, `summary` TEXT, `country` TEXT, `manualUrl` TEXT, `lastIndexedAt` INTEGER NOT NULL, `lastPlayedAt` INTEGER, `isFavorite` INTEGER NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `fileName` TEXT NOT NULL, `fileUri` TEXT NOT NULL, `title` TEXT NOT NULL, `systemId` TEXT NOT NULL, `developer` TEXT, `publisher` TEXT, `coverFrontUrl` TEXT, `coverBackUrl` TEXT, `cartridgeUrl` TEXT, `releaseDate` TEXT, `summary` TEXT, `country` TEXT, `manualUrl` TEXT, `achievementId` INTEGER, `lastIndexedAt` INTEGER NOT NULL, `lastPlayedAt` INTEGER, `isFavorite` INTEGER NOT NULL)",
         "fields": [
           {
             "fieldPath": "id",
@@ -90,6 +90,12 @@
             "fieldPath": "manualUrl",
             "columnName": "manualUrl",
             "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "achievementId",
+            "columnName": "achievementId",
+            "affinity": "INTEGER",
             "notNull": false
           },
           {
@@ -377,7 +383,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'd1633005527abf40bce1d3e746f76eb9')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'd61f8cdfa23e20822bcfc34806fde059')"
     ]
   }
 }

@@ -53,6 +53,7 @@ data class Game(
     val summary: String?,
     val country: String?,
     val manualUrl: String? = null,
+    val achievementId: Int? = 0,
     val lastIndexedAt: Long,
     val lastPlayedAt: Long? = null,
     val isFavorite: Boolean = false,
