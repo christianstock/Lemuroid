@@ -83,7 +83,11 @@ fun RetroBottomActionButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     isLoading: Boolean = false,
-) {
+    backgroundColor: Color = RetroPanelLight,
+    borderColor: Color = RetroBorderLight,
+    edgeColor: Color = RetroPanel,
+    textColor: Color = RetroText
+    ) {
     val outerShape = RoundedCornerShape(8.dp)
     val faceShape = RoundedCornerShape(
         topStart = 6.dp, topEnd = 6.dp,
@@ -95,7 +99,7 @@ fun RetroBottomActionButton(
             .height(60.dp)
             .alpha(if (isLoading) 0.5f else 1f)
             .clip(outerShape)
-            .background(RetroBorderLight)
+            .background(borderColor)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -110,7 +114,7 @@ fun RetroBottomActionButton(
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .height(8.dp)
-                .background(RetroPanel)
+                .background(edgeColor)
         )
 
         // Face: 2 dp inside on top and sides, 6 dp on the bottom
@@ -119,7 +123,7 @@ fun RetroBottomActionButton(
                 .fillMaxSize()
                 .padding(start = 2.dp, top = 2.dp, end = 2.dp, bottom = 8.dp)
                 .clip(faceShape)
-                .background(RetroPanelLight),
+                .background(backgroundColor),
             contentAlignment = Alignment.Center,
         ) {
             Row(
@@ -132,7 +136,7 @@ fun RetroBottomActionButton(
                     fontSize = 8.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.sp,
-                    color = RetroText,
+                    color = textColor,
                 )
             }
         }

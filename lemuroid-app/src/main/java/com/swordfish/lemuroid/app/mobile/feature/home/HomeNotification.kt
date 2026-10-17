@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -75,7 +76,7 @@ fun HomeNotification(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Top Row: Image + Header + Message
+            // Top Row: Image + Text Content + Action Button all inline
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -109,27 +110,12 @@ fun HomeNotification(
                         color = RetroText
                     )
                 }
-            }
-
-            // Bottom Row: BONUS QUEST on the left, Action Button on the right
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "BONUS QUEST",
-                    fontFamily = pressStart2PFontFamily,
-                    fontSize = 8.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = RetroMagenta
-                )
 
                 RetroBottomActionButton(
                     label = stringResource(id = actionId).uppercase(),
                     onClick = onAction,
                     isLoading = !enabled,
-                    modifier = Modifier.width(120.dp)
+                    modifier = Modifier.width(110.dp)
                 )
             }
         }

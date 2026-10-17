@@ -115,11 +115,11 @@
     <string name="cheat_frozen_warning">Game appears frozen. Disabling cheat: %1$s</string>
 
     <string name="home_notification_title">Notifications</string>
-    <string name="home_notification_message">Get a ping when a game or scan is running in background.</string>
+    <string name="home_notification_message">Active games and scans.</string>
     <string name="home_notification_action">Enable</string>
 
     <string name="home_microphone_title">Microphone</string>
-    <string name="home_microphone_message">Some games can listen to you. Allow it if you want them to.</string>
+    <string name="home_microphone_message">Some games listen to you.</string>
     <string name="home_microphone_action">Allow</string>
 
     <string name="home_empty_title">Your Library</string>
