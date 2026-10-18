@@ -43,6 +43,7 @@ import com.swordfish.lemuroid.app.shared.settings.StorageFrameworkPickerLauncher
 import com.swordfish.lemuroid.ext.feature.core.CoreUpdaterImpl
 import com.swordfish.lemuroid.ext.feature.review.ReviewManager
 import com.swordfish.lemuroid.ext.feature.savesync.SaveSyncManagerImpl
+import com.swordfish.lemuroid.lib.achievements.RetroAchievementsApi
 import com.swordfish.lemuroid.lib.bios.BiosManager
 import com.swordfish.lemuroid.lib.core.CoreUpdater
 import com.swordfish.lemuroid.lib.core.CoreVariablesManager
@@ -211,6 +212,11 @@ abstract class LemuroidApplicationModule {
         @Provides
         @PerApp
         @JvmStatic
+        fun retroAchievementsApi(okHttpClient: OkHttpClient) = RetroAchievementsApi(okHttpClient)
+
+        @Provides
+        @PerApp
+        @JvmStatic
         fun lemuroidLibrary(
             db: RetrogradeDatabase,
             context: Context,
@@ -218,7 +224,8 @@ abstract class LemuroidApplicationModule {
             gameMetadataProvider: Lazy<GameMetadataProvider>,
             skraperMetadataProvider: Lazy<SkraperMetadataProvider>,
             biosManager: BiosManager,
-        ) = LemuroidLibrary(db, context, storageProviderRegistry, gameMetadataProvider, skraperMetadataProvider, biosManager)
+            retroAchievementsApi: RetroAchievementsApi,
+        ) = LemuroidLibrary(db, context, storageProviderRegistry, gameMetadataProvider, skraperMetadataProvider, biosManager, retroAchievementsApi)
 
         @Provides
         @PerApp

@@ -79,13 +79,23 @@ fun HomeScreen(
     onOpenSettings: () -> Unit = {},
 ) {
     val context = LocalContext.current
-
-    // Collect state safely from ViewModel
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-
-    // Local mutable states for Extras checkboxes (or persist to ViewModel/Preferences as needed)
+    var showOnboardingTutorial by remember { mutableStateOf(false) }
     var cheatsEnabled by remember { mutableStateOf(true) }
     var trophiesEnabled by remember { mutableStateOf(true) }
+
+    if (showOnboardingTutorial) {
+        LibraryOnboardingScreen(
+            indexInProgress = state.indexInProgress,
+            trophiesEnabled = trophiesEnabled,
+            onSelectDirectory = {
+                // Trigger the directory picker and close onboarding
+                viewModel.changeLocalStorageFolder(context)
+                showOnboardingTutorial = false
+            }
+        )
+        return
+    }
 
     ComposableLifecycle { _, event ->
         if (event == Lifecycle.Event.ON_RESUME) {
@@ -160,27 +170,29 @@ fun HomeScreen(
                         // 1. EMPTY LIBRARY CARD (Shows First)
                         EmptyLibraryCard(
                             indexInProgress = state.indexInProgress,
-                            onSelectDirectory = { viewModel.changeLocalStorageFolder(context) },
+                            onSelectDirectory = { showOnboardingTutorial = true },
                             cheatsEnabled = cheatsEnabled,
                             onCheatsToggled = { cheatsEnabled = it },
                             trophiesEnabled = trophiesEnabled,
                             onTrophiesToggled = { trophiesEnabled = it }
                         )
 
-                        Box(
-                            modifier = Modifier.padding(horizontal = 20.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "SIDE QUESTS",
-                                fontFamily = pressStart2PFontFamily,
-                                fontSize = 8.sp,
-                                color = RetroText,
-                            )
+                        if (state.showNoNotificationPermissionCard || state.showNoMicrophonePermissionCard) {
+                            Box(
+                                modifier = Modifier.padding(horizontal = 20.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "SIDE QUESTS",
+                                    fontFamily = pressStart2PFontFamily,
+                                    fontSize = 8.sp,
+                                    color = RetroText,
+                                )
+                            }
                         }
 
                         // 2. NOTIFICATION PERMISSION CARD (Shows Second)
-                        if (!state.showNoNotificationPermissionCard) {
+                        if (state.showNoNotificationPermissionCard) {
                             HomeNotification(
                                 imageId = R.drawable.game_grl_launcher_round,
                                 titleId = R.string.home_notification_title,
@@ -195,7 +207,7 @@ fun HomeScreen(
                         }
 
                         // 3. MICROPHONE PERMISSION CARD (Shows Third)
-                        if (!state.showNoMicrophonePermissionCard) {
+                        if (state.showNoMicrophonePermissionCard) {
                             HomeNotification(
                                 imageId = R.drawable.game_grl_mic,
                                 titleId = R.string.home_microphone_title,
@@ -369,7 +381,7 @@ private fun EmptyLibraryCard(
                 Spacer(modifier = Modifier.height(4.dp))
 
                 RetroBottomActionButton(
-                    label = if (indexInProgress) "SCANNING..." else stringResource(R.string.home_empty_action).uppercase(),
+                    label = stringResource(R.string.home_empty_action).uppercase(),
                     onClick = onSelectDirectory,
                     isLoading = indexInProgress,
                     modifier = Modifier.fillMaxWidth(),
@@ -425,7 +437,7 @@ private fun RetroCheckbox(
                 fontFamily = pressStart2PFontFamily,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.Black,
+                color = RetroPanel,
                 modifier = Modifier.offset(y = (-4).dp)
             )
         }

@@ -23,8 +23,11 @@ import android.content.Context
 import android.util.Log
 import com.swordfish.lemuroid.common.coroutines.batchWithSizeAndTime
 import com.swordfish.lemuroid.common.kotlin.calculateCrc32
+import com.swordfish.lemuroid.common.kotlin.calculateMd5
+import com.swordfish.lemuroid.lib.achievements.RetroAchievementsApi
 import com.swordfish.lemuroid.lib.bios.BiosManager
 import com.swordfish.lemuroid.lib.library.db.RetrogradeDatabase
+import com.swordfish.lemuroid.lib.library.db.entity.AchievementEntity
 import com.swordfish.lemuroid.lib.library.db.entity.DataFile
 import com.swordfish.lemuroid.lib.library.db.entity.Game
 import com.swordfish.lemuroid.lib.library.metadata.GameMetadata
@@ -44,6 +47,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flatMapConcat
 import kotlinx.coroutines.flow.flatMapMerge
+import com.swordfish.lemuroid.lib.preferences.SharedPreferencesHelper
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -58,6 +62,7 @@ class LemuroidLibrary(
     private val gameMetadataProvider: Lazy<GameMetadataProvider>,
     private val skraperMetadataProvider: Lazy<SkraperMetadataProvider>,
     private val biosManager: BiosManager,
+    private val retroAchievementsApi: RetroAchievementsApi? = null,
 ) {
     private val _systemProgress = MutableStateFlow<List<SystemScanProgress>>(emptyList())
     val systemProgress: StateFlow<List<SystemScanProgress>> = _systemProgress.asStateFlow()
@@ -242,11 +247,50 @@ class LemuroidLibrary(
                         game.copy(lastIndexedAt = startedAtMs, fileName = correctedFileName)
                     }
 
-                    recordGameProgress(updatedGame)
-                    updatedGame
+                    val gameWithAchievements = processRetroAchievementsForGame(updatedGame, primaryFile)
+                    recordGameProgress(gameWithAchievements)
+                    gameWithAchievements
                 }
 
         retrogradedb.gameDao().update(updatedGames)
+    }
+
+    private suspend fun processRetroAchievementsForGame(game: Game, primaryFile: BaseStorageFile): Game {
+        val api = retroAchievementsApi ?: return game
+        if (game.achievementId != null && game.achievementId != 0) return game
+        return runCatching {
+            val md5Hash = appContext.contentResolver.openInputStream(primaryFile.uri)?.use { it.calculateMd5() }
+            if (!md5Hash.isNullOrBlank()) {
+                val gameId = api.getGameIdByMd5(md5Hash)
+                if (gameId != null && gameId > 0) {
+                    val prefs = SharedPreferencesHelper.getSharedPreferences(appContext)
+                    val username = prefs.getString("ra_username", "") ?: ""
+                    val token = prefs.getString("ra_token", "") ?: ""
+
+                    if (username.isNotBlank() && token.isNotBlank()) {
+                        val info = api.getGameInfoAndUserProgress(username, token, gameId)
+                        if (info != null && info.achievements.isNotEmpty()) {
+                            val entities = info.achievements.map { dto ->
+                                AchievementEntity(
+                                    id = dto.id,
+                                    gameId = gameId,
+                                    title = dto.title,
+                                    description = dto.description,
+                                    points = dto.points,
+                                    badgeUrl = dto.badgeUrl,
+                                    isUnlocked = dto.isUnlocked,
+                                    unlockTimestamp = dto.unlockTimestamp,
+                                    displayOrder = dto.displayOrder,
+                                )
+                            }
+                            retrogradedb.achievementDao().insertAll(entities)
+                        }
+                    }
+                    return@runCatching game.copy(achievementId = gameId)
+                }
+            }
+            game
+        }.getOrDefault(game)
     }
 
     private fun updateDataFiles(
@@ -275,7 +319,7 @@ class LemuroidLibrary(
         )
     }
 
-    private fun handleNewEntries(
+    private suspend fun handleNewEntries(
         entries: List<ScanEntry>,
         startedAtMs: Long,
         provider: StorageProvider,
@@ -293,13 +337,13 @@ class LemuroidLibrary(
         handleUnknownFiles(provider, unknownFiles, startedAtMs)
     }
 
-    private fun handleNewGames(
+    private suspend fun handleNewGames(
         pairs: List<ScanEntry.GameFile>,
         startedAtMs: Long,
     ) {
-        val games =
-            pairs
-                .map { it.game }
+        val games = pairs.map { pair ->
+            processRetroAchievementsForGame(pair.game, pair.file.primaryFile)
+        }
 
         val gameIds = retrogradedb.gameDao().insert(games)
         val dataFiles =
