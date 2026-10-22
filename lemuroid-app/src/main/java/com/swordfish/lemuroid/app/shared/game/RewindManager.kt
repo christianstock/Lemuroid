@@ -178,6 +178,15 @@ class RewindManager(private val context: Context) {
 
     fun stopRewind() {
         synchronized(rewindBuffer) {
+            if (isRewindActive && rewindIndex > 0) {
+                repeat(rewindIndex) {
+                    if (rewindBuffer.isNotEmpty()) {
+                        val removed = rewindBuffer.removeLast()
+                        currentBufferSizeBytes -= removed.stateData.size
+                    }
+                }
+                Timber.i("Rewind buffer truncated: removed $rewindIndex states. New size: ${rewindBuffer.size}")
+            }
             isRewindActive = false
             rewindIndex = 0
         }
