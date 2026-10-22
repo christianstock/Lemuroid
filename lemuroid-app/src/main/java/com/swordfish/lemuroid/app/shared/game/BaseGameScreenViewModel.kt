@@ -488,12 +488,9 @@ class BaseGameScreenViewModel(
     suspend fun captureRewindState() {
         val retroGameView = retroGameView.retroGameView ?: return
         try {
-            // Capture state on emulation thread
             val stateData = retroGameView.serializeState()
-
             rewindManager.captureState(stateData)
 
-            // Only update available state if it actually changed to reduce UI recomposition
             val available = rewindManager.isRewindAvailable()
             if (rewindAvailable.value != available) {
                 rewindAvailable.value = available
@@ -513,7 +510,7 @@ class BaseGameScreenViewModel(
                 rewindManager.rewindBackward()
                 rewindProgress.value = rewindManager.getRewindProgress()
                 applyRewindState()
-                
+
                 // 3:1 (33ms delay) for first 15 seconds (150 steps at 0.1s/step)
                 // 5:1 (20ms delay) thereafter
                 val delayTime = if (stepCount < 150) 33L else 20L
@@ -526,6 +523,9 @@ class BaseGameScreenViewModel(
     fun stopRewind() {
         rewindManager.stopRewind()
         isPlaying.value = true
+        retroGameView.retroGameView?.apply {
+            frameSpeed = 1
+        }
         rewindProgress.value = 0f
     }
 
@@ -539,14 +539,35 @@ class BaseGameScreenViewModel(
         }
     }
 
+    fun refreshPausedFrame() {
+        if (!isPlaying.value && !rewindManager.isRewindActive()) {
+            viewModelScope.launch {
+                try {
+                    val view = retroGameView.retroGameView ?: return@launch
+                    view.frameSpeed = 1
+                    delay(350)
+                    if (!isPlaying.value && !rewindManager.isRewindActive()) {
+                        view.frameSpeed = 0
+                    }
+                } catch (e: Throwable) {
+                    // Ignored
+                }
+            }
+        }
+    }
+
     fun togglePause() {
         setPause(isPlaying.value)
     }
 
     private fun setPause(isCurrentlyPlaying: Boolean) {
         isPlaying.value = !isCurrentlyPlaying
-        retroGameView.retroGameView?.apply {
-            frameSpeed = if (isPlaying.value) 1 else 0
+        if (isPlaying.value) {
+            retroGameView.retroGameView?.apply {
+                frameSpeed = 1
+            }
+        } else {
+            refreshPausedFrame()
         }
     }
 
@@ -555,6 +576,13 @@ class BaseGameScreenViewModel(
         rewindManager.stopRewind()
         // No explicit clear call needed if we trust JVM GC, 
         // but we can add one to RewindManager if we use DirectByteBuffers later.
+    }
+
+    override fun onResume(owner: LifecycleOwner) {
+        super.onResume(owner)
+        if (!isPlaying.value) {
+            refreshPausedFrame()
+        }
     }
 
     override fun onCreate(owner: LifecycleOwner) {

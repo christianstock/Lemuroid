@@ -1,5 +1,6 @@
-package com.swordfish.lemuroid.app.mobile.feature.home
+package com.swordfish.lemuroid.app.mobile.feature.home.onboarding
 
+import android.graphics.Typeface
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -14,7 +15,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -34,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -76,7 +77,7 @@ fun LibraryOnboardingScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val condensedFontFamily = remember {
-        FontFamily(android.graphics.Typeface.create("sans-serif-condensed", android.graphics.Typeface.NORMAL))
+        FontFamily(Typeface.create("sans-serif-condensed", Typeface.NORMAL))
     }
 
     val prefs = remember { SharedPreferencesHelper.getSharedPreferences(context) }
@@ -178,7 +179,7 @@ fun LibraryOnboardingScreen(
                                 color = RetroBorderLight,
                                 topLeft = Offset(stroke / 2f, stroke / 2f),
                                 size = Size(size.width - stroke, size.height - stroke),
-                                cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadius, cornerRadius),
+                                cornerRadius = CornerRadius(cornerRadius, cornerRadius),
                                 style = Stroke(width = stroke)
                             )
                         }
@@ -277,7 +278,7 @@ fun LibraryOnboardingScreen(
                             color = RetroBorderLight,
                             topLeft = Offset(stroke / 2f, stroke / 2f),
                             size = Size(size.width - stroke, size.height - stroke),
-                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadius, cornerRadius),
+                            cornerRadius = CornerRadius(cornerRadius, cornerRadius),
                             style = Stroke(width = stroke)
                         )
                     }
@@ -327,7 +328,7 @@ fun LibraryOnboardingScreen(
                                 color = RetroBorderLight,
                                 topLeft = Offset(stroke / 2f, stroke / 2f),
                                 size = Size(size.width - stroke, size.height - stroke),
-                                cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadius, cornerRadius),
+                                cornerRadius = CornerRadius(cornerRadius, cornerRadius),
                                 style = Stroke(width = stroke)
                             )
                         }
@@ -477,7 +478,7 @@ fun LibraryOnboardingScreen(
                             color = RetroBorderLight,
                             topLeft = Offset(stroke / 2f, stroke / 2f),
                             size = Size(size.width - stroke, size.height - stroke),
-                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadius, cornerRadius),
+                            cornerRadius = CornerRadius(cornerRadius, cornerRadius),
                             style = Stroke(width = stroke)
                         )
                     }
@@ -541,7 +542,7 @@ private fun RetroInputField(
                     color = RetroLime,
                     topLeft = Offset(stroke / 2f, stroke / 2f),
                     size = Size(size.width - stroke, size.height - stroke),
-                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadius, cornerRadius),
+                    cornerRadius = CornerRadius(cornerRadius, cornerRadius),
                     style = Stroke(width = stroke)
                 )
             }
@@ -602,7 +603,7 @@ private fun InstructionCheckItem(
     subtitle: String
 ) {
     val condensedFontFamily = remember {
-        FontFamily(android.graphics.Typeface.create("sans-serif-condensed", android.graphics.Typeface.NORMAL))
+        FontFamily(Typeface.create("sans-serif-condensed", Typeface.NORMAL))
     }
 
     Row(

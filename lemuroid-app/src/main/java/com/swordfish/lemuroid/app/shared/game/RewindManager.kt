@@ -61,8 +61,7 @@ class RewindManager(private val context: Context) {
         activityManager.getMemoryInfo(memInfo)
 
         val availableMemMB = memInfo.availMem / (1024 * 1024)
-        
-        // Reverting to available RAM strategy to avoid crashes
+
         val strategy = when {
             availableMemMB < 512 -> Strategy.DISABLED
             availableMemMB < 1024 -> Strategy.LOW_RAM
@@ -103,10 +102,8 @@ class RewindManager(private val context: Context) {
                 currentBufferSizeBytes -= removedState.stateData.size
             }
 
-            // Add new state
-            // Optimization: Remove copyOf() as serializeState() already returns a fresh array.
-            // This reduces GC pressure and CPU usage per snapshot.
-            rewindBuffer.addLast(RewindState(stateData, System.currentTimeMillis()))
+            // Add new state with defensive copy
+            rewindBuffer.addLast(RewindState(stateData.copyOf(), System.currentTimeMillis()))
             currentBufferSizeBytes += newStateSize
         }
     }
@@ -142,19 +139,10 @@ class RewindManager(private val context: Context) {
 
     fun getLatestRewindState(): RewindState? {
         return synchronized(rewindBuffer) {
-            if (rewindBuffer.isEmpty()) return@synchronized null
             if (isRewindActive && rewindIndex < rewindBuffer.size) {
-                // Optimize to avoid toList() which is O(N)
-                val iterator = rewindBuffer.descendingIterator()
-                var current: RewindState? = null
-                repeat(rewindIndex + 1) {
-                    if (iterator.hasNext()) {
-                        current = iterator.next()
-                    }
-                }
-                current
+                rewindBuffer.toList().getOrNull(rewindBuffer.size - 1 - rewindIndex)
             } else {
-                rewindBuffer.peekLast()
+                rewindBuffer.lastOrNull()
             }
         }
     }
@@ -190,18 +178,6 @@ class RewindManager(private val context: Context) {
 
     fun stopRewind() {
         synchronized(rewindBuffer) {
-            if (isRewindActive && rewindIndex > 0) {
-                // Truncate the buffer to remove the "future" states that were rewound past.
-                // This ensures that new gameplay starts from the current rewind point
-                // and doesn't just append to the previous timeline.
-                repeat(rewindIndex) {
-                    if (rewindBuffer.isNotEmpty()) {
-                        val removed = rewindBuffer.removeLast()
-                        currentBufferSizeBytes -= removed.stateData.size
-                    }
-                }
-                Timber.i("Rewind buffer truncated: removed $rewindIndex states. New size: ${rewindBuffer.size}")
-            }
             isRewindActive = false
             rewindIndex = 0
         }
@@ -213,8 +189,6 @@ class RewindManager(private val context: Context) {
         return synchronized(rewindBuffer) {
             if (rewindBuffer.isEmpty()) return@synchronized 0f
             if (isRewindActive) {
-                // Calculate actual seconds rewound based on snapshot index
-                // rewindIndex represents how many snapshots we've gone back
                 rewindIndex * (SNAPSHOT_INTERVAL_MS / 1000f)
             } else {
                 0f

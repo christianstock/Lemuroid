@@ -12,6 +12,7 @@ import com.swordfish.lemuroid.app.shared.library.PendingOperationsMonitor
 import com.swordfish.lemuroid.app.shared.settings.StorageFrameworkPickerLauncher
 import com.swordfish.lemuroid.common.kotlin.cleanGameTitle
 import com.swordfish.lemuroid.lib.core.CoresSelection
+import com.swordfish.lemuroid.lib.library.LemuroidLibrary
 import com.swordfish.lemuroid.lib.library.SystemID
 import com.swordfish.lemuroid.lib.library.db.RetrogradeDatabase
 import com.swordfish.lemuroid.lib.library.db.entity.Game
@@ -38,6 +39,7 @@ class HomeViewModel(
     private val appContext: Context,
     private val retrogradeDb: RetrogradeDatabase,
     private val coresSelection: CoresSelection,
+    private val lemuroidLibrary: LemuroidLibrary,
 ) : ViewModel() {
 
     companion object {
@@ -55,10 +57,11 @@ class HomeViewModel(
         private val appContext: Context,
         private val retrogradeDb: RetrogradeDatabase,
         private val coresSelection: CoresSelection,
+        private val lemuroidLibrary: LemuroidLibrary,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return HomeViewModel(appContext, retrogradeDb, coresSelection) as T
+            return HomeViewModel(appContext, retrogradeDb, coresSelection, lemuroidLibrary) as T
         }
     }
 
@@ -77,6 +80,11 @@ class HomeViewModel(
         val showNoNotificationPermissionCard: Boolean = false,
         val showNoMicrophonePermissionCard: Boolean = false,
         val showNoGamesCard: Boolean = false,
+        val scannedGamesCount: Int = 0,
+        val scannedBoxArtCount: Int = 0,
+        val scannedCartridgesCount: Int = 0,
+        val scannedManualsCount: Int = 0,
+        val recentScannedArtworks: List<String> = emptyList(),
     )
 
     private val microphonePermissionEnabledState = MutableStateFlow(true)
@@ -88,6 +96,26 @@ class HomeViewModel(
 
     private val _uiState = MutableStateFlow(UIState())
     val uiState: StateFlow<UIState> = _uiState.asStateFlow()
+
+    // Track baseline count when indexing begins
+    private var scanStartGameCount = 0
+    private val _scanSessionState = MutableStateFlow(ScanSessionStats())
+
+    data class ScanSessionStats(
+        val isScanningActive: Boolean = false,
+        val sessionGames: Int = 0,
+        val sessionBoxArt: Int = 0,
+        val sessionCartridges: Int = 0,
+        val sessionManuals: Int = 0,
+        val sessionArtworks: List<String> = emptyList()
+    )
+
+    // Call this right before launching the directory picker
+    fun prepareForNewScan() {
+        val currentGames = _uiState.value.systemLibraries.flatMap { it.games }
+        scanStartGameCount = currentGames.size
+        _scanSessionState.value = ScanSessionStats(isScanningActive = true)
+    }
 
     fun setSelectedSystem(systemId: String) {
         val normalizedId = systemId.lowercase()
@@ -141,11 +169,17 @@ class HomeViewModel(
 
     private fun isNotificationsPermissionGranted(context: Context): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return true
-        return ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        return ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
     }
 
     private fun isMicrophonePermissionGranted(context: Context): Boolean {
-        return ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+        return ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.RECORD_AUDIO
+        ) == PackageManager.PERMISSION_GRANTED
     }
 
     init {
@@ -176,29 +210,48 @@ class HomeViewModel(
         // Combine DB & State Flows
         viewModelScope.launch {
             combine(
-                retrogradeDb.gameDao().selectSystemsFlow(),
-                retrogradeDb.gameDao().selectAllFlow(),
-                selectedSystemIdState,
-                systemScrollIndicesState,
-                systemResetsState,
-                refreshCountState,
-                notificationsPermissionEnabledState,
-                indexingInProgress(appContext).onStart { emit(false) },
-                microphoneNotification(retrogradeDb).onStart { emit(false) }
+                listOf<Flow<Any?>>(
+                    retrogradeDb.gameDao().selectSystemsFlow(),
+                    retrogradeDb.gameDao().selectAllFlow(),
+                    selectedSystemIdState,
+                    systemScrollIndicesState,
+                    systemResetsState,
+                    refreshCountState,
+                    notificationsPermissionEnabledState,
+                    indexingInProgress(appContext).onStart { emit(false) },
+                    microphoneNotification(retrogradeDb).onStart { emit(false) },
+                    lemuroidLibrary.totalGamesFound,
+                    lemuroidLibrary.boxArtFound,
+                    lemuroidLibrary.cartridgesFound,
+                    lemuroidLibrary.manualsFound,
+                    lemuroidLibrary.recentArtworks,
+                    lemuroidLibrary.scanComplete
+                )
             ) { args: Array<Any?> ->
                 @Suppress("UNCHECKED_CAST")
                 val availableSystems = args[0] as List<String>
+
                 @Suppress("UNCHECKED_CAST")
                 val allGames = args[1] as List<Game>
                 val selectedSystemId = args[2] as String?
+
                 @Suppress("UNCHECKED_CAST")
                 val scrollIndices = args[3] as Map<String, Int>
+
                 @Suppress("UNCHECKED_CAST")
                 val systemResets = args[4] as Map<String, Long>
                 val refreshCount = args[5] as Int
                 val notificationsEnabled = args[6] as Boolean
                 val indexInProgress = args[7] as Boolean
                 val showMicrophoneCard = args[8] as Boolean
+                val totalGamesFound = args[9] as Int
+                val boxArtFound = args[10] as Int
+                val cartridgesFound = args[11] as Int
+                val manualsFound = args[12] as Int
+
+                @Suppress("UNCHECKED_CAST")
+                val liveRecentArtworks = args[13] as List<String>
+                val scanComplete = args[14] as Boolean
 
                 // Strict whitelist filter for GB, GBC, and GBA
                 val filteredSystems = availableSystems
@@ -226,6 +279,14 @@ class HomeViewModel(
                     lib.systemId to page
                 }
 
+                // If currently scanning or scan not marked complete, display live incremental counts starting from 0
+                val isScanningActive = indexInProgress || !scanComplete
+                val finalGamesCount = if (isScanningActive) totalGamesFound else allGames.size
+                val finalBoxArtCount = if (isScanningActive) boxArtFound else allGames.count { !it.coverFrontUrl.isNullOrBlank() }
+                val finalCartridgesCount = if (isScanningActive) cartridgesFound else allGames.count { !it.cartridgeUrl.isNullOrBlank() }
+                val finalManualsCount = if (isScanningActive) manualsFound else allGames.count { !it.manualUrl.isNullOrBlank() }
+                val finalArtworks = if (isScanningActive) liveRecentArtworks else allGames.mapNotNull { it.coverFrontUrl.takeIf { url -> !url.isNullOrBlank() } }.takeLast(9)
+
                 UIState(
                     systemLibraries = systemLibraries,
                     selectedSystemId = selectedSystemId,
@@ -235,6 +296,11 @@ class HomeViewModel(
                     showNoNotificationPermissionCard = !notificationsEnabled,
                     showNoMicrophonePermissionCard = showMicrophoneCard,
                     showNoGamesCard = systemLibraries.isEmpty(),
+                    scannedGamesCount = finalGamesCount,
+                    scannedBoxArtCount = finalBoxArtCount,
+                    scannedCartridgesCount = finalCartridgesCount,
+                    scannedManualsCount = finalManualsCount,
+                    recentScannedArtworks = finalArtworks
                 )
             }
                 .distinctUntilChanged()
@@ -256,7 +322,10 @@ class HomeViewModel(
 
     private fun microphoneNotification(db: RetrogradeDatabase): Flow<Boolean> {
         return microphonePermissionEnabledState.flatMapLatest { isEnabled ->
-            if (isEnabled) flowOf(false) else combine(coresSelection.getSelectedCores(), dsGamesCount(db)) { cores, dsCount ->
+            if (isEnabled) flowOf(false) else combine(
+                coresSelection.getSelectedCores(),
+                dsGamesCount(db)
+            ) { cores, dsCount ->
                 cores.any { it.coreConfig.supportsMicrophone } && dsCount > 0
             }
         }.distinctUntilChanged()

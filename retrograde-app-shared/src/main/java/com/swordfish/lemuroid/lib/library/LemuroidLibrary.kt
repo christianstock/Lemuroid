@@ -70,6 +70,18 @@ class LemuroidLibrary(
     private val _totalGamesFound = MutableStateFlow(0)
     val totalGamesFound: StateFlow<Int> = _totalGamesFound.asStateFlow()
 
+    private val _boxArtFound = MutableStateFlow(0)
+    val boxArtFound: StateFlow<Int> = _boxArtFound.asStateFlow()
+
+    private val _cartridgesFound = MutableStateFlow(0)
+    val cartridgesFound: StateFlow<Int> = _cartridgesFound.asStateFlow()
+
+    private val _manualsFound = MutableStateFlow(0)
+    val manualsFound: StateFlow<Int> = _manualsFound.asStateFlow()
+
+    private val _recentArtworks = MutableStateFlow<List<String>>(emptyList())
+    val recentArtworks: StateFlow<List<String>> = _recentArtworks.asStateFlow()
+
     private val _scanComplete = MutableStateFlow(false)
     val scanComplete: StateFlow<Boolean> = _scanComplete.asStateFlow()
 
@@ -80,6 +92,10 @@ class LemuroidLibrary(
 
         _systemProgress.value = emptyList()
         _totalGamesFound.value = 0
+        _boxArtFound.value = 0
+        _cartridgesFound.value = 0
+        _manualsFound.value = 0
+        _recentArtworks.value = emptyList()
         _scanComplete.value = false
         systemGamesCountMap.clear()
 
@@ -362,6 +378,8 @@ class LemuroidLibrary(
     }
 
     private fun recordGameProgress(game: Game) {
+        if (game.systemId.lowercase() !in ALLOWED_SYSTEMS) return
+
         val gameSystem = GameSystem.findById(game.systemId)
         val systemName = gameSystem.libretroFullName
 
@@ -395,6 +413,22 @@ class LemuroidLibrary(
 
         _systemProgress.value = currentList
         _totalGamesFound.value = systemGamesCountMap.values.sum()
+
+        val coverUrl = game.coverFrontUrl
+        if (!coverUrl.isNullOrBlank()) {
+            _boxArtFound.value = _boxArtFound.value + 1
+            val current = _recentArtworks.value.toMutableList()
+            if (!current.contains(coverUrl)) {
+                current.add(coverUrl)
+                _recentArtworks.value = current.takeLast(9)
+            }
+        }
+        if (!game.cartridgeUrl.isNullOrBlank()) {
+            _cartridgesFound.value = _cartridgesFound.value + 1
+        }
+        if (!game.manualUrl.isNullOrBlank()) {
+            _manualsFound.value = _manualsFound.value + 1
+        }
     }
 
     private fun handleUnknownFiles(
@@ -455,8 +489,10 @@ class LemuroidLibrary(
         
         // Try to find matching SystemID by checking folder names
         return SystemID.entries.find { 
-            it.dbname.lowercase() == systemFolder ||
-            systemFolder.contains(it.dbname.lowercase())
+            it.dbname.lowercase() in ALLOWED_SYSTEMS && (
+                it.dbname.lowercase() == systemFolder ||
+                systemFolder.contains(it.dbname.lowercase())
+            )
         }
     }
 
@@ -499,6 +535,9 @@ class LemuroidLibrary(
         }
 
         val gameSystem = GameSystem.findById(gameMetadata.system!!)
+        if (gameSystem.id.dbname.lowercase() !in ALLOWED_SYSTEMS) {
+            return null
+        }
 
         // If the databased matched a data file (as with bin/cue) we force link the primary filename
         val fileName =
@@ -612,5 +651,6 @@ class LemuroidLibrary(
     companion object {
         const val MAX_BUFFER_SIZE = 200
         const val MAX_TIME = 5000
+        private val ALLOWED_SYSTEMS = setOf("gb", "gbc", "gba")
     }
 }

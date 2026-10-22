@@ -129,7 +129,7 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
     }
 
     private val homeViewModel: HomeViewModel by viewModels {
-        HomeViewModel.Factory(applicationContext, retrogradeDb, coresSelection)
+        HomeViewModel.Factory(applicationContext, retrogradeDb, coresSelection, lemuroidLibrary)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

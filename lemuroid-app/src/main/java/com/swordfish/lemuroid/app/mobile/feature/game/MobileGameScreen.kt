@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -36,6 +37,15 @@ import androidx.compose.material3.TextButton
 import android.app.Activity
 import android.content.ContextWrapper
 import android.content.pm.ActivityInfo
+import android.graphics.RenderEffect
+import android.graphics.RuntimeShader
+import android.os.Build
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.asComposeRenderEffect
+import androidx.compose.ui.graphics.graphicsLayer
+import com.swordfish.lemuroid.app.mobile.shared.pressStart2PFontFamily
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -186,6 +196,11 @@ fun MobileGameScreen(viewModel: BaseGameScreenViewModel) {
                                 },
                         factory = { ctx ->
                             viewModel.createRetroView(ctx, lifecycle) ?: android.view.View(ctx)
+                        },
+                        update = { view ->
+                            if (!isPlayingState.value && rewindProgressState.value <= 0f) {
+                                viewModel.refreshPausedFrame()
+                            }
                         },
                     )
                 }
